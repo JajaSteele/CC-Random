@@ -1,4 +1,4 @@
-local monitor = peripheral.wrap("right")
+local monitor = peripheral.find("monitor")
 
 function mslowPrint(x1,delay1,color1)
     i1 = 1
@@ -29,7 +29,6 @@ local args = {...}
 if args[1] ~= nil then
     delay = tonumber(args[2])
     color = colors[args[3]]
-    os.sleep(1)
     monitor.clear()
     monitor.setCursorPos(1,1)
     local text1={}; for w in args[1]:gsub("%f[%w].-%f[^%w]","\0%0\0"):gmatch"%Z+" do table.insert(text1, w) end

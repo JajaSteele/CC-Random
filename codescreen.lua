@@ -26,7 +26,6 @@ if not fs.exists("/Base64") then
 else
     print("All Dependencies found!")
     os.loadAPI("/Base64")
-    cipher = require("cipher")
     print("Library Loaded.\n")
     print("Validating..\n")
     os.sleep(0.1)

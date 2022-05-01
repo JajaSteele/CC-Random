@@ -155,6 +155,11 @@ while true do
     res1 = io.read()
     if res1 == "repeat" then
         wait1 = true
+        chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
+        os.sleep(3)
+        chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
+        os.sleep(3)
+        chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
     end
     if newX == tarX and newY == tarY and newZ == tarZ then
         print("Destination Reached!")

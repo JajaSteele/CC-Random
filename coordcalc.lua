@@ -117,7 +117,7 @@ while true do
         if newdist3 < maxdist and newdist3 > -maxdist then
             newZ = newZ + newdist3
         else
-            if newdist1 > 0 then
+            if newdist3 > 0 then
                 newZ = newZ + maxdist
             else
                 newZ = newZ - maxdist
@@ -136,8 +136,7 @@ while true do
     term.write(" Z"..newZ)
     term.setTextColor(0x1)
     print("\n")
-    chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
-
+    
     print("Target Coords:")
     term.setTextColor(0x4000)
     term.write("X"..tarX)
@@ -152,6 +151,11 @@ while true do
     print("  Flat: "..onlypos(newdist1+newdist3))
     print("  Total: "..onlypos(newdist1+newdist2+newdist3))
     print("Press ENTER to continue..\n(or write \"repeat\" to send in chat again)")
+
+    chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
+    os.sleep(4)
+    chat("Coords to Enter: X"..newX.." Y"..newY.." Z"..newZ)
+    
     res1 = io.read()
     if res1 == "repeat" then
         wait1 = true

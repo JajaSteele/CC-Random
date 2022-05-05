@@ -1,5 +1,68 @@
 mt = peripheral.find("monitor")
 tardis = peripheral.find("tardisinterface")
+speaker = peripheral.find("speaker")
+
+local dfpwm = require("cc.audio.dfpwm")
+local decoder = dfpwm.make_decoder()
+
+local function playAudio(t)
+    if speaker ~= nil then
+        for chunk in io.lines(t, 16 * 1024) do
+            local buffer = decoder(chunk)
+        
+            while not speaker.playAudio(buffer,20) do
+                os.pullEvent("speaker_audio_empty")
+            end
+        end
+    end
+end
+
+if fs.exists("/soundfiles") == false then
+    print("Missing Soundfiles!")
+    if speaker ~= nil then
+        print("Downloading..")
+        fs.makeDir("/soundfiles")
+
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-HELLOWORLD.dfpwm /soundfiles/helloworld.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-LANDING.dfpwm /soundfiles/landing.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-LOWFUEL.dfpwm /soundfiles/lowfuel.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-REACHED.dfpwm /soundfiles/reached.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-TAKINGOFF.dfpwm /soundfiles/takingoff.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-HELLOWORLD2.dfpwm /soundfiles/helloworld2.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-DANGERSUBSYS.dfpwm /soundfiles/dangersubsys.dfpwm")
+
+        print("Done!")
+        playAudio("/soundfiles/helloworld2.dfpwm")
+    else
+        print("No Speaker detected, skipping download!")
+    end
+else
+    file1 = io.open("/soundfiles/helloworld.dfpwm","r")
+    file2 = io.open("/soundfiles/landing.dfpwm","r")
+    file3 = io.open("/soundfiles/lowfuel.dfpwm","r")
+    file4 = io.open("/soundfiles/reached.dfpwm","r")
+    file5 = io.open("/soundfiles/takingoff.dfpwm","r")
+    file6 = io.open("/soundfiles/helloworld2.dfpwm","r")
+    file7 = io.open("/soundfiles/dangersubsys.dfpwm","r")
+    if #fs.list("/soundfiles") == 7 then
+        print("All soundfiles validated!")
+    else
+        print("Missing soundfiles!")
+
+        print("Downloading..")
+        
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-HELLOWORLD.dfpwm /soundfiles/helloworld.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-LANDING.dfpwm /soundfiles/landing.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-LOWFUEL.dfpwm /soundfiles/lowfuel.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-REACHED.dfpwm /soundfiles/reached.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-TAKINGOFF.dfpwm /soundfiles/takingoff.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-HELLOWORLD2.dfpwm /soundfiles/helloworld2.dfpwm")
+        shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Tardis%20Screen%205x3_Monitor/soundfiles/TTS-Kimberly-DANGERSUBSYS.dfpwm /soundfiles/dangersubsys.dfpwm")
+
+        print("Done!")
+        playAudio("/soundfiles/helloworld2.dfpwm")
+    end
+end
 
 local function slowprint(t,d)
     length = string.len(t)
@@ -121,6 +184,13 @@ dimDisplay = 1
 
 safeModeEngaged = 0
 
+audioLoop = false
+audioLoopN = 0
+
+longDangersys = {}
+
+playAudio("/soundfiles/helloworld.dfpwm")
+
 function mainUI()
     while true do
         currArtron = tardis.getArtronBank()
@@ -157,17 +227,17 @@ function mainUI()
 
         for k,v in pairs(subsys) do
             health = tardis.getSubSystemHealth(v)
-            if health < 0.30 and health > 0.10 then
+            if health < 0.30 and health > 0.165 then
                 table.insert(damagedsys,v)
             end
-            if health < 0.10 then
+            if health < 0.165 then
                 table.insert(dangeroussys,v)
             end
         end
 
         sethome(2,16) mt.clearLine()
 
-        if #damagedsys ~= 0 or #dangeroussys ~= 0 then
+        if #damagedsys ~= 0 or #dangeroussys ~= 0 or audioLoop == true then
             sc(c.red)
             if #damagedsys == 1 then
                 wd("WARNING | Damaged Subsystem:")
@@ -178,13 +248,27 @@ function mainUI()
             mt.clearLine()
             w(table.concat(damagedsys,", "))
             if #dangeroussys ~= 0 then
+                longDangersys = dangeroussys
                 if #damagedsys ~= 0 then
                     w(", ")
                 end
                 sc(c.red)
                 w(table.concat(dangeroussys,", "))
-                if tardis.getAlarm() ~= false then
+                if tardis.getAlarm() == false then
                     tardis.setAlarm(true)
+                    audioLoop = true
+                end
+            else
+                stopAlarm = true
+                for k,v in pairs(longDangersys) do
+                    health = tardis.getSubSystemHealth(v)
+                    if health ~= health or health < 0.165 then
+                        stopAlarm = false
+                    end
+                end
+                if stopAlarm or tardis.getAlarm() == false then
+                    tardis.setAlarm(false)
+                    audioLoop = false
                 end
             end
         else
@@ -211,6 +295,15 @@ function mainUI()
 
         if timeleft2 ~= nil then
             draw("ETA:"..timeleft2.."s",mX-10,16)
+        end
+
+        if audioLoop == true then
+            if audioLoopN == 0 then
+                playAudio("/soundfiles/dangersubsys.dfpwm")
+                audioLoopN = 10
+            else
+                audioLoopN = audioLoopN-1
+            end
         end
 
         sc(c.white)
@@ -320,14 +413,21 @@ function clickListener()
             tardis.setHandbrake(false)
             tardis.setDoors("CLOSED")
             os.sleep(1)
+            playAudio("/soundfiles/takingoff.dfpwm")
+            os.sleep(2)
+            if tardis.getArtronBank() < 125 then
+                playAudio("/soundfiles/lowfuel.dfpwm")
+                os.sleep(3)
+            end
             tardis.setFlight(1)
             os.sleep(1)
             flightTime = tardis.getTimeLeft()
             flightTime_r = flightTime+15
-            for i1=1, flightTime_r do
-                flightEta = flightTime_r-i1
+            repeat
+                flightEta = tardis.getTimeLeft()
                 os.sleep(1)
-            end
+            until flightEta == 0
+            playAudio("/soundfiles/landing.dfpwm")
             tardis.setHandbrake(true)
             flightEta = nil
         end

@@ -82,7 +82,7 @@ if config["enabledc"] == true then
         dc_hookapi = require("/lib/DiscordHook")
     end
     success, hook = dc_hookapi.createWebhook(config["dc_hook"])
-    success1 = hook.send("WH Connected to Program: Survey")
+    success1 = hook.send("Program Connected: **Survey, "..config["basename"].."**")
     if success1 then
         print("Successfully connected to the Webhook!")
     else

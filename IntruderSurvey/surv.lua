@@ -195,12 +195,18 @@ while true do
     diffs,chat_diffs,dc_diffs,print_diffs = getDiff(current_ply,old_ply)
     
     if chat_diffs ~= nil then
-        msgOwner(table.concat(chat_diffs,"\n"))
+        if table.concat(chat_diffs,"\n") ~= "\n" then
+            msgOwner(table.concat(chat_diffs,"\n"))
+        end
     end
     if dc_diffs ~= nil then
-        hook.send(table.concat(dc_diffs,"\n"))
+        if table.concat(dc_diffs,"\n") ~= "\n" then
+            hook.send(table.concat(dc_diffs,"\n"))
+        end
     end
     if print_diffs ~= nil then
-        print(table.concat(print_diffs,"\n"))
+        if table.concat(print_diffs,"\n") ~= "\n" then
+            print(table.concat(print_diffs,"\n"))
+        end
     end
 end

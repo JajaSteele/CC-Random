@@ -1,3 +1,8 @@
+local dfpwm = require("cc.audio.dfpwm")
+local speaker = peripheral.find("speaker")
+
+local decoder = dfpwm.make_decoder()
+
 while true do
     print("Choose music Path: (.dfpwm files)")
     path = io.read()

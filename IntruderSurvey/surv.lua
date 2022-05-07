@@ -8,6 +8,13 @@ local function clear()
     term.setCursorPos(1,1)
 end
 
+if args[1] == "update" then
+    programname = shell.getRunningProgram()
+    shell.run("delete "..programname)
+    shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/IntruderSurvey/surv.lua "..programname)
+    return
+end
+
 if not fs.exists("/surv.cfg") or args[1] == "cfg" then
     while true do
         newConfig = {}
@@ -195,17 +202,17 @@ while true do
     diffs,chat_diffs,dc_diffs,print_diffs = getDiff(current_ply,old_ply)
     
     if chat_diffs ~= nil then
-        if table.concat(chat_diffs,"\n") ~= "\n" then
+        if table.concat(chat_diffs,"\n") ~= "\n" and table.concat(chat_diffs,"\n") ~= "" then
             msgOwner(table.concat(chat_diffs,"\n"))
         end
     end
     if dc_diffs ~= nil then
-        if table.concat(dc_diffs,"\n") ~= "\n" then
+        if table.concat(dc_diffs,"\n") ~= "\n" and table.concat(dc_diffs,"\n") ~= "" then
             hook.send(table.concat(dc_diffs,"\n"))
         end
     end
     if print_diffs ~= nil then
-        if table.concat(print_diffs,"\n") ~= "\n" then
+        if table.concat(print_diffs,"\n") ~= "\n" and table.concat(print_diffs,"\n") ~= "" then
             print(table.concat(print_diffs,"\n"))
         end
     end

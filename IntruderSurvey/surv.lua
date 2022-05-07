@@ -92,22 +92,38 @@ end
 
 local function msg(t,u)
     if config["enablechat"] == true and chatbox ~= nil then
-        chatbox.sendMessage(t,u)
+        if u ~= nil then
+            chatbox.sendMessage(t,u)
+        else
+            chatbox.sendMessage(t,config["basename"])
+        end
     end
 end
 
 local function msgUser(t,d,u)
     if config["enablechat"] == true and chatbox ~= nil then
-        chatbox.sendMessageToPlayer(t,d,u)
+        if u ~= nil then
+            chatbox.sendMessageToPlayer(t,d,u)
+        else
+            chatbox.sendMessageToPlayer(t,d,config["basename"])
+        end
     end
 end
 
 local function msgOwner(t,u)
     if config["enablechat"] == true and chatbox ~= nil then
-        if args[1] == "debug" then
-            chatbox.sendMessage(t,u)
+        if u ~= nil then
+            if args[1] == "debug" then
+                chatbox.sendMessage(t,u)
+            else
+                chatbox.sendMessageToPlayer(t,config["username"],u)
+            end
         else
-            chatbox.sendMessageToPlayer(t,config["username"],u)
+            if args[1] == "debug" then
+                chatbox.sendMessage(t,config["basename"])
+            else
+                chatbox.sendMessageToPlayer(t,config["username"],config["basename"])
+            end
         end
     end
 end

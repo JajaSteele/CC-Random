@@ -104,8 +104,23 @@ end
 
 local function msgOwner(t,u)
     if config["enablechat"] == true and chatbox ~= nil then
-        chatbox.sendMessageToPlayer(t,config["username"],u)
+        if args[1] == "debug" then
+            chatbox.sendMessage(t,u)
+        else
+            chatbox.sendMessageToPlayer(t,config["username"],u)
+        end
     end
+end
+
+local function compare(t1,value)
+    local result = false
+    for k,v in pairs(t1) do
+        if v == value then
+            result = true
+            break
+        end
+    end
+    return result
 end
 
 local function getDiff(t1,t2)
@@ -118,7 +133,12 @@ local function getDiff(t1,t2)
     else
         if #t1 > #t2 then
             for i1=1, #t1 do
-                if t2[i1] == nil and t1[i1] ~= config["username"] then
+                if not compare(t2,t1[i1]) and t1[i1] ~= config["username"] then
+                    if args[1] == "debug" then
+                        print("t1 bigger than t2 (joined)")
+                        print(textutils.serialize(t1))
+                        print(textutils.serialize(t2))
+                    end
                     table.insert(difflist,t1[i1])
                     table.insert(chat_difflist,"§e§l"..t1[i1].." §aEntered §e§l"..config["basename"])
                     table.insert(print_difflist,t1[i1].." Entered "..config["basename"])
@@ -127,7 +147,12 @@ local function getDiff(t1,t2)
             end
         elseif #t1 < #t2 then
             for i1=1, #t2 do
-                if t1[i1] == nil and t2[i1] ~= config["username"] then
+                if not compare(t1,t2[i1]) and t2[i1] ~= config["username"] then
+                    if args[1] == "debug" then
+                        print("t2 bigger than t1 (left)")
+                        print(textutils.serialize(t1))
+                        print(textutils.serialize(t2))
+                    end
                     table.insert(difflist,t2[i1])
                     table.insert(chat_difflist,"§e§l"..t2[i1].." §cLeft §e§l"..config["basename"])
                     table.insert(print_difflist,t2[i1].." Left "..config["basename"])

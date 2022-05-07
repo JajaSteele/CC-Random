@@ -153,9 +153,13 @@ while true do
     os.sleep(1)
     diffs,chat_diffs,dc_diffs,print_diffs = getDiff(current_ply,old_ply)
     
-    if diffs ~= nil then
-        hook.send(table.concat(dc_diffs,"\n"))
+    if chat_diffs ~= nil then
         msgOwner(table.concat(chat_diffs,"\n"))
+    end
+    if dc_diffs ~= nil then
+        hook.send(table.concat(dc_diffs,"\n"))
+    end
+    if print_diffs ~= nil then
         print(table.concat(print_diffs,"\n"))
     end
 end

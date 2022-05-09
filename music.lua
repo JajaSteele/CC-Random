@@ -1,6 +1,8 @@
 speaker = peripheral.find("speaker")
 
 if speaker == nil then
+    pocket.unequipBack()
+    os.sleep(0.5)
     pocket.equipBack("speaker")
     speaker = peripheral.find("speaker")
     if speaker == nil then

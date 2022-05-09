@@ -3,6 +3,8 @@ ply_detector = peripheral.find("playerDetector")
 completion = require "cc.completion"
 
 if ply_detector == nil then
+    pocket.unequipBack()
+    os.sleep(0.5)
     pocket.equipBack("playerDetector")
     ply_detector = peripheral.find("playerDetector")
     if ply_detector == nil then
@@ -120,7 +122,7 @@ function main()
                 print("R-Click to select another player")
                 print("M-Click to quit")
             end
-            os.sleep(0.25)
+            os.sleep(0.75)
             if loopMain < 2 then
                 break
             end

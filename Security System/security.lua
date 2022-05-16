@@ -171,7 +171,8 @@ function getServer()
     local id, msg = rednet.receive("security_part2",4)
     if id == nil then
         playAudio("timeoutid")
-    end
+    else
+        print("Successfully Linked!")
     return id
 end
 

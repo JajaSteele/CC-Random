@@ -168,9 +168,9 @@ end
 
 function getServer()
     rednet.broadcast("give_server_id","security_part1")
-    local id, msg = rednet.receive("security_part2",10)
+    local id, msg = rednet.receive("security_part2",4)
     if id == nil then
-        playAudio("/audio/timeoutid.dfpwm")
+        playAudio("timeoutid")
     end
     return id
 end
@@ -198,18 +198,22 @@ function clickThread()
         repeat
             rednet.send(serverID,textutils.serialise({username,req_rank,acc_name}),"check_user")
             print("Checking "..username)
-            id, check_msg = rednet.receive("check_user_result",5)
+            id, check_msg = rednet.receive("check_user_result",3)
             loopcount = loopcount+1
         until id == serverID or loopcount == 2
         if loopcount == 2 then
             table.insert(soundPlay,"timeoutcheck")
         end
-        print("Result: "..check_msg)
-        if tostring(check_msg) == "granted" then
-            table.insert(soundPlay,"accessgranted")
-            bundled_bottom = c.combine(bundled_bottom,c.white)
-            os.sleep(5)
-            bundled_bottom = c.subtract(bundled_bottom,c.white)
+        if check_msg ~= nil then
+            print("Result: "..check_msg)
+            if tostring(check_msg) == "granted" then
+                table.insert(soundPlay,"accessgranted")
+                bundled_bottom = c.combine(bundled_bottom,c.white)
+                os.sleep(5)
+                bundled_bottom = c.subtract(bundled_bottom,c.white)
+            else
+                table.insert(soundPlay,"accessdenied")
+            end
         else
             table.insert(soundPlay,"accessdenied")
         end

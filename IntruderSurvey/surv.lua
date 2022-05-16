@@ -7,12 +7,83 @@ local function clear()
     term.clear()
     term.setCursorPos(1,1)
 end
+local function clearline()
+    term.write(string.rep(" ",mX))
+end
+local function setpos(x,y)
+    term.setCursorPos(x,y)
+end
+local function sethome(x,y)
+    term.setCursorPos(x,y)
+    homeX = x
+    homeY = y
+end
+local function down()
+    currX,currY = term.getCursorPos()
+    term.setCursorPos(homeX,currY+1)
+end
+local function w(t)
+    term.write(t)
+end
+local function wd(t)
+    term.write(t)
+    down()
+end
+local function sc(c)
+    term.setTextColor(c)
+end
+local function sbc(c)
+    term.setBackgroundColor(c)
+end
+local function wdc(t)
+    term.write(t)
+    clearline()
+    down()
+end
+
+c = colors
+
+mX,mY = term.getSize()
 
 if args[1] == "update" then
     programname = shell.getRunningProgram()
     shell.run("delete "..programname)
     shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/IntruderSurvey/surv.lua "..programname)
     return
+end
+
+if fs.exists("/surv_wlist.cfg") then
+    filewhitelist1 = io.open("/surv_wlist.cfg","r")
+    whitelist = textutils.unserialize(filewhitelist1:read("*a"))
+    filewhitelist1:close()
+else
+    whitelist = {""}
+end
+
+if args[1] == "whitelist" then
+    print("Hello! Starting whitelist editor..")
+    if fs.exists("/surv_wlist.cfg") then
+        filewhitelist2 = io.open("/surv_wlist.cfg","r")
+        edit_whitelist = textutils.unserialize(filewhitelist2:read("*a"))
+        filewhitelist2:close()
+    else
+        edit_whitelist = {}
+    end
+    while true do
+        clear()
+        print("Whitelist Editor")
+        print(table.concat(edit_whitelist,", "))
+        setpos(1,mY)
+        w("ADD | REMOVE | EXIT")
+        os.sleep(0.5)
+        local event, button, x, y = os.pullEvent("mouse_click")
+        if x < 4 and y == mY then
+            clear()
+            print("Username to whitelist:")
+            newUsername = io.read()
+            table.insert(edit_whitelist,newUsername)
+        end
+    end
 end
 
 if not fs.exists("/surv.cfg") or args[1] == "cfg" then
@@ -75,6 +146,9 @@ end
 fileconfig1 = io.open("/surv.cfg","r")
 if fileconfig1 ~= nil then
     config = textutils.unserialize(fileconfig1:read("*a"))
+    if args[1] == "debug2" then
+        config["username"] = ""
+    end
 end
 fileconfig1:close()
 

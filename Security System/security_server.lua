@@ -3,7 +3,7 @@ rednet.open("right")
 
 local completion = require "cc.shell.completion"
 local complete = completion.build(
-  { completion.choice, { "ranks", "reboot", "startup", "config", "update_startup" } },
+  { completion.choice, { "ranks", "reboot", "update_all", "startup", "config", "update_startup", "close_all", "open_all" } },
   completion.dir
 )
 
@@ -64,6 +64,33 @@ if args[1] == "reboot" then
     res = io.read()
     if res == "y" then
         rednet.broadcast("reboot_now","reboot_protocol")
+        os.reboot()
+    end
+end
+
+if args[1] == "update_all" then
+    print("Are you sure you want to mass-update? (y/n)")
+    res = io.read()
+    if res == "y" then
+        rednet.broadcast("update_now","reboot_protocol")
+        os.reboot()
+    end
+end
+
+if args[1] == "open_all" then
+    print("Are you sure you want to mass-open? (y/n)")
+    res = io.read()
+    if res == "y" then
+        rednet.broadcast("open_all","reboot_protocol")
+        os.reboot()
+    end
+end
+
+if args[1] == "close_all" then
+    print("Are you sure you want to mass-close? (y/n)")
+    res = io.read()
+    if res == "y" then
+        rednet.broadcast("close_all","reboot_protocol")
         os.reboot()
     end
 end

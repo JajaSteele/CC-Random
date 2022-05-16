@@ -167,15 +167,21 @@ function playAudio(t)
 end
 
 function getServer()
-    rednet.broadcast("give_server_id","security_part1")
-    local id, msg = rednet.receive("security_part2",4)
-    if id == nil then
+    loop = 0
+    repeat
+        rednet.broadcast("give_server_id","security_part1")
+        id, msg = rednet.receive("security_part2",0.25)
+        loop = loop+1
+    until id ~= nil or loop == 20
+    if loop == 20 then
         playAudio("timeoutid")
-    else
-        print("Successfully Linked!")
+    elseif id ~= nil then
+        print("Successfully Linked to "..id)
     end
     return id
 end
+
+serverID = getServer()
 
 function audioThread()
     while true do
@@ -200,10 +206,10 @@ function clickThread()
         repeat
             rednet.send(serverID,textutils.serialise({username,req_rank,acc_name}),"check_user")
             print("Checking "..username)
-            id, check_msg = rednet.receive("check_user_result",3)
+            id, check_msg = rednet.receive("check_user_result",2)
             loopcount = loopcount+1
-        until id == serverID or loopcount == 2
-        if loopcount == 2 then
+        until id == serverID or loopcount == 3
+        if loopcount == 3 then
             table.insert(soundPlay,"timeoutcheck")
         end
         if check_msg ~= nil then
@@ -233,12 +239,34 @@ function rebootThread()
     while true do
         repeat
             id, check_msg = rednet.receive("reboot_protocol")
-        until check_msg == "reboot_now"
-        os.sleep(2.5)
-        os.reboot()
+        until check_msg ~= nil
+        if check_msg == "reboot_now" then
+            math.randomseed(os.getComputerID())
+            os.sleep(math.random(1.25,5))
+            os.sleep(math.random(0.25,3))
+            os.reboot()
+        end
+        if check_msg == "update_now" then
+            shell.run("delete "..shell.getRunningProgram())
+            shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/Security%20System/security.lua "..shell.getRunningProgram())
+            math.randomseed(os.getComputerID())
+            os.sleep(math.random(1.25,5))
+            os.sleep(math.random(0.25,3))
+            os.reboot()
+        end
+        if check_msg == "open_all" then
+            math.randomseed(os.getComputerID())
+            os.sleep(math.random(1.25,3))
+            os.sleep(math.random(0.25,2))
+            bundled_bottom = c.combine(bundled_bottom,c.white)
+        end
+        if check_msg == "close_all" then
+            math.randomseed(os.getComputerID())
+            os.sleep(math.random(1.25,3))
+            os.sleep(math.random(0.25,2))
+            bundled_bottom = c.subtract(bundled_bottom,c.white)
+        end
     end
 end
-
-serverID = getServer()
 
 parallel.waitForAll(rsThread,clickThread,audioThread,rebootThread)

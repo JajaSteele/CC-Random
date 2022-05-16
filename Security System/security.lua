@@ -7,6 +7,11 @@ bundled_bottom = 0
 
 soundPlay = {}
 
+speaker = peripheral.find("speaker")
+
+local dfpwm = require("cc.audio.dfpwm")
+local decoder = dfpwm.make_decoder()
+
 function playAudio(t)
     for chunk in io.lines("/audio/"..t, 16 * 1024) do
         local buffer = decoder(chunk)

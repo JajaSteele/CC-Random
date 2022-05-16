@@ -173,6 +173,7 @@ function getServer()
         playAudio("timeoutid")
     else
         print("Successfully Linked!")
+    end
     return id
 end
 

@@ -136,8 +136,10 @@ if fs.exists("/security.cfg") then
     access_config = textutils.unserialise(fileconfig2:read("*a"))
     fileconfig2:close()
 
-    rednet.CHANNEL_BROADCAST = access_config["repeat_chan"]
-    rednet.CHANNEL_REPEAT = access_config["bc_chan"]
+    if (access_config["repeat_chan"] ~= nil and access_config["repeat_chan"] ~= 0) and (access_config["bc_chan"] ~= nil and access_config["bc_chan"] ~= 0) then
+        rednet.CHANNEL_BROADCAST = access_config["repeat_chan"]
+        rednet.CHANNEL_REPEAT = access_config["bc_chan"]
+    end
 else
     print("No Config! Run \""..shell.getRunningProgram().." config\" to add one.")
     return

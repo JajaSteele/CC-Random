@@ -105,6 +105,9 @@ if args[1] == "config" then
     wc("Required Rank: ")
     newConfig["required_rank"] = io.read()
     down()
+    wc("Open Time (seconds): ")
+    newConfig["open_time"] = tonumber(io.read())
+    down()
     wc("Access Name: ")
     newConfig["access_name"] = io.read()
     wc("Execute on Startup? (y/n)")
@@ -217,7 +220,7 @@ function clickThread()
             if tostring(check_msg) == "granted" then
                 table.insert(soundPlay,"accessgranted")
                 bundled_bottom = c.combine(bundled_bottom,c.white)
-                os.sleep(5)
+                os.sleep(access_config["open_time"])
                 bundled_bottom = c.subtract(bundled_bottom,c.white)
             else
                 table.insert(soundPlay,"accessdenied")

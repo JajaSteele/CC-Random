@@ -217,22 +217,27 @@ function clickThread()
         acc_name = access_config["access_name"]
 
         loopcount = 0
-        repeat
-            rednet.send(serverID,textutils.serialise({username,req_rank,acc_name}),"check_user")
-            print("Checking "..username)
-            id, check_msg = rednet.receive("check_user_result",2)
-            loopcount = loopcount+1
-        until id == serverID or loopcount == 3
-        if loopcount == 3 then
-            table.insert(soundPlay,"timeoutcheck")
-        end
-        if check_msg ~= nil then
-            print("Result: "..check_msg)
-            if tostring(check_msg) == "granted" then
-                table.insert(soundPlay,"accessgranted")
-                bundled_bottom = c.combine(bundled_bottom,c.white)
-                os.sleep(access_config["open_time"])
-                bundled_bottom = c.subtract(bundled_bottom,c.white)
+
+        if serverID ~= nil then
+            repeat
+                rednet.send(serverID,textutils.serialise({username,req_rank,acc_name}),"check_user")
+                print("Checking "..username)
+                id, check_msg = rednet.receive("check_user_result",2)
+                loopcount = loopcount+1
+            until id == serverID or loopcount == 3
+            if loopcount == 3 then
+                table.insert(soundPlay,"timeoutcheck")
+            end
+            if check_msg ~= nil then
+                print("Result: "..check_msg)
+                if tostring(check_msg) == "granted" then
+                    table.insert(soundPlay,"accessgranted")
+                    bundled_bottom = c.combine(bundled_bottom,c.white)
+                    os.sleep(access_config["open_time"])
+                    bundled_bottom = c.subtract(bundled_bottom,c.white)
+                else
+                    table.insert(soundPlay,"accessdenied")
+                end
             else
                 table.insert(soundPlay,"accessdenied")
             end

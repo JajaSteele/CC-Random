@@ -125,6 +125,12 @@ if args[1] == "config" then
         newConfig["startup"] = 0
     end
     down()
+    wc("RedN Repeat Chan: ")
+    newConfig["repeat_chan"] = tonumber(io.read())
+    down()
+    wc("RedN Broadcast Chan: ")
+    newConfig["bc_chan"] = tonumber(io.read())
+    down()
     fileconfig1 = io.open("/security_server.cfg","w")
     fileconfig1:write(textutils.serialise(newConfig))
     fileconfig1:close()
@@ -136,6 +142,9 @@ if fs.exists("/security_server.cfg") then
     fileconfig2 = io.open("/security_server.cfg","r")
     serv_config = textutils.unserialise(fileconfig2:read("*a"))
     fileconfig2:close()
+
+    rednet.CHANNEL_BROADCAST = serv_config["repeat_chan"]
+    rednet.CHANNEL_REPEAT = serv_config["bc_chan"]
 else
     print("No Config! Run \""..shell.getRunningProgram().." config\" to add one.")
     return

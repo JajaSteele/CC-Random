@@ -108,6 +108,12 @@ if args[1] == "config" then
     wc("Open Time (seconds): ")
     newConfig["open_time"] = tonumber(io.read())
     down()
+    wc("RedN Repeat Chan: ")
+    newConfig["repeat_chan"] = tonumber(io.read())
+    down()
+    wc("RedN Broadcast Chan: ")
+    newConfig["bc_chan"] = tonumber(io.read())
+    down()
     wc("Access Name: ")
     newConfig["access_name"] = io.read()
     wc("Execute on Startup? (y/n)")
@@ -129,6 +135,9 @@ if fs.exists("/security.cfg") then
     fileconfig2 = io.open("/security.cfg","r")
     access_config = textutils.unserialise(fileconfig2:read("*a"))
     fileconfig2:close()
+
+    rednet.CHANNEL_BROADCAST = access_config["repeat_chan"]
+    rednet.CHANNEL_REPEAT = access_config["bc_chan"]
 else
     print("No Config! Run \""..shell.getRunningProgram().." config\" to add one.")
     return

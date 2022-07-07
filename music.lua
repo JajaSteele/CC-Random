@@ -67,7 +67,8 @@ vanilla_disc_list = {
     "ward",
     "11",
     "wait",
-    "pigstep"
+    "pigstep",
+    "otherside"
 }
 
 vanilla_music_list = {

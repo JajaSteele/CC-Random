@@ -7,7 +7,7 @@ while true do
   local hasStarted = false
   while true do
     local stat, block = turtle.inspect()
-    if (stat == true and block["tags"]["minecraft:logs"] == true) or (hasStarted == false and upCount < 10) then
+    if (stat == true and block["tags"]["minecraft:logs"] == true) or (hasStarted == false and upCount < 2) then
       print(hasStarted,upCount)
       turtle.dig()
       turtle.digUp()

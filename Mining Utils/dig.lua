@@ -101,6 +101,7 @@ function drawUI()
   end
   print("\n")
   print("Distance Mined: "..digLength)
+  print("Fuel Left: "..turtle.getFuelLevel())
 end
 
 play("minecraft:entity.experience_orb.pickup",1,0.75)
@@ -196,6 +197,7 @@ for i1=1, t_l do
   dig()
   turtle.forward()
   optiCount = optiCount+1
+  drawUI()
   if t_bridge == true then
     blockDown, blockInfo = turtle.inspectDown()
     if blockDown then

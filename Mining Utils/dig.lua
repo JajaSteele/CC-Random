@@ -171,7 +171,7 @@ for i1=1, t_l do
     no_fuel = true
     break
   end
-  if optiCount >= t_opti_distance+1 then
+  if t_opti == true and optiCount >= t_opti_distance+1 then
     turn("right")
     for i1=1, t_opti_length do
       dig()

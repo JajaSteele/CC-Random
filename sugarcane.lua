@@ -4,8 +4,13 @@ function mineCane()
   turtle.digDown()
 end
 
+waiting = true
+
 while true do
-  print("Waiting for Sugarcane..")
+  if waiting then
+    print("Waiting for Sugarcane..")
+    waiting = false
+  end
   if turtle.inspect() then
     print("Starting!")
     for i1=1, 16 do
@@ -45,6 +50,7 @@ while true do
       turtle.select(i1)
       turtle.dropDown()
     end
+    waiting = true
   end
   os.sleep(2)
 end

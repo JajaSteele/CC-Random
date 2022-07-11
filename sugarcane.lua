@@ -5,16 +5,20 @@ function mineCane()
 end
 
 while true do
+  print("Waiting for Sugarcane..")
   if turtle.inspect() then
+    print("Starting!")
     for i1=1, 16 do
       mineCane()
     end
+    print("Row n°1 done.")
     turtle.turnRight()
     mineCane()
     turtle.turnRight()
     for i1=1, 15 do
       mineCane()
     end
+    print("Row n°2 done.")
     turtle.turnLeft()
     turtle.forward()
     mineCane()
@@ -22,18 +26,21 @@ while true do
     for i1=1, 15 do
       mineCane()
     end
+    print("Row n°3 done.")
     turtle.turnRight()
     mineCane()
     turtle.turnRight()
     for i1=1, 15 do
       mineCane()
     end
+    print("Row n°4 done.\nReturning to Home.")
     turtle.forward()
     turtle.turnRight()
     for i1=1, 4 do
       turtle.forward()
     end
     turtle.turnRight()
+    print("Dropping All..")
     for i1=1, 16 do
       turtle.select(i1)
       turtle.dropDown()

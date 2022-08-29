@@ -6,6 +6,12 @@ cafeNames = {
     "Kamel"
 }
 
+args = {...}
+if args[1] == "update" then
+    fs.delete(shell.getRunningProgram())
+    shell.run("wget https://github.com/JJS-Laboratories/CC-Random/raw/main/private/cafe/cafe.lua")
+end
+
 function down()
     currx,curry = term.getCursorPos()
     term.setCursorPos(currx-1,curry+1)

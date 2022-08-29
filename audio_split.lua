@@ -42,20 +42,6 @@ else
     fs.makeDir("/audio")
 end
 
-while true do
-    print("Hello! Please enter audio linkbase")
-    linkbase = io.read()
-    print("Segment Count:")
-    segments = tonumber(io.read())
-    print("Segment Length:")
-    length = tonumber(io.read())
-
-    curr_seg = 1
-    play_seg = 0
-
-    parallel.waitForAny(play,timer)
-end
-
 function play()
     while true do
         id = curr_seg-1
@@ -73,7 +59,7 @@ function play()
         end
         if nextSegment == true then
             curr_seg = curr_seg+1
-            nextSegment == false
+            nextSegment = false
         end
     end
 end
@@ -85,4 +71,18 @@ function timer()
         end
         nextSegment = true
     end
+end
+
+while true do
+    print("Hello! Please enter audio linkbase")
+    linkbase = io.read()
+    print("Segment Count:")
+    segments = tonumber(io.read())
+    print("Segment Length:")
+    length = tonumber(io.read())
+
+    curr_seg = 1
+    play_seg = 0
+
+    parallel.waitForAny(play,timer)
 end

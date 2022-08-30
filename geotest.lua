@@ -47,12 +47,20 @@ end
 if not s_chunk then
   print("Range? (0-8)")
   s_range = tonumber(io.read())
-  print("Relative Coords? (y/n)")
+  print("Show Relative Coords? (y/n)")
   s_coords = io.read():lower()
   if s_coords == "y" then
     s_coords = true
   else
     s_coords = false
+  end
+
+  print("Show Distance? (y/n)")
+  s_dist = io.read():lower()
+  if s_dist == "y" then
+    s_dist = true
+  else
+    s_dist = false
   end
 end
 
@@ -79,19 +87,29 @@ if not s_chunk then
         if s_filter and check(name,s_filter_list) then
           print(name)
           if s_coords then
-            sfc(colors.red) w(" x"..v["x"])
-            sfc(colors.lime) w(" y"..v["y"])
-            sfc(colors.blue) w(" z"..v["z"])
+            sfc(colors.red) w(" x: "..v["x"])
+            sfc(colors.lime) w(" y: "..v["y"])
+            sfc(colors.blue) w(" z: "..v["z"])
 
+            sfc(colors.white)
+          end
+          if s_dist then
+            distance = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
+            sfc(colors.yellow) w(" D: "..distance)
             sfc(colors.white)
           end
         elseif not s_filter then
           print(name)
           if s_coords then
-            sfc(colors.red) w(" x"..v["x"])
-            sfc(colors.lime) w(" y"..v["y"])
-            sfc(colors.blue) w(" z"..v["z"])
+            sfc(colors.red) w(" x: "..v["x"])
+            sfc(colors.lime) w(" y: "..v["y"])
+            sfc(colors.blue) w(" z: "..v["z"])
 
+            sfc(colors.white)
+          end
+          if s_dist then
+            distance = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
+            sfc(colors.yellow) w(" D: "..distance)
             sfc(colors.white)
           end
         end

@@ -9,7 +9,7 @@ function split(s, delimiter)
 end
 
 function check(t,l)
-  res = false
+  local res = false
   for k,v in pairs(l) do
     if t == v then
       res = true

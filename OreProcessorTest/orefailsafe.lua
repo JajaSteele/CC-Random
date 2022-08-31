@@ -12,6 +12,14 @@ local function monitorClear()
     monitor.setCursorPos(1,1)
 end
 
+local function split(s, delimiter)
+    result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 local function mprint(t,c)
     oldColor = monitor.getTextColor()
     if c then
@@ -23,11 +31,25 @@ local function mprint(t,c)
     monitor.setCursorPos(1,currY+1)
 end
 
-local function mwrite(x,y,t)
+local function mwrite(x,y,t,clear)
     local currX,currY = monitor.getCursorPos()
     monitor.setCursorPos(x,y)
+    if clear then
+        monitor.clearLine()
+    end
     monitor.write(tostring(t))
     monitor.setCursorPos(currX,currY)
+end
+
+local function check(value,table1)
+  local res = false
+  for k,v in pairs(table1) do
+    if value == v then
+      res = true
+      break
+    end
+  end
+  return res
 end
 
 if fs.exists("/ore.cfg") then
@@ -56,6 +78,34 @@ else
     config = newconfig
 end
 
+local function getTag(match,tags)
+    local res = false
+    for k,v in pairs(tags) do
+        local tag1, n = k:gsub(match,"")
+        if n > 0 then
+            return(tag1)
+        end
+    end
+end
+
+local accepted_ores = {
+    "aluminum",
+    "nickel",
+    "platinum",
+    "silver",
+    "tin",
+    "zinc",
+    "allthemodium",
+    "unobtainium",
+    "vibranium",
+    "copper",
+    "gold",
+    "iron",
+    "lead",
+    "osmium",
+    "uranium"
+}
+
 input_storage = peripheral.wrap(config.input_side)
 output_storage = peripheral.wrap(config.output_side)
 
@@ -72,10 +122,11 @@ while true do
     monitorClear()
     mprint("Scanning..")
     local item_list = {}
+    local transfer_list = {}
     local input_list = input_storage.list()
     local size = input_storage.size()
     for k,v in pairs(input_list) do
-        mwrite(1,2,k.."/"..#input_list)
+        mwrite(1,2,k.."/"..#input_list,true)
         name = v.name
         if item_list[name] ~= nil then
             item_list[name].count = item_list[name].count + v.count
@@ -88,35 +139,66 @@ while true do
 
     for k,v in pairs(item_list) do
         for i1=1, size do
-            mwrite(1,3,i1.."/"..size)
+            mwrite(1,3,i1.."/"..size,true)
             local item = input_storage.getItemDetail(i1)
             if item and item.name == k then
                 if item.tags["forge:raw_materials"] then
                     item_list[k].isRaw = true
+                    item_list[k].isAccepted = check(getTag("forge:raw_ores/",item.tags),accepted_ores)
                 else
                     item_list[k].isRaw = false
+                    item_list[k].isAccepted = check(getTag("forge:ores/",item.tags),accepted_ores)
                 end
                 break
             end
         end
     end
 
-    monitorClear()
+    
+    local wrongRawAmount = false
     for k,v in pairs(item_list) do
+        mwrite(1,2,k.."/"..#input_list,true)
         if v.isRaw and math.fmod(v.count,3) ~= 0 then
-            mprint("!WARN!",colors.red)
-            mprint("Raw Ores must be")
-            mprint("in multiple of 3!")
-            if math.fmod(v.count,3) == 1 then
-                mprint("(Add 2/Remove 1)")
-            elseif math.fmod(v.count,3) == 2 then
-                mprint("(Add 1/Remove 2")
+            wrongRawAmount = true
+            monitorClear()
+            mprint("WARN",colors.red)
+            mprint("Raw Ores not in")
+            mprint("multiple of 3!")
+            mprint("("..split(k,":")[2]..")")
+            item_list[k].count = v.count-math.fmod(v.count,3)
+            os.sleep(1.35)
+            monitorClear()
+            mwrite(1,1,"Scanning..")
+        end
+        transfer_list[k] = 0
+    end
+
+    monitorClear()
+    mwrite(1,1,"Transferring..")
+
+    for i1=1, size do
+        mwrite(1,2,i1.."/"..size,true)
+        local item = input_storage.getItemDetail(i1)
+        if item and item_list[item.name].isAccepted then
+            if item_list[item.name].isRaw then
+                local transferAmount = input_storage.pushItems(peripheral.getName(output_storage),i1,item_list[item.name].count-transfer_list[item.name])
+                transfer_list[item.name] = transfer_list[item.name]+transferAmount
+            else
+                local transferAmount = input_storage.pushItems(peripheral.getName(output_storage),i1,64)
+                transfer_list[item.name] = transfer_list[item.name]+transferAmount
             end
-            os.pullEvent("monitor_touch")
-            break
         end
     end
 
-    print(textutils.serialise(item_list))
+    monitorClear()
+    mprint("Transfer Complete!",colors.lime)
+    mprint("Please wait for")
+    mprint("ores to process!")
+    local fullTransfer = 0
+    for k,v in pairs(transfer_list) do
+        fullTransfer = fullTransfer+v
+    end
+    mprint("Total Items: "..fullTransfer)
+    os.sleep(3)
 end
     

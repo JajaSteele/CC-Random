@@ -15,6 +15,14 @@ local debug_print = false
 
 local width,height = term.getSize()
 
+local info_bar = {
+    {value=0,name="Current: "},
+    {value=1,name="Start At: "},
+}
+local info_active = 1
+
+local timer = 0
+
 function split(s, delimiter)
     local result = {};
     for match in (s..delimiter):gmatch("(.-)"..delimiter) do
@@ -192,6 +200,7 @@ add_button("Set",11,height-3,13,height-3,colors.orange,colors.white,function()
     if newStart ~= "" then
         start_play = tonumber(newStart)
     end
+    info_bar[2].value = start_play
     os.sleep(1)
     fill(15,height-3,width,height-3,colors.yellow)
 end)
@@ -309,6 +318,13 @@ function playlist_view()
             write(1,height-4,"Stopped",colors.orange,colors.black)
         end
 
+        term.setCursorPos(3,1)
+        term.setBackgroundColor(colors.yellow)
+        term.setTextColor(colors.red)
+
+        local v = info_bar[info_active]
+        term.write(v.name..v.value.." ")
+
         term.setCursorPos(old_posx,old_posy)
         term.setTextColor(old_fg)
         term.setBackgroundColor(old_bg)
@@ -321,8 +337,8 @@ function player()
         if isPlaying then
             isSkipping = false
             if startSong then
+                info_bar[1].value = playing
                 debug("starting song")
-                write(3,1,"Playing: "..playing,colors.yellow,colors.red)
                 startSong = false
                 if playlist[playing] then
                     debug("playing song")
@@ -340,4 +356,20 @@ function player()
     end
 end
 
-parallel.waitForAny(player,button_events,playlist_view)
+local function timerstuff()
+    while true do
+        timer = timer+1
+        if timer > 60 then
+            timer = 0
+            if info_active < #info_bar then
+                info_active = info_active+1
+            else
+                info_active = 1
+            end
+        end
+        os.sleep(0)
+    end
+end
+
+
+parallel.waitForAny(player,button_events,playlist_view,timerstuff)

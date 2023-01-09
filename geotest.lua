@@ -60,9 +60,17 @@ if not s_chunk then
   s_coords = io.read():lower()
   if s_coords == "y" then
     s_coords = true
+    print("Show N/S/W/E instead of XYZ? (y/n)")
+    s_coords_compass = io.read():lower()
+    if s_coords_compass == "y" then
+      s_coords_compass = true
+    else
+      s_coords_compass = false
+    end
   else
     s_coords = false
   end
+
 
   print("Show Distance? (y/n)")
   s_dist = io.read():lower()
@@ -83,12 +91,28 @@ else
   s_filter = false
 end
 
+print("Show Name? (y/n)")
+s_showname = io.read():lower()
+if s_showname == "y" then
+  s_showname = true
+else
+  s_showname = false
+end
+
+function sort_dist(a,b)
+  return a.dist < b.dist
+end
+
 
 function main()
   if not s_chunk then
     while true do
       term.setCursorPos(1,1)
       newData = geo.scan(s_range)
+      for k,v in pairs(newData) do
+        newData[k].dist = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
+      end
+      table.sort(newData,sort_dist)
       if s_filter then
         clear(2,my)
         term.setCursorPos(1,2)
@@ -99,17 +123,39 @@ function main()
         for k,v in pairs(newData) do
           name = split(v["name"],":")[2]
           if s_filter and check(name,s_filter_list) then
-            print(name)
+            if s_showname then
+              print(name)
+            else
+              print("")
+            end
             if s_coords then
-              sfc(colors.red) w(" x: "..v["x"])
-              sfc(colors.lime) w(" y: "..v["y"])
-              sfc(colors.blue) w(" z: "..v["z"])
+              if not s_coords_compass then
+                sfc(colors.red) w(" x: "..v["x"])
+                sfc(colors.lime) w(" y: "..v["y"])
+                sfc(colors.blue) w(" z: "..v["z"])
+              else
+                if v.x >= 0 then
+                  sfc(colors.red) w(" E: "..math.abs(v["x"]))
+                else
+                  sfc(colors.red) w(" W: "..math.abs(v["x"]))
+                end
+                if v.y >= 0 then
+                  sfc(colors.lime) w(" UP: "..math.abs(v["y"]))
+                else
+                  sfc(colors.lime) w(" DOWN: "..math.abs(v["y"]))
+                end
+                if v.z >= 0 then
+                  sfc(colors.blue) w(" S: "..math.abs(v["z"]))
+                else
+                  sfc(colors.blue) w(" N: "..math.abs(v["z"]))
+                end
+              end
 
               sfc(colors.white)
             end
             if s_dist then
-              distance = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
-              sfc(colors.yellow) w(" D: "..distance)
+              
+              sfc(colors.yellow) w(" D: "..v.dist)
               sfc(colors.white)
             end
           elseif not s_filter then
@@ -122,8 +168,8 @@ function main()
               sfc(colors.white)
             end
             if s_dist then
-              distance = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
-              sfc(colors.yellow) w(" D: "..distance)
+
+              sfc(colors.yellow) w(" D: "..v.dist)
               sfc(colors.white)
             end
           end

@@ -7,6 +7,7 @@ local playlist = {}
 
 local isPlaying = false
 local playing = 0
+local start_play = 1
 local isSkipping = false
 local startSong = false
 
@@ -35,7 +36,7 @@ end
 local function playAudio(link)
     request = http.get(link,nil,true)
     for i1=1, request.readAll():len()/(16*1024) do
-        request.seek("set",(16*1024)*i1)
+        request.seek("set",(16*1024)*(i1-1))
         local chunk = request.read(16*1024)
         if chunk == nil then break end
         local buffer = decoder(chunk)
@@ -168,7 +169,7 @@ add_button("X",1,1,1,1,colors.red,colors.yellow,function()
 end)
 
 add_button("Play",1,height-3,4,height-3,colors.lime,colors.white,function()
-    playing = 1
+    playing = start_play
     isPlaying = true
     startSong = true
 end)
@@ -179,15 +180,20 @@ add_button("Stop",6,height-3,9,height-3,colors.red,colors.white,function()
     playing = 0
 end)
 
-add_button("Skip",11,height-3,14,height-3,colors.orange,colors.white,function()
-    isPlaying = true
-    isSkipping = true
+add_button("Set",11,height-3,13,height-3,colors.orange,colors.white,function()
+    isPlaying = false
     startSong = false
-    playing = playing+1
-    repeat
-        os.sleep(0)
-    until not isSkipping
-    startSong = true
+    term.setCursorPos(15,height-3)
+    term.setTextColor(colors.black)
+    term.setBackgroundColor(colors.yellow)
+    local newStart = read()
+    newStart = newStart:gsub("%D","")
+    write(15,height-3,"Set: "..newStart.."     ",colors.yellow,colors.green)
+    if newStart ~= "" then
+        start_play = tonumber(newStart)
+    end
+    os.sleep(1)
+    fill(15,height-3,width,height-3,colors.yellow)
 end)
 
 
@@ -226,8 +232,8 @@ add_button("Exp",9,height-1,11,height-1,colors.orange,colors.white,function()
 end)
 
 add_button("Imp",13,height-1,15,height-1,colors.orange,colors.white,function()
-    local import_file = io.open("/exported_playlist.txt","w")
-    playlist = textutils.unserialise(import_file:read("*a"))
+    local import_file = io.open("/exported_playlist.txt","r")
+    playlist = textutils.unserialise(import_file:read("*a") or "{}")
     import_file:close()
     fill(1,height,width,height,colors.yellow)
     write(1,height,"Imported the Playlist",colors.yellow,colors.green)
@@ -240,7 +246,8 @@ function button_events()
         local event, button, x, y = os.pullEvent("mouse_click")
         for k,v in pairs(buttons) do
             if x >= v.x and x <= v.x1 and y >= v.y and y <= v.y1 then
-                pcall(v.func)
+                local stat, err = pcall(v.func)
+                if not stat then error(err) end
             end
         end
         coroutine.yield()
@@ -269,11 +276,13 @@ function playlist_view()
                 local text
                 if i1 >= 10 then
                     text = split(v, "/")
-                    text1 = text[#text]:sub(1,20)
+                    text1 = text[#text]:gsub("%%20"," ")
+                    text1 = text1:sub(1,20)
                     term.write(i1..". "..text1..string.rep(" ",20-text1:len()))
                 else
                     text = split(v, "/")
-                    text1 = text[#text]:sub(1,21)
+                    text1 = text[#text]:gsub("%%20"," ")
+                    text1 = text1:sub(1,21)
                     term.write(i1..". "..text1..string.rep(" ",21-text1:len()))
                 end
             else
@@ -313,7 +322,7 @@ function player()
             isSkipping = false
             if startSong then
                 debug("starting song")
-                write(1,1,"Curr: "..playing,colors.yellow,colors.red)
+                write(3,1,"Playing: "..playing,colors.yellow,colors.red)
                 startSong = false
                 if playlist[playing] then
                     debug("playing song")

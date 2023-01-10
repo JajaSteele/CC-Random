@@ -109,10 +109,12 @@ function main()
     while true do
       term.setCursorPos(1,1)
       newData = geo.scan(s_range)
-      for k,v in pairs(newData) do
-        newData[k].dist = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
+      if newData then
+        for k,v in pairs(newData) do
+          newData[k].dist = math.abs(v["x"])+math.abs(v["y"]),math.abs(v["z"])
+        end
+        table.sort(newData,sort_dist)
       end
-      table.sort(newData,sort_dist)
       if s_filter then
         clear(2,my)
         term.setCursorPos(1,2)

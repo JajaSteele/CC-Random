@@ -20,8 +20,7 @@ end
 
 local function playAudio(link)
     local request = http.get(link,nil,true)
-    for i1=1, request.readAll():len()/(16*1024) do
-        request.seek("set",(16*1024)*(i1-1))
+    while true do
         local chunk = request.read(16*1024)
         if chunk == nil then break end
         local buffer = decoder(chunk)
@@ -41,6 +40,7 @@ while true do
     local new_signal = redstone.getAnalogInput(config.side)
     if new_signal > 0 and old_signal == 0 then
         print("Playing Audio!")
+        speaker.stop()
         playAudio(config.url)
     end
 end

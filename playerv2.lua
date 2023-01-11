@@ -43,8 +43,7 @@ end
 
 local function playAudio(link)
     request = http.get(link,nil,true)
-    for i1=1, request.readAll():len()/(16*1024) do
-        request.seek("set",(16*1024)*(i1-1))
+    while true do
         local chunk = request.read(16*1024)
         if chunk == nil then break end
         local buffer = decoder(chunk)

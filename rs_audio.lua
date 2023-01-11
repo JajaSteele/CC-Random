@@ -20,6 +20,7 @@ end
 
 local function playAudio(link)
     request = http.get(link,nil,true)
+    print(request)
     for i1=1, request.readAll():len()/(16*1024) do
         request.seek("set",(16*1024)*(i1-1))
         local chunk = request.read(16*1024)
@@ -39,11 +40,11 @@ local old_signal = 0
 
 while true do
     old_signal = redstone.getAnalogInput(config.side)
-    local os.pullEvent("redstone")
+    os.pullEvent("redstone")
     local new_signal = redstone.getAnalogInput(config.side)
     if new_signal > 0 and old_signal == 0 then
         print("Playing Audio!")
-        playAudio(config.url)
+        playAudio("https://raw.githubusercontent.com/JJS-Laboratories/Cassettes/main/TTS/TTS-Departure10s.dfpwm")
     end
 end
     

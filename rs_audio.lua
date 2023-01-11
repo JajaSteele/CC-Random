@@ -1,5 +1,5 @@
 local dfpwm = require("cc.audio.dfpwm")
-speaker = peripheral.find("speaker")
+local speaker = peripheral.find("speaker")
 local decoder = dfpwm.make_decoder()
 local config = {}
 
@@ -19,8 +19,7 @@ else
 end
 
 local function playAudio(link)
-    request = http.get(link,nil,true)
-    print(request)
+    local request = http.get(link,nil,true)
     for i1=1, request.readAll():len()/(16*1024) do
         request.seek("set",(16*1024)*(i1-1))
         local chunk = request.read(16*1024)
@@ -44,7 +43,7 @@ while true do
     local new_signal = redstone.getAnalogInput(config.side)
     if new_signal > 0 and old_signal == 0 then
         print("Playing Audio!")
-        playAudio("https://raw.githubusercontent.com/JJS-Laboratories/Cassettes/main/TTS/TTS-Departure10s.dfpwm")
+        playAudio(config.url)
     end
 end
     

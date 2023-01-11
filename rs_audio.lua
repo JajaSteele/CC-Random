@@ -26,9 +26,7 @@ local function playAudio(link)
         if chunk == nil then break end
         local buffer = decoder(chunk)
 
-        if not isPlaying or isSkipping then speaker.stop() request.close() debug("loop1 exit") return end
-
-        while not speaker.playAudio(buffer) and isPlaying and not isSkipping do
+        while not speaker.playAudio(buffer) do
             os.pullEvent("speaker_audio_empty")
         end
     end

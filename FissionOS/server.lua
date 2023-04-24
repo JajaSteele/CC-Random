@@ -42,8 +42,8 @@ config = textutils.unserialise(configfile:read("*a"))
 configfile:close()
 
 local loggingLevels = {
-    "§7[§6ERROR§7]§c",
-    "§7[§eWARN§7]§f",
+    "§7[§4ERROR§7]§c",
+    "§7[§6WARN§7]§e",
     "§7[§fINFO§7]§f",
     "§7[§aFORCE-INFO§7]§f"
 }
@@ -55,33 +55,88 @@ local loggingLevels_file = {
     "[FORCE-INFO]"
 }
 
-local logFileName = "FissionOS_Server-"..os.date("%d-%m-%Y_%H.%M.%S")..".log"
+local logFileName = os.date("%d-%m-%Y_%H.%M.%S")..".log"
 
-local function chatLog(txt,level)
-    local chatBox = peripheral.find("chatBox")
-    if (level <= config.chatLoggingLevel or level == 4) and chatBox then
-        if config.isGlobal then
-            chatBox.sendMessage(loggingLevels[level].." "..txt, "FissionOS | "..config.name)
-        else
-            chatBox.sendMessageToPlayer(loggingLevels[level].." "..txt, config.owner, "FissionOS | "..config.name)
-        end
+local function getDate(mode)
+    if mode == "shortdate" then
+        return os.date("%d/%m %H.%M.%S")
+    elseif mode == "shorttime" then
+        return os.date("%H.%M.%S")
     end
 end
 
-local function fileLog(text,level)
-    local chatBox = peripheral.find("chatBox")
-    if (level <= config.chatLoggingLevel or level == 4) then
-        local logFileRead = io.open("/logs/"..logFileName,"r")
-        local txt = logFileRead:read("*a").."\n"..loggingLevels_file[level].." "..text
-        logFileRead:close()
+-- local function chatLog(txt,level)
+--     local chatBox = peripheral.find("chatBox")
+--     if (level <= config.chatLoggingLevel or level == 4) and chatBox then
+--         if config.isGlobal then
+--             chatBox.sendMessage("["..getDate("shorttime").."] "..loggingLevels[level]..txt, "FissionOS | "..config.name)
+--         else
+--             chatBox.sendMessageToPlayer("["..getDate("shorttime").."] "..loggingLevels[level]..txt, config.owner, "FissionOS | "..config.name)
+--         end
+--     end
+-- end
+-- 
+-- local function fileLog(text,level)
+--     if not fs.isDir("/FissionOS_logs") then
+--         fs.makeDir("/FissionOS_logs")
+--     end
+--     if (level <= config.chatLoggingLevel or level == 4) then
+--         local logFileRead = io.open("/FissionOS_logs/"..logFileName,"r")
+--         local txt
+--         if logFileRead then
+--             txt = logFileRead:read("*a").."\n".."["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text
+--             logFileRead:close()
+--         else
+--             txt = "["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text
+--         end
+-- 
+--         local logFile = io.open("/FissionOS_logs/"..logFileName,"w")
+--         logFile:write(txt)
+--         logFile:close()
+--     end
+-- end
 
-        local logFile = io.open("/logs/"..logFileName,"w")
+local chatQueue = {}
+
+local function fullLog(text,level)
+    if not fs.isDir("/FissionOS_logs") then
+        fs.makeDir("/FissionOS_logs")
+    end
+    if (level <= config.chatLoggingLevel or level == 4) then
+        local logFileRead = io.open("/FissionOS_logs/"..logFileName,"r")
+        local txt
+        if logFileRead then
+            txt = logFileRead:read("*a").."\n".."["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text
+            logFileRead:close()
+        else
+            txt = "["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text
+        end
+
+        local logFile = io.open("/FissionOS_logs/"..logFileName,"w")
         logFile:write(txt)
         logFile:close()
     end
+    local chatBox = peripheral.find("chatBox")
+    if (level <= config.chatLoggingLevel or level == 4) and chatBox then
+        local new_id = math.random(1000000,9999999)
+        if config.isGlobal then
+            chatQueue[tostring(new_id)] = {
+                text = "["..getDate("shorttime").."] "..loggingLevels[level].." "..text, 
+                name = "FissionOS | "..config.name,
+                isglobal = true,
+                target = ""
+            }
+        else
+            chatQueue[tostring(new_id)] = {
+                text = "["..getDate("shorttime").."] "..loggingLevels[level]..text, 
+                name = "FissionOS | "..config.name,
+                isglobal = false,
+                target = config.owner
+            }
+        end
+    end
+    print("["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text)
 end
-    
-
 
 modem.closeAll()
 os.sleep(0.1)
@@ -89,16 +144,13 @@ rednet.open(peripheral.getName(modem))
 
 rednet.host("FissionOS_Server",config.name)
 
-print("FissionOS Starting.. Computer ID: "..os.computerID())
-chatLog("Server is now online",4)
-fileLog("Server is now online",4)
+fullLog("Server is now online",4)
+os.sleep(1.1)
 
 local function newClient()
     while true do
         local id, msg, protocol = rednet.receive("requestNewClient")
-        print("Client ["..id.."] connected.")
-        chatLog("Client ["..id.."] connected.",3)
-        fileLog("Client ["..id.."] connected.",3)
+        fullLog("Client ["..id.."] connected.",3)
         local new_id = math.random(1000000,9999999)
         activeClients[tostring(new_id)] = {
             id=id
@@ -145,9 +197,7 @@ local function pingClient()
             local id, msg, protocol = rednet.receive("pingClient_Confirm",1)
             if id == nil then
                 activeClients[k] = nil
-                print("Client ["..v.id.."] disconnected.")
-                chatLog("Client ["..v.id.."] disconnected.",3)
-                fileLog("Client ["..v.id.."] disconnected.",3)
+                fullLog("Client ["..v.id.."] disconnected.",3)
             end
         end
         os.sleep(5)
@@ -158,7 +208,7 @@ local function nameRequest()
     while true do
         local id, msg, protocol = rednet.receive("serverNameRequest")
         rednet.send(id, config.name, "serverNameReply")
-        fileLog("Computer ["..id.."] requested server name.",3)
+        fullLog("Computer ["..id.."] requested server name.",3)
     end
 end
 
@@ -173,51 +223,72 @@ local function reactorControl()
     while true do
         local id, msg, protocol = rednet.receive()
         if protocol == "reactorActivate" then
-            if msg == "on" then
+            if msg == "on" and not reactor.getStatus() then
                 reactor.activate()
-            elseif msg == "off" then
+            elseif msg == "off" and reactor.getStatus() then
                 reactor.scram()
             end
-            print("Reactor Status set to "..msg)
-            chatLog("Reactor status changed to §l"..msg,2)
-            fileLog("Reactor status changed to ["..msg.."]",2)
+            fullLog("Reactor status changed to ["..msg.."]",2)
         end
     end
 end
 
 local function reactorChecks()
+    local fuel_warn = false
     while true do
-        if reactor.getTemperature() > 1200 then
-            reactor.scram()
-            print("High temperature detected! Shutting down reactor")
-            chatLog("High temperature detected! Shutting down reactor",1)
-            fileLog("High temperature detected! Shutting down reactor",1)
+        if reactor.getStatus() then
+            if reactor.getTemperature() > 1200 then
+                reactor.scram()
+                fullLog("High temperature detected! SCRAM",1)
+            end
+            if reactor.getWaste().amount >= reactor.getWasteCapacity() then
+                reactor.scram()
+                fullLog("Waste overfilling detected! SCRAM",1)
+            end
+            if reactor.getDamagePercent() > 90 then
+                reactor.scram()
+                fullLog("Critical Damages! SCRAM",1)
+            end
+            if reactor.getFuel().amount < reactor.getFuelCapacity()*0.1 and reactor.getFuel().amount > 10 then
+                if not fuel_warn then
+                    fuel_warn = true
+                    fullLog("Low Fuel",2)
+                end
+            else
+                fuel_warn = false
+            end
+            if reactor.getFuel().amount <= 10 then
+                reactor.scram()
+                fullLog("No Fuel!",1)
+            end
         end
-        if reactor.getWaste().amount >= reactor.getWasteCapacity() then
-            reactor.scram()
-            print("Waste overfilling detected! Shutting down reactor")
-            chatLog("Waste overfilling detected! Shutting down reactor",1)
-            fileLog("Waste overfilling detected! Shutting down reactor",1)
+        coroutine.yield()
+    end
+end
+
+local function chatManager()
+    while true do
+        local to_delete = {}
+        local chatBox = peripheral.find("chatBox")
+        for k,v in pairs(chatQueue) do
+            if v.isglobal then
+                if chatBox.sendMessage(v.text, v.name) then
+                    to_delete[#to_delete+1] = k
+                end
+            else
+                if chatBox.sendMessageToPlayer(v.text, v.target, v.name) then
+                    to_delete[#to_delete+1] = k
+                end
+            end
+            os.sleep(1.1)
         end
-        if reactor.getDamagePercent() > 90 then
-            reactor.scram()
-            print("Critical Damages! Shutting down reactor")
-            chatLog("Critical Damages! Shutting down reactor",1)
-            fileLog("Critical Damages! Shutting down reactor",1)
-        end
-        if reactor.getFuel().amount < reactor.getFuelCapacity()*0.1 then
-            print("Low Fuel")
-            chatLog("Low Fuel",2)
-            fileLog("Low Fuel",2)
-        end
-        if reactor.getFuel().amount <= 10 then
-            print("No Fuel!")
-            chatLog("No Fuel!",1)
-            fileLog("No Fuel!",1)
+        for k,v in pairs(to_delete) do
+            chatQueue[v] = nil
+            to_delete[k] = nil
         end
         coroutine.yield()
     end
 end
 
 
-parallel.waitForAny(newClient,sendReactorData,pingClient,pingServer,reactorControl,nameRequest,reactorChecks)
+parallel.waitForAny(newClient,sendReactorData,pingClient,pingServer,reactorControl,nameRequest,reactorChecks,chatManager)

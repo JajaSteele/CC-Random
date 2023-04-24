@@ -128,7 +128,7 @@ local function fullLog(text,level)
             }
         else
             chatQueue[tostring(new_id)] = {
-                text = "["..getDate("shorttime").."] "..loggingLevels[level]..text, 
+                text = "["..getDate("shorttime").."] "..loggingLevels[level].." "..text, 
                 name = "FissionOS | "..config.name,
                 isglobal = false,
                 target = config.owner

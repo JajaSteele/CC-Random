@@ -91,6 +91,8 @@ if res == 1 then
     print("Y: "..string.format("%.2f", y2-y1))
     term.setTextColor(colors.blue)
     print("Z: "..string.format("%.2f", z2-z1))
+    term.setTextColor(colors.white)
+    print("All: "..string.format("%.2f", math.abs(x2-x1)+math.abs(y2-y1)+math.abs(z2-z1)))
 elseif res == 2 then
     local exit_loop = false
     repeat
@@ -125,6 +127,8 @@ elseif res == 2 then
         print("Y: "..string.format("%.2f", y2-y1))
         term.setTextColor(colors.blue)
         print("Z: "..string.format("%.2f", z2-z1))
+        term.setTextColor(colors.white)
+        print("All: "..string.format("%.2f", math.abs(x2-x1)+math.abs(y2-y1)+math.abs(z2-z1)))
 
         print("\n\nPress \"Backspace\" to stop.")
         os.startTimer(0.1)

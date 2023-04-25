@@ -142,11 +142,11 @@ local function drawData(data)
     end
 
     local temp_color = colors.lime
-    if data.damage >= 1000 then
+    if data.temp >= 1000 then
         temp_color = colors.yellow
-        if data.damage >= 1350 then
+        if data.temp >= 1350 then
             temp_color = colors.orange
-            if data.damage >= 1500 then
+            if data.temp >= 1500 then
                 temp_color = colors.red
             end
         end
@@ -195,6 +195,9 @@ local function drawData(data)
     term.write("Burn Rate: "..data.burn_rate.." mB/t")
     term.setCursorPos(1,17)
     term.write("Boiling Rate: "..data.heating_rate.." mB/t")
+    term.setCursorPos(1,18)
+    term.write("Rads: ")
+    writeColor(data.rads, colors.green)
 end
 
 local function clickHandler()

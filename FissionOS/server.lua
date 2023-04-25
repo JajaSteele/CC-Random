@@ -183,6 +183,13 @@ local function sendReactorData()
             damage = reactor.getDamagePercent()
 
         }
+        local envDec = peripheral.find("environmentDetector")
+        if envDec then
+            local rads = envDec.getRadiation()
+            content.rads = string.format("%.2f", rads.radiation).." "..rads.unit
+        else
+            content.rads = "Unknown"
+        end
         for k,v in pairs(activeClients) do
             rednet.send(v.id, textutils.serialise(content), "dataReceive")
         end

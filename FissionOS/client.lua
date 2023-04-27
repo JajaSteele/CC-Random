@@ -12,6 +12,8 @@ local args = {...}
 
 local config = {}
 
+local oldterm
+
 if not fs.exists("/FissionOS_clientconfig.txt") then
     local file = io.open("/FissionOS_clientconfig.txt","w")
     file:write(textutils.serialise({saved_id = -1}))
@@ -22,11 +24,21 @@ local configfile = io.open("/FissionOS_clientconfig.txt","r")
 config = textutils.unserialise(configfile:read("*a"))
 configfile:close()
 
+local touch_event = "mouse_click"
+
+if config.monitorstart then
+    oldterm = term
+    term = peripheral.find("monitor")
+    touch_event = "monitor_touch"
+else
+    if peripheral.find("monitor") then peripheral.find("monitor"):clear() end
+end
+
 rednet.open(peripheral.getName(modem))
 
 local serverID = -1
 
-if config.saved_id >= 0 then
+if config.saved_id >= 0 and args[1] ~= "nofav" then 
     serverID = config.saved_id
 else
     term.clear()
@@ -229,7 +241,7 @@ end
 
 local function clickHandler()
     while true do
-        local event, button, x, y = os.pullEvent("mouse_click")
+        local event, button, x, y = os.pullEvent(touch_event)
 
         local sizeX,sizeY = term.getSize()
         if y == 3 then
@@ -283,6 +295,35 @@ local function keyHandler()
                 startupfile:close()
                 term.setCursorPos(1,sizeY)
                 writeColor("Auto Startup enabled", colors.orange)
+            end
+        elseif key == keys.m then
+            if not config.monitorstart and peripheral.find("monitor") then
+                config.monitorstart = true
+                local configfile = io.open("/FissionOS_clientconfig.txt","w")
+                configfile:write(textutils.serialise(config))
+                configfile:close()
+
+                term.clear()
+
+                term.setCursorPos(1,sizeY)
+                writeColor("Monitor Mode enabled", colors.orange)
+                oldterm = term
+                term = peripheral.find("monitor")
+                touch_event = "monitor_touch"
+                os.queueEvent("mouse_click", 1, 1, 1)
+            else
+                config.monitorstart = false
+                local configfile = io.open("/FissionOS_clientconfig.txt","w")
+                configfile:write(textutils.serialise(config))
+                configfile:close()
+
+                if peripheral.find("monitor") then peripheral.find("monitor"):clear() end
+
+                term.setCursorPos(1,sizeY)
+                writeColor("Monitor Mode disabled", colors.orange)
+                term = oldterm
+                touch_event = "mouse_click"
+                os.queueEvent("monitor_touch", "", 1, 1)
             end
         end
     end

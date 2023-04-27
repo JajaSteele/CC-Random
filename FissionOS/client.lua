@@ -8,40 +8,60 @@ for k,v in pairs(modems) do
     end
 end
 
+local args = {...}
+
+local config = {}
+
+if not fs.exists("/FissionOS_clientconfig.txt") then
+    local file = io.open("/FissionOS_clientconfig.txt","w")
+    file:write(textutils.serialise({saved_id = -1}))
+    file:close()
+end
+
+local configfile = io.open("/FissionOS_clientconfig.txt","r")
+config = textutils.unserialise(configfile:read("*a"))
+configfile:close()
+
 rednet.open(peripheral.getName(modem))
 
-term.clear()
-term.setCursorPos(1,1)
+local serverID = -1
 
-term.write("Searching servers..")
+if config.saved_id >= 0 then
+    serverID = config.saved_id
+else
+    term.clear()
+    term.setCursorPos(1,1)
 
-local reac_list = {rednet.lookup("FissionOS_Server")}
-for k,v in ipairs(reac_list) do
-    term.setCursorPos(1,2)
-    term.write("Checking server "..k)
-    if v then
-        rednet.send(v, "", "serverNameRequest")
-        local id, msg, protocol = rednet.receive("serverNameReply",1)
-        reac_list[k] = {
-            id=v,
-            name=msg or "UNKNOWN"
-        }
+    term.write("Searching servers..")
+
+    local reac_list = {rednet.lookup("FissionOS_Server")}
+    for k,v in ipairs(reac_list) do
+        term.setCursorPos(1,2)
+        term.write("Checking server "..k)
+        if v then
+            rednet.send(v, "", "serverNameRequest")
+            local id, msg, protocol = rednet.receive("serverNameReply",1)
+            reac_list[k] = {
+                id=v,
+                name=msg or "UNKNOWN"
+            }
+        end
     end
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Reactor List:")
+
+    for k,v in ipairs(reac_list) do
+        print("["..v.id.."] - "..v.name)
+        os.sleep(0.05)
+    end
+
+    print("\nSelect ID: ")
+
+    serverID = tonumber(read())
 end
-
-term.clear()
-term.setCursorPos(1,1)
-
-print("Reactor List:")
-
-for k,v in ipairs(reac_list) do
-    print("["..v.id.."] - "..v.name)
-    os.sleep(0.05)
-end
-
-print("\nSelect ID: ")
-
-local serverID = tonumber(read())
 
 rednet.send(serverID,"","requestNewClient")
 
@@ -60,6 +80,13 @@ local last_sent_data = {}
 
 local exit_reason = ""
 
+local function clearLine(y)
+    local oldX,oldY = term.getCursorPos()
+    local sizeX,sizeY = term.getSize()
+    term.setCursorPos(1, y)
+    term.write(string.rep(" ", sizeX))
+    term.setCursorPos(oldX,oldY)
+end
 local function writeColor(t,f,b)
     local oldF = term.getTextColor()
     local oldB = term.getBackgroundColor()
@@ -218,6 +245,49 @@ local function clickHandler()
     end
 end
 
+local function keyHandler()
+    while true do
+        local event, key, held = os.pullEvent("key")
+
+        local sizeX,sizeY = term.getSize()
+        if key == keys.f then
+            if config.saved_id >= 0 then
+                config.saved_id = -1
+                term.setCursorPos(1,sizeY)
+                writeColor("Removed Favorite", colors.orange)
+            else
+                config.saved_id = serverID
+                local configfile = io.open("/FissionOS_clientconfig.txt","w")
+                configfile:write(textutils.serialise(config))
+                configfile:close()
+                term.setCursorPos(1,sizeY)
+                writeColor("Set Favorite to "..serverID, colors.orange)
+            end
+        elseif key == keys.r then
+            if config.autostart then
+                config.autostart = false
+                local configfile = io.open("/FissionOS_clientconfig.txt","w")
+                configfile:write(textutils.serialise(config))
+                configfile:close()
+
+                fs.delete("/startup")
+                term.setCursorPos(1,sizeY)
+                writeColor("Auto Startup removed", colors.orange)
+            else
+                config.autostart = true
+                local configfile = io.open("/FissionOS_clientconfig.txt","w")
+                configfile:write(textutils.serialise(config))
+                configfile:close()
+                local startupfile = io.open("/startup","a")
+                startupfile:write([[ shell.execute("/client.lua")]])
+                startupfile:close()
+                term.setCursorPos(1,sizeY)
+                writeColor("Auto Startup enabled", colors.orange)
+            end
+        end
+    end
+end
+
 
 local function receiveData()
     while true do
@@ -249,7 +319,7 @@ local function pingServer()
     end
 end
 
-parallel.waitForAny(receiveData,pingClient,pingServer,clickHandler)
+parallel.waitForAny(receiveData, pingClient, pingServer, clickHandler, keyHandler)
 
 term.clear()
 term.setCursorPos(1,1)

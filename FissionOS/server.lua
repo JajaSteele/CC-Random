@@ -20,7 +20,18 @@ if args[1] == "config" or not fs.exists("/FissionOS_serverconfig.txt") then
     print("Welcome to the configuration wizard!")
     print("Reactor Name?")
     config.name = read()
-    print("Global Chat? (Y/N)")
+    print("Startup with computer? (y/n)")
+    config.autostart = read():lower()
+    if config.autostart == "y" then
+        config.autostart = true
+        local startupfile = io.open("/startup","a")
+        startupfile:write([[ shell.execute("/server.lua")]])
+        startupfile:close()
+    else
+        config.autostart = false
+        fs.delete("/startup")
+    end
+    print("Global Chat? (y/n)")
     config.isGlobal = read():lower()
     if config.isGlobal == "y" then
         config.isGlobal = true

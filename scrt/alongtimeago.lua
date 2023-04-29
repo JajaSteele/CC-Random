@@ -16,8 +16,8 @@ term.clear()
 
 for line in string.gmatch( filmText, "([^\n]*)\n") do
 	length = length+1
-	monitor.setCursorPos(1, sizeY/2)
-	print("Loading Line "..length)
+	term.setCursorPos(1, sizeY/2)
+	term.write("Loading Line "..length)
 end
 
 clearLine(sizeY/2)

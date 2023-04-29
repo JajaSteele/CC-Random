@@ -18,6 +18,16 @@ for line in string.gmatch( filmText, "([^\n]*)\n") do
 	print("Loading Line "..length)
 end
 
+local function clamp(v,min,max)
+    if v > max then
+        return max
+    elseif v < min then
+        return min
+    else
+        return v
+    end
+end
+
 local function iterator()
 	local w,h = monitor.getSize()
 	return coroutine.wrap( function()
@@ -26,7 +36,7 @@ local function iterator()
 			coroutine.yield(line)
 			clearLine(h)
 			monitor.setCursorPos(2, h)
-			monitor.write("["..string.rep("#", (w-2)*(count/length)))
+			monitor.write("["..string.rep("-", clamp(((w-2)*(count/length))-1, 0, 1))..string.char(0x07))
 			monitor.setCursorPos(w, h)
 			monitor.write("]")
 		end

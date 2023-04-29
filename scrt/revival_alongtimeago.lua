@@ -1,4 +1,4 @@
-local file = http.get("https://raw.githubusercontent.com/JJS-Laboratories/CC-Random/a21ab5612fbea8ab13e5a3080651121896949cfb/scrt/alongtimeago.lua")
+local file = http.get("https://raw.githubusercontent.com/JJS-Laboratories/CC-Random/d2ae612bc4fc1cc0c8790d75784ffea436c81914/scrt/alongtimeago.lua")
 local cb = peripheral.find("chatBox")
 
 local filmText = [[

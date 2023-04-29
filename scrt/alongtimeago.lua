@@ -9,14 +9,18 @@ local function clearLine(y)
     term.setCursorPos(oldX,oldY)
 end
 
+local sizeX,sizeY = term.getSize()
 local count = 0
 local length = 0
 term.clear()
 
 for line in string.gmatch( filmText, "([^\n]*)\n") do
 	length = length+1
+	monitor.setCursorPos(1, sizeY/2)
 	print("Loading Line "..length)
 end
+
+clearLine(sizeY/2)
 
 local function clamp(v,min,max)
     if v > max then
@@ -35,7 +39,11 @@ local function iterator()
 			count = count+1
 			coroutine.yield(line)
 			clearLine(h)
-			monitor.setCursorPos(2, h)
+			monitor.setCursorPos(1, h-2)
+			monitor.write("("..string.format("%.3f", (count/length)*100)..")")
+			monitor.setCursorPos(1, h-1)
+			monitor.write("Frame "..count.."/"..length)
+			monitor.setCursorPos(1, h)
 			monitor.write("["..string.rep("-", clamp(((w-2)*(count/length))-1, 0, 1))..string.char(0x07))
 			monitor.setCursorPos(w, h)
 			monitor.write("]")

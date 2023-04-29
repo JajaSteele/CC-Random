@@ -15,7 +15,6 @@ term.clear()
 
 for line in string.gmatch( filmText, "([^\n]*)\n") do
 	length = length+1
-	print("Loading Line "..length)
 end
 
 local function iterator()

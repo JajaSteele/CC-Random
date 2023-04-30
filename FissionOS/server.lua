@@ -24,7 +24,7 @@ if args[1] == "config" or not fs.exists("/FissionOS_serverconfig.txt") then
     config.autostart = read():lower()
     if config.autostart == "y" then
         config.autostart = true
-        local startupfile = io.open("/startup","a")
+        local startupfile = io.open("/startup","w")
         startupfile:write([[ shell.execute("/server.lua")]])
         startupfile:close()
     else
@@ -43,6 +43,18 @@ if args[1] == "config" or not fs.exists("/FissionOS_serverconfig.txt") then
     print("Chat Logging Level? (1-3)")
     config.chatLoggingLevel = tonumber(read())
 
+    print("Discord Integration? (y/n)")
+    config.isDiscord = read():lower()
+    if config.isDiscord == "y" then
+        config.isDiscord = true
+        print("Discord Logging Level?")
+        config.discordLevel = tonumber(read())
+        print("Discord Webhook URL")
+        config.discordWebhook = read()
+    else
+        config.isDiscord = false
+    end
+
     local configfile = io.open("/FissionOS_serverconfig.txt","w")
     configfile:write(textutils.serialise(config))
     configfile:close()
@@ -51,6 +63,29 @@ end
 local configfile = io.open("/FissionOS_serverconfig.txt","r")
 config = textutils.unserialise(configfile:read("*a"))
 configfile:close()
+
+local discord
+local discord_hook
+local success
+local use_discord = false
+
+if config.isDiscord then
+    if not fs.exists("/DiscordHook.lua") then
+        local file = http.get("https://raw.githubusercontent.com/Wendelstein7/DiscordHook-CC/master/DiscordHook.lua")
+        local file2 = io.open("/DiscordHook.lua", "w")
+        file2:write(file.readAll())
+        file2:close()
+        file.close()
+    end
+    discord = require("DiscordHook")
+    success, discord_hook = discord.createWebhook(config.discordWebhook)
+    if not success then
+        print("Discord failed to connect!")
+        use_discord = false
+    else
+        use_discord = true
+    end
+end
 
 local loggingLevels = {
     "§7[§4ERROR§7]§c",
@@ -64,6 +99,13 @@ local loggingLevels_file = {
     "[WARN]",
     "[INFO]",
     "[FORCE-INFO]"
+}
+
+local loggingLevels_emojis = {
+    ":octagonal_sign:",
+    ":warning:",
+    ":information_source:",
+    ":mega:"
 }
 
 local logFileName = os.date("%d-%m-%Y_%H.%M.%S")..".log"
@@ -146,6 +188,10 @@ local function fullLog(text,level)
             }
         end
     end
+    if config.isDiscord and (level <= config.discordLevel or level == 4) and use_discord then
+        discord_hook.send(loggingLevels_emojis[level].." **"..loggingLevels_file[level].."** - "..text, "FissionOS | "..config.name)
+    end
+        
     print("["..getDate("shortdate").."] "..loggingLevels_file[level].." "..text)
 end
 

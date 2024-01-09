@@ -11,6 +11,18 @@ local filter
 
 local filter_preset = "default"
 
+if fs.exists("GSX/preset.txt") then
+    local file = io.open("GSX/preset.txt", "r")
+    filter_preset = file:read("*a")
+    file:close()
+end
+
+local function savePreset()
+    local file = io.open("GSX/preset.txt", "w")
+    file:write(filter_preset)
+    file:close()
+end
+
 local completion = require("cc.completion")
 
 local player_list = {}
@@ -194,7 +206,7 @@ local function check(t,l)
     local res = false
     for k,v in pairs(l) do
         if t == v.id then
-            return true
+            return v
         end
     end
 end
@@ -225,7 +237,7 @@ local cursors_table = { --Order: x > y
     }
 }
 
-local function drawScanCursor(pos_x, pos_y)
+local function drawScanCursor(pos_x, pos_y, color)
     local curs_pos_x = clamp(pos_x, 1, w)
     local curs_pos_y = clamp(pos_y, 1, h)
 
@@ -233,8 +245,11 @@ local function drawScanCursor(pos_x, pos_y)
     local range_y = outside_range(pos_y, 1, h)
     local char = cursors_table[range_x][range_y]
 
+    local old_fg = term.getTextColor()
+    term.setTextColor(color or colors.white)
     term.setCursorPos(curs_pos_x, curs_pos_y)
     term.write(char)
+    term.setTextColor(old_fg)
 end
 
 local function coreThread()
@@ -276,7 +291,8 @@ local function drawPosThread()
         fill(dist_box_x1, dist_box_y1, dist_box_x2, dist_box_y2, colors.black, colors.gray, "\x7F")
         if pos and scan_pos then
             for k,v in pairs(scan or {}) do
-                if check(v.name, filter) and pos then
+                local check_res = check(v.name, filter)
+                if check_res and pos then
                     local rot_hori = ptp(pos.x, pos.z, scan_pos.x+v.x, scan_pos.z+v.z)%360
                     local dist = math.abs(v.x)+math.abs(v.z)
                     local rot_vert = ptp(pos.y+pos.eyeHeight, 0, scan_pos.y, dist)%360
@@ -288,11 +304,12 @@ local function drawPosThread()
                         cross_distances[#cross_distances+1] = {
                             dist = dist,
                             offset = math.abs((deltaAngle(rot_hori, pos.yaw%360)/90)*w)+math.abs((deltaAngle(rot_vert, pos.pitch)/90)*h),
-                            type = v.name
+                            type = v.name,
+                            full_dist = dist+(math.abs(pos.y-(scan_pos.y+v.y)))
                         }
                     end
 
-                    drawScanCursor(cursor_pos_x, cursor_pos_y)
+                    drawScanCursor(cursor_pos_x, cursor_pos_y, check_res.color)
                 end
             end
         end
@@ -301,7 +318,7 @@ local function drawPosThread()
             return a.offset < b.offset
         end)
 
-        write(1, 1, "Dist: "..((cross_distances[1] or {dist="N/A"}).dist or "N/A"), colors.black, colors.lightBlue)
+        write(1, 1, "Dist: "..((cross_distances[1] or {dist="N/A"}).full_dist or "N/A"), colors.black, colors.lightBlue)
         write(1, 2, "Type: "..((cross_distances[1] or {type="N/A"}).type or "N/A"), colors.black, colors.orange)
 
         sleep(0.125)
@@ -395,6 +412,7 @@ local buttons = {
                         local selected_filter = read(nil, nil, function(text) return completion.choice(text, fs.list("/GSX/filter/")) end, filter_preset..".txt")
                         if fs.exists("/GSX/filter/"..selected_filter) and not fs.isDir("/GSX/filter/"..selected_filter) then
                             filter_preset = selected_filter:gsub("(.+)%.%w+", "%1")
+                            savePreset()
                             loadFilter()
                         end
                     elseif event[2] == 3 then --If middle click
@@ -403,6 +421,7 @@ local buttons = {
                         local new_filter = read(nil, nil, function(text) return completion.choice(text, {"New Preset"}) end, "")
                         if not fs.exists("/GSX/filter/"..new_filter) then
                             filter_preset = new_filter
+                            savePreset()
                             filter = {}
                             saveFilter()
                         end
@@ -414,6 +433,7 @@ local buttons = {
                             filter = {}
                             fs.delete("/GSX/filter/"..filter_preset..".txt")
                             filter_preset = "default"
+                            savePreset()
                             loadFilter()
                         end
                     end

@@ -274,54 +274,56 @@ end
 
 local function drawPosThread()
     while true do
-        if isPresent("playerDetector") then
-            local ply_temp = peripheral.find("playerDetector")
-            if ply_temp and ply_temp.getPlayerPos then
-                pos = ply_temp.getPlayerPos(player_username)
-            end
-        end
-        term.clear()
-        local dist_box_x1 = math.floor(w/2)-2
-        local dist_box_y1 = math.floor(h/2)-2
-        local dist_box_x2 = math.floor(w/2)+2
-        local dist_box_y2 = math.floor(h/2)+2
-
-        local cross_distances = {}
-
-        fill(dist_box_x1, dist_box_y1, dist_box_x2, dist_box_y2, colors.black, colors.gray, "\x7F")
-        if pos and scan_pos then
-            for k,v in pairs(scan or {}) do
-                local check_res = check(v.name, filter)
-                if check_res and pos then
-                    local rot_hori = ptp(pos.x, pos.z, scan_pos.x+v.x, scan_pos.z+v.z)%360
-                    local dist = math.abs(v.x)+math.abs(v.z)
-                    local rot_vert = ptp(pos.y+pos.eyeHeight, 0, scan_pos.y, dist)%360
-
-                    local cursor_pos_x = (w/2)-((deltaAngle(rot_hori, pos.yaw%360)/90)*w)
-                    local cursor_pos_y = (h/2)-((deltaAngle(rot_vert, pos.pitch)/90)*h)
-
-                    if inside_range(cursor_pos_x, dist_box_x1-0.75, dist_box_x2+0.75, true) and inside_range(cursor_pos_y, dist_box_y1-0.75, dist_box_y2+0.75, true) then
-                        cross_distances[#cross_distances+1] = {
-                            dist = dist,
-                            offset = math.abs((deltaAngle(rot_hori, pos.yaw%360)/90)*w)+math.abs((deltaAngle(rot_vert, pos.pitch)/90)*h),
-                            type = v.name,
-                            full_dist = dist+(math.abs(pos.y-(scan_pos.y+v.y)))
-                        }
-                    end
-
-                    drawScanCursor(cursor_pos_x, cursor_pos_y, check_res.color)
+        local stat, err = pcall(function()
+            if isPresent("playerDetector") then
+                local ply_temp = peripheral.find("playerDetector")
+                if ply_temp and ply_temp.getPlayerPos then
+                    pos = ply_temp.getPlayerPos(player_username)
                 end
             end
-        end
+            term.clear()
+            local dist_box_x1 = math.floor(w/2)-2
+            local dist_box_y1 = math.floor(h/2)-2
+            local dist_box_x2 = math.floor(w/2)+2
+            local dist_box_y2 = math.floor(h/2)+2
 
-        table.sort(cross_distances, function(a,b)
-            return a.offset < b.offset
+            local cross_distances = {}
+
+            fill(dist_box_x1, dist_box_y1, dist_box_x2, dist_box_y2, colors.black, colors.gray, "\x7F")
+            if pos and scan_pos then
+                for k,v in pairs(scan or {}) do
+                    local check_res = check(v.name, filter)
+                    if check_res and pos then
+                        local rot_hori = ptp(pos.x, pos.z, scan_pos.x+v.x, scan_pos.z+v.z)%360
+                        local dist = math.abs(v.x)+math.abs(v.z)
+                        local rot_vert = ptp(pos.y+pos.eyeHeight, 0, scan_pos.y, dist)%360
+
+                        local cursor_pos_x = (w/2)-((deltaAngle(rot_hori, pos.yaw%360)/90)*w)
+                        local cursor_pos_y = (h/2)-((deltaAngle(rot_vert, pos.pitch)/90)*h)
+
+                        if inside_range(cursor_pos_x, dist_box_x1-0.75, dist_box_x2+0.75, true) and inside_range(cursor_pos_y, dist_box_y1-0.75, dist_box_y2+0.75, true) then
+                            cross_distances[#cross_distances+1] = {
+                                dist = dist,
+                                offset = math.abs((deltaAngle(rot_hori, pos.yaw%360)/90)*w)+math.abs((deltaAngle(rot_vert, pos.pitch)/90)*h),
+                                type = v.name,
+                                full_dist = dist+(math.abs(pos.y-(scan_pos.y+v.y)))
+                            }
+                        end
+
+                        drawScanCursor(cursor_pos_x, cursor_pos_y, check_res.color)
+                    end
+                end
+            end
+
+            table.sort(cross_distances, function(a,b)
+                return a.offset < b.offset
+            end)
+
+            write(1, 1, "Dist: "..((cross_distances[1] or {dist="N/A"}).full_dist or "N/A"), colors.black, colors.lightBlue)
+            write(1, 2, "Type: "..((cross_distances[1] or {type="N/A"}).type or "N/A"), colors.black, colors.orange)
+
+            sleep(0.125)
         end)
-
-        write(1, 1, "Dist: "..((cross_distances[1] or {dist="N/A"}).full_dist or "N/A"), colors.black, colors.lightBlue)
-        write(1, 2, "Type: "..((cross_distances[1] or {type="N/A"}).type or "N/A"), colors.black, colors.orange)
-
-        sleep(0.125)
     end
 end
 

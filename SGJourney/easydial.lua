@@ -310,6 +310,14 @@ local dial_book = {
 
 clearGate()
 
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 local stat, err = pcall(function()
     local w, h = term.getSize()
 
@@ -318,7 +326,8 @@ local stat, err = pcall(function()
     print("Select Mode:")
     print("1. Manual Dial")
     print("2. Dial Book")
-    print("3. Exit")
+    print("3. Clipboard")
+    print("4. Exit")
 
     term.setCursorPos(1,h)
     local mode = tonumber(wait_for_key("%d"))
@@ -343,6 +352,24 @@ local stat, err = pcall(function()
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
         end
     elseif mode == 3 then
+        term.clear()
+        term.setCursorPos(1,1)
+        print("Waiting for Clipboard (Press CTRL+V)")
+        local name, clipboard = os.pullEvent("paste")
+
+        local temp_address = split(clipboard, "-")
+        auto_address_call = {}
+
+        for k,v in ipairs(temp_address) do
+            if tonumber(v) then
+                auto_address_call[#auto_address_call+1] = tonumber(v)
+                print(tonumber(v))
+            end
+        end
+        
+        clearGate()
+        parallel.waitForAll(inputThread, dialThread, autoInputThread)
+    elseif mode == 4 then
         term.clear()
         term.setCursorPos(1,1)
         return

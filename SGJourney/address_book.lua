@@ -279,19 +279,22 @@ local commands = {
         main="chat", 
         args={
             {name="entry", type="int", outline="<>"},
-            {name="whisper", type="bool", outline="<>"},
             {name="player", type="username", outline="<>"},
         },
         func=(function(...)
-            local entry_num, whisper, username = ...
+            local entry_num, username = ...
             local selected_entry = address_book[tonumber(entry_num)]
 
             local msg_text = '["",{"text":"\n"},{"text":"Name: ","color":"yellow"},{"text":"$NAME","color":"aqua","clickEvent":{"action":"copy_to_clipboard","value":"$NAME"},"hoverEvent":{"action":"show_text","contents":"Click to Copy"}},{"text":"\n"},{"text":"Address: ","color":"yellow"},{"text":"$ADDRESS","color":"aqua","clickEvent":{"action":"copy_to_clipboard","value":"$ADDRESS"},"hoverEvent":{"action":"show_text","contents":"Click to Copy"}}]'
             msg_text = msg_text:gsub("$ADDRESS", addressToString(selected_entry.address, "-", true))
             msg_text = msg_text:gsub("$NAME", selected_entry.name)
+            
+            local msg_text_whisper = '["",{"text":"(Whisper)","italic":true,"color":"gray"},{"text":"\n"},{"text":"Name: ","color":"yellow"},{"text":"$NAME","color":"aqua","clickEvent":{"action":"copy_to_clipboard","value":"$NAME"},"hoverEvent":{"action":"show_text","contents":"Click to Copy"}},{"text":"\n"},{"text":"Address: ","color":"yellow"},{"text":"$ADDRESS","color":"aqua","clickEvent":{"action":"copy_to_clipboard","value":"$ADDRESS"},"hoverEvent":{"action":"show_text","contents":"Click to Copy"}}]'
+            msg_text_whisper = msg_text_whisper:gsub("$ADDRESS", addressToString(selected_entry.address, "-", true))
+            msg_text_whisper = msg_text_whisper:gsub("$NAME", selected_entry.name)
 
-            if whisper then
-                chat_box.sendFormattedMessageToPlayer(msg_text, username, "Address Book")
+            if username then
+                chat_box.sendFormattedMessageToPlayer(msg_text_whisper, username, "Address Book")
             else
                 chat_box.sendFormattedMessage(msg_text, "Address Book")
             end

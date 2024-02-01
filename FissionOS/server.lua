@@ -1,5 +1,10 @@
 local reactor = peripheral.find("fissionReactorLogicAdapter")
 
+repeat
+    reactor = peripheral.find("fissionReactorLogicAdapter")
+    sleep(1)
+until reactor.getStatus ~= nil
+
 local activeClients = {}
 
 local modems = {peripheral.find("modem")}
@@ -88,10 +93,10 @@ if config.isDiscord then
 end
 
 local loggingLevels = {
-    "§7[§4ERROR§7]§c",
-    "§7[§6WARN§7]§e",
-    "§7[§fINFO§7]§f",
-    "§7[§aFORCE-INFO§7]§f"
+    "\xA77[\xA74ERROR\xA77]\xA7c",
+    "\xA77[\xA76WARN\xA77]\xA7e",
+    "\xA77[\xA7fINFO\xA77]\xA7f",
+    "\xA77[\xA7aFORCE-INFO\xA77]\xA7f"
 }
 
 local loggingLevels_file = {
@@ -354,5 +359,7 @@ local function chatManager()
     end
 end
 
-
-parallel.waitForAny(newClient,sendReactorData,pingClient,pingServer,reactorControl,nameRequest,reactorChecks,chatManager)
+local stat, err = pcall(function()
+    parallel.waitForAny(newClient,sendReactorData,pingClient,pingServer,reactorControl,nameRequest,reactorChecks,chatManager)
+end)
+if not stat then fullLog("Program Errored: "..err, 2) sleep(1) os.reboot() end

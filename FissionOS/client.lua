@@ -83,6 +83,8 @@ local serverName = msg
 
 if id == nil then
     print("Failed!")
+    sleep(5)
+    os.reboot()
     return
 else
     print("Successfully connected!")
@@ -354,6 +356,8 @@ local function pingServer()
         local id, msg, protocol = rednet.receive("pingServer_Confirm",1)
         if id == nil then
             exit_reason = "Reason: Lost connection to FissionOS Server "..serverName.." ("..serverID..")"
+            sleep(5)
+            os.reboot()
             return
         end
         os.sleep(5)

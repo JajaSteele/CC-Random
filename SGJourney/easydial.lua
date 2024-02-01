@@ -10,8 +10,10 @@ local auto_address_call = {}
 local monitor = peripheral.find("monitor")
 if monitor then
     local mw, mh = monitor.getSize()
-    monitor.setTextScale(1.5)
+    monitor.setTextScale(1)
     monitor.clear()
+    monitor.setPaletteColor(colors.white, 0xFFFFFF)
+    monitor.setPaletteColor(colors.black, 0x000000)
 end
 
 local function wait_for_key(pattern, key, mode)
@@ -30,6 +32,7 @@ local function wait_for_key(pattern, key, mode)
 end
 
 local function clearGate()
+    sg.lowerChevron()
     if (0-sg.getCurrentSymbol()) % 39 < 19 then
         sg.rotateAntiClockwise(0)
     else
@@ -44,6 +47,14 @@ local function clearGate()
     sg.raiseChevron()
     sleep(0.25)
     sg.lowerChevron()
+
+    sleep(0.10)
+    sg.rotateClockwise(38)
+    sleep(0.25)
+    sg.rotateAntiClockwise(1)
+    sleep(0.5)
+
+    sg.rotateClockwise(0)
 end
 
 local function inputThread()
@@ -70,6 +81,8 @@ local function inputThread()
         term.write(input_text)
 
         if monitor then
+            monitor.setPaletteColor(colors.white, 0xFFDEAA)
+            monitor.setPaletteColor(colors.black, 0x100500)
             local mw, mh = monitor.getSize()
             monitor.clear()
             monitor.setCursorPos(1,1)
@@ -290,10 +303,12 @@ local function autoInputThread()
 end
 
 local dial_book = {
-    {name="Earth", address={27,25,4,35,10,28}},
+    {name="Earth", address={31,21,11,1,16,14,18,12}},
     {name="Abydos", address={26,6,14,31,11,29}},
     {name="Chulak", address={8,1,22,14,36,19}}
 }
+
+clearGate()
 
 local stat, err = pcall(function()
     local w, h = term.getSize()

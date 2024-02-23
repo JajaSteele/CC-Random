@@ -283,3 +283,5 @@ local function inputMain()
 end
 
 parallel.waitForAny(drawMain, inputMain)
+
+-- test

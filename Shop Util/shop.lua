@@ -353,7 +353,7 @@ local function drawMain()
                 end
 
                 fill(1, print_y, name_column-3, print_y, colors.black, colors.yellow, " ")
-                if ctrl_down then
+                if not ctrl_down then
                     write(cart_column-1, print_y, entry.count*(shop_cart[i1+scroll] or 0), colors.black, (((shop_items_count[i1+scroll] or 0) >= (shop_cart[i1+scroll] or 0)*shop_items[i1+scroll].count) and colors.yellow) or colors.red)
                 else
                     write(cart_column, print_y, "x"..(shop_cart[i1+scroll] or 0), colors.black, (((shop_items_count[i1+scroll] or 0) >= (shop_cart[i1+scroll] or 0)*shop_items[i1+scroll].count) and colors.yellow) or colors.red)
@@ -495,7 +495,7 @@ local function inputMain()
                         shop_cart[entry_num] = clamp((shop_cart[entry_num] or 0) - multiplier, 0, 64)
                     end
                     fill(1, y, name_column-3, y, colors.black, colors.black, " ")
-                    if ctrl_down then
+                    if not ctrl_down then
                         write(cart_column-1, y, entry.count*(shop_cart[entry_num] or 0), colors.black, (((shop_items_count[entry_num] or 0) >= (shop_cart[entry_num] or 0)*shop_items[entry_num].count) and colors.yellow) or colors.red)
                     else
                         write(cart_column, y, "x"..(shop_cart[entry_num] or 0), colors.black, (((shop_items_count[entry_num] or 0) >= (shop_cart[entry_num] or 0)*shop_items[entry_num].count) and colors.yellow) or colors.red)

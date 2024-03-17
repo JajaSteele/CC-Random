@@ -107,6 +107,28 @@ local function writeSave()
     file:close()
 end
 
+local config = {}
+
+local function loadConfig()
+    if fs.exists("saved_config.txt") then
+        local file = io.open("saved_config.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open("saved_config.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+loadConfig()
+
+config.pocket_mode = config.pocket_mode or false
+local hold_shift = false
+local hold_alt = false
+local hold_ctrl = false
+
 local cmd_history = {}
 
 local w,h = term.getSize()
@@ -300,6 +322,14 @@ local commands = {
             end
         end)
     },
+    {
+        main="pocket",
+        args={},
+        func=(function()
+            config.pocket_mode = not config.pocket_mode
+            writeConfig()
+        end)
+    }
 }
 
 local function getCommand(name)
@@ -420,20 +450,25 @@ local function listThread()
             if selected_address then
                 fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
                 local address_string = addressToString(selected_address.address, "-", true)
-                term.setCursorPos(1, 1+i1)
-                term.write(selected_num..".")
-                if selected_address.security == "public" then
-                    term.setTextColor(colors.lime)
-                    term.write("\x6F ")
-                else
-                    term.setTextColor(colors.red)
-                    term.write("\xF8 ")
-                end
-                term.setTextColor(colors.white)
-                term.write(selected_address.name)
 
-                term.setCursorPos(w-#address_string, 1+i1)
-                term.write(address_string)
+                if not config.pocket_mode or (config.pocket_mode and not hold_shift) then
+                    term.setCursorPos(1, 1+i1)
+                    term.write(selected_num..".")
+                    if selected_address.security == "public" then
+                        term.setTextColor(colors.lime)
+                        term.write("\x6F ")
+                    else
+                        term.setTextColor(colors.red)
+                        term.write("\xF8 ")
+                    end
+                    term.setTextColor(colors.white)
+                    term.write(selected_address.name)
+                end
+                
+                if not config.pocket_mode or (config.pocket_mode and hold_shift) then
+                    term.setCursorPos(w-#address_string, 1+i1)
+                    term.write(address_string)
+                end
             else
                 fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
             end
@@ -484,4 +519,35 @@ local function scrollThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread)
+local function keyThread()
+    while true do
+        local event, key, holding = os.pullEvent()
+        if (event == "key" or event == "key_up") and not holding then
+            if event == "key" then
+                if key == keys.leftShift or key == keys.rightShift then
+                    hold_shift = true
+                    os.queueEvent("drawList")
+                elseif key == keys.leftAlt or key == keys.rightAlt then
+                    hold_alt = true
+                    os.queueEvent("drawList")
+                elseif key == keys.leftCtrl or key == keys.rightCtrl then
+                    hold_ctrl = true
+                    os.queueEvent("drawList")
+                end
+            elseif event == "key_up" then
+                if key == keys.leftShift or key == keys.rightShift then
+                    hold_shift = false
+                    os.queueEvent("drawList")
+                elseif key == keys.leftAlt or key == keys.rightAlt then
+                    hold_alt = false
+                    os.queueEvent("drawList")
+                elseif key == keys.leftCtrl or key == keys.rightCtrl then
+                    hold_ctrl = false
+                    os.queueEvent("drawList")
+                end
+            end
+        end
+    end
+end
+
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread)

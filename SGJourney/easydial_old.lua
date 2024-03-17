@@ -1,4 +1,4 @@
-local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
+local sg = peripheral.find("basic_interface")
 
 local address = {}
 local display_address = {}
@@ -32,7 +32,7 @@ local function wait_for_key(pattern, key, mode)
 end
 
 local function clearGate()
-    sg.closeChevron()
+    sg.lowerChevron()
     if (0-sg.getCurrentSymbol()) % 39 < 19 then
         sg.rotateAntiClockwise(0)
     else
@@ -44,9 +44,9 @@ local function clearGate()
     until sg.getCurrentSymbol() == 0
 
     sleep(0.25)
-    sg.openChevron()
+    sg.raiseChevron()
     sleep(0.25)
-    sg.closeChevron()
+    sg.lowerChevron()
 
     sleep(0.10)
     sg.rotateClockwise(38)
@@ -273,9 +273,9 @@ local function dialThread()
                     sleep()
                 until sg.getCurrentSymbol() == v.num
                 sleep(0.25)
-                sg.openChevron()
+                sg.raiseChevron()
                 sleep(0.25)
-                sg.closeChevron()
+                sg.lowerChevron()
                 address[k].dialing = false
                 address[k].dialed = true
             end

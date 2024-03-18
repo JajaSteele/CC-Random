@@ -29,6 +29,6 @@ while true do
     end
 
     if username then
-        playAudio("http://172.16.143.50/?tts="..textutils.urlEncode(msg).."&voice="..voice)
+        playAudio("http://109.221.125.142/?tts="..textutils.urlEncode(msg).."&voice="..textutils.urlEncode(voice))
     end
 end

@@ -2,6 +2,18 @@ local printer = peripheral.find("printer")
 local completion = require("cc.completion")
 local chat_box = peripheral.find("chatBox")
 
+local modems = {peripheral.find("modem")}
+
+local modem
+
+for k,v in pairs(modems) do
+    if v.isWireless() == true then
+        modem = modems[k]
+    end
+end
+
+rednet.open(peripheral.getName(modem))
+
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
@@ -328,6 +340,34 @@ local commands = {
         func=(function()
             config.pocket_mode = not config.pocket_mode
             writeConfig()
+        end)
+    },
+    {
+        main="dial",
+        args={
+            {name="entry", type="int", outline="<>"}
+        },
+        func=(function(...)
+            local entry = ...
+
+            local hosts = {rednet.lookup("jjs_sg_remotedial")}
+            local gates = {}
+            local gates_completion = {}
+
+            for k,v in ipairs(hosts) do
+                rednet.send(v, "", "jjs_sg_getlabel")
+                local id, name = rednet.receive("jjs_sg_sendlabel")
+                gates[name or "unknown"] = id
+                gates_completion[#gates_completion+1] = name
+            end
+
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Select Gate")
+            term.setCursorPos(1, h-1)
+            term.write("> ")
+            local selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
+
+            rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
         end)
     }
 }

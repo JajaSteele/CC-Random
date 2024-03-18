@@ -1,5 +1,26 @@
 local sg = peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
+local modems = {peripheral.find("modem")}
+
+local modem
+
+for k,v in pairs(modems) do
+    if v.isWireless() == true then
+        modem = modems[k]
+    end
+end
+
+rednet.open(peripheral.getName(modem))
+rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home")
+
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 local address = {}
 local display_address = {}
 
@@ -271,7 +292,7 @@ local function autoInputThread()
     os.queueEvent("key", keys.enter, false)
     repeat 
         sleep()
-    until sg.isStargateConnected() or sg.getRecentFeedback() < 0
+    until sg.isStargateConnected()
 end
 
 local dial_book = {
@@ -279,6 +300,7 @@ local dial_book = {
     {name="Abydos", address={26,6,14,31,11,29}},
     {name="Chulak", address={8,1,22,14,36,19}}
 }
+
 
 local function split(s, delimiter)
     local result = {};
@@ -288,7 +310,7 @@ local function split(s, delimiter)
     return result;
 end
 
-local stat, err = pcall(function()
+local function mainThread()
     local w, h = term.getSize()
 
     term.clear()
@@ -342,8 +364,36 @@ local stat, err = pcall(function()
     elseif mode == 4 then
         term.clear()
         term.setCursorPos(1,1)
+        os.reboot()
         return
     end
+end
+
+local function mainRemote()
+    while true do
+        local id, msg, protocol = rednet.receive()
+
+        if protocol == "jjs_sg_startdial" then
+            local temp_address = split(msg, "-")
+            auto_address_call = {}
+
+            for k,v in ipairs(temp_address) do
+                if tonumber(v) then
+                    auto_address_call[#auto_address_call+1] = tonumber(v)
+                    print(tonumber(v))
+                end
+            end
+            
+            clearGate()
+            parallel.waitForAll(inputThread, dialThread, autoInputThread)
+        elseif protocol == "jjs_sg_getlabel" then
+            rednet.send(id, "LABELTEST", "jjs_sg_sendlabel")
+        end
+    end
+end
+
+local stat, err = pcall(function()
+    parallel.waitForAll(mainThread, mainRemote)
 end)
 
 if not stat then

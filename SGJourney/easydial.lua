@@ -1,5 +1,67 @@
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
+local modems = {peripheral.find("modem")}
+
+local modem
+
+local is_dialing = false
+
+for k,v in pairs(modems) do
+    if v.isWireless() == true then
+        modem = modems[k]
+    end
+end
+
+if modem then
+    rednet.open(peripheral.getName(modem))
+    rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home")
+end
+
+local function write(x,y,text,bg,fg)
+    local old_posx,old_posy = term.getCursorPos()
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
+
+    if bg then
+        term.setBackgroundColor(bg)
+    end
+    if fg then
+        term.setTextColor(fg)
+    end
+
+    term.setCursorPos(x,y)
+    term.write(text)
+
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
+end
+
+local config = {}
+config.label = "Computer "..os.getComputerID()
+local function loadConfig()
+    if fs.exists("saved_config_easydial.txt") then
+        local file = io.open("saved_config_easydial.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open("saved_config_easydial.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+loadConfig()
+
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 local address = {}
 local display_address = {}
 
@@ -32,29 +94,23 @@ local function wait_for_key(pattern, key, mode)
 end
 
 local function clearGate()
-    sg.closeChevron()
-    if (0-sg.getCurrentSymbol()) % 39 < 19 then
-        sg.rotateAntiClockwise(0)
-    else
-        sg.rotateClockwise(0)
+    if sg.isStargateConnected() then
+        sg.closeChevron()
+        if (0-sg.getCurrentSymbol()) % 39 < 19 then
+            sg.rotateAntiClockwise(0)
+        else
+            sg.rotateClockwise(0)
+        end
+
+        repeat
+            sleep()
+        until sg.getCurrentSymbol() == 0
+
+        sleep(0.25)
+        sg.openChevron()
+        sleep(0.25)
+        sg.closeChevron()
     end
-
-    repeat
-        sleep()
-    until sg.getCurrentSymbol() == 0
-
-    sleep(0.25)
-    sg.openChevron()
-    sleep(0.25)
-    sg.closeChevron()
-
-    sleep(0.10)
-    sg.rotateClockwise(38)
-    sleep(0.25)
-    sg.rotateAntiClockwise(1)
-    sleep(0.5)
-
-    sg.rotateClockwise(0)
 end
 
 local function inputThread()
@@ -234,7 +290,9 @@ local function inputThread()
                         term.write("Dialing Successful!")
                         term.setCursorPos(1,8)
 
-                        os.pullEvent("stargate_disconnected")
+                        repeat
+                            local event = os.pullEvent()
+                        until event == "stargate_disconnected" or event == "stargate_reset"
 
                         if monitor then
                             monitor.clear()
@@ -318,7 +376,7 @@ local function split(s, delimiter)
     return result;
 end
 
-local stat, err = pcall(function()
+local function mainThread()
     local w, h = term.getSize()
 
     term.clear()
@@ -328,13 +386,21 @@ local stat, err = pcall(function()
     print("2. Dial Book")
     print("3. Clipboard")
     print("4. Exit")
+    print("5. Set Label")
+
+    write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
     term.setCursorPos(1,h)
     local mode = tonumber(wait_for_key("%d"))
 
+    if is_dialing then
+        return
+    end
+
     if mode == 1 then
         clearGate()
         parallel.waitForAny(inputThread, dialThread)
+        is_dialing = true
     elseif mode == 2 then
         term.clear()
         term.setCursorPos(1,1)
@@ -347,6 +413,7 @@ local stat, err = pcall(function()
         local selected = tonumber(wait_for_key("%d"))
 
         if dial_book[selected] then
+            is_dialing = true
             auto_address_call = dial_book[selected].address
             clearGate()
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
@@ -367,13 +434,55 @@ local stat, err = pcall(function()
             end
         end
         
+        is_dialing = true
         clearGate()
         parallel.waitForAll(inputThread, dialThread, autoInputThread)
     elseif mode == 4 then
         term.clear()
         term.setCursorPos(1,1)
         return
+    elseif mode == 5 then
+        term.clear()
+        term.setCursorPos(1,1)
+        print("New Label:")
+        local new_label = read(nil, nil, nil, config.label)
+        config.label = new_label
+        writeConfig()
+        os.reboot()
+        return
     end
+end
+
+local function mainRemote()
+    while true do
+        local id, msg, protocol = rednet.receive()
+
+        if is_dialing then
+            return
+        end
+
+        if protocol == "jjs_sg_startdial" then
+            local temp_address = split(msg, "-")
+            auto_address_call = {}
+
+            for k,v in ipairs(temp_address) do
+                if tonumber(v) then
+                    auto_address_call[#auto_address_call+1] = tonumber(v)
+                    print(tonumber(v))
+                end
+            end
+            
+            clearGate()
+            is_dialing = true
+            parallel.waitForAll(inputThread, dialThread, autoInputThread)
+        elseif protocol == "jjs_sg_getlabel" then
+            rednet.send(id, config.label, "jjs_sg_sendlabel")
+        end
+    end
+end
+
+local stat, err = pcall(function()
+    parallel.waitForAll(mainThread, mainRemote)
 end)
 
 if not stat then

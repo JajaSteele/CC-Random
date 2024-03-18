@@ -4,14 +4,55 @@ local modems = {peripheral.find("modem")}
 
 local modem
 
+local is_dialing = false
+
 for k,v in pairs(modems) do
     if v.isWireless() == true then
         modem = modems[k]
     end
 end
 
-rednet.open(peripheral.getName(modem))
-rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home")
+if modem then
+    rednet.open(peripheral.getName(modem))
+    rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home")
+end
+
+local function write(x,y,text,bg,fg)
+    local old_posx,old_posy = term.getCursorPos()
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
+
+    if bg then
+        term.setBackgroundColor(bg)
+    end
+    if fg then
+        term.setTextColor(fg)
+    end
+
+    term.setCursorPos(x,y)
+    term.write(text)
+
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
+end
+
+local config = {}
+config.label = "Computer "..os.getComputerID()
+local function loadConfig()
+    if fs.exists("saved_config_easydial.txt") then
+        local file = io.open("saved_config_easydial.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open("saved_config_easydial.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+loadConfig()
 
 local function split(s, delimiter)
     local result = {};
@@ -320,13 +361,21 @@ local function mainThread()
     print("2. Dial Book")
     print("3. Clipboard")
     print("4. Exit")
+    print("5. Set Label")
+
+    write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
     term.setCursorPos(1,h)
     local mode = tonumber(wait_for_key("%d"))
 
+    if is_dialing then
+        return
+    end
+
     if mode == 1 then
         clearGate()
         parallel.waitForAny(inputThread, dialThread)
+        is_dialing = true
     elseif mode == 2 then
         term.clear()
         term.setCursorPos(1,1)
@@ -337,8 +386,9 @@ local function mainThread()
         
         term.setCursorPos(1,h)
         local selected = tonumber(wait_for_key("%d"))
-
+        
         if dial_book[selected] then
+            is_dialing = true
             auto_address_call = dial_book[selected].address
             clearGate()
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
@@ -359,11 +409,20 @@ local function mainThread()
             end
         end
         
+        is_dialing = true
         clearGate()
         parallel.waitForAll(inputThread, dialThread, autoInputThread)
     elseif mode == 4 then
         term.clear()
         term.setCursorPos(1,1)
+        return
+    elseif mode == 5 then
+        term.clear()
+        term.setCursorPos(1,1)
+        print("New Label:")
+        local new_label = read(nil, nil, nil, config.label)
+        config.label = new_label
+        writeConfig()
         os.reboot()
         return
     end
@@ -372,6 +431,10 @@ end
 local function mainRemote()
     while true do
         local id, msg, protocol = rednet.receive()
+
+        if is_dialing then
+            return
+        end
 
         if protocol == "jjs_sg_startdial" then
             local temp_address = split(msg, "-")
@@ -385,9 +448,10 @@ local function mainRemote()
             end
             
             clearGate()
+            is_dialing = true
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
         elseif protocol == "jjs_sg_getlabel" then
-            rednet.send(id, "LABELTEST", "jjs_sg_sendlabel")
+            rednet.send(id, config.label, "jjs_sg_sendlabel")
         end
     end
 end

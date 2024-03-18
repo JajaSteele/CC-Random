@@ -12,7 +12,9 @@ for k,v in pairs(modems) do
     end
 end
 
-rednet.open(peripheral.getName(modem))
+if modem then
+    rednet.open(peripheral.getName(modem))
+end
 
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = term.getBackgroundColor()
@@ -367,7 +369,9 @@ local commands = {
             term.write("> ")
             local selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
 
-            rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+            if gates[selected_gate] then
+                rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+            end
         end)
     }
 }
@@ -491,7 +495,7 @@ local function listThread()
                 fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
                 local address_string = addressToString(selected_address.address, "-", true)
 
-                if not config.pocket_mode or (config.pocket_mode and not hold_shift) then
+                if not config.pocket_mode or (config.pocket_mode and not hold_alt) then
                     term.setCursorPos(1, 1+i1)
                     term.write(selected_num..".")
                     if selected_address.security == "public" then
@@ -505,7 +509,7 @@ local function listThread()
                     term.write(selected_address.name)
                 end
                 
-                if not config.pocket_mode or (config.pocket_mode and hold_shift) then
+                if not config.pocket_mode or (config.pocket_mode and hold_alt) then
                     term.setCursorPos(w-#address_string, 1+i1)
                     term.write(address_string)
                 end

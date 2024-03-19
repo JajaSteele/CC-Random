@@ -269,7 +269,7 @@ local commands = {
         main="print", 
         args={
             {name="compact", type="bool", outline="<>"},
-            {name="security", type="public or private or both", outline="<>"},
+            {name="security", type="public or private or both", outline="[]"},
         },
         func=(function(...)
             local mode , security = ...
@@ -315,7 +315,7 @@ local commands = {
         main="chat", 
         args={
             {name="entry", type="int", outline="<>"},
-            {name="player", type="username", outline="<>"},
+            {name="player", type="username", outline="[]"},
         },
         func=(function(...)
             local entry_num, username = ...
@@ -348,7 +348,7 @@ local commands = {
         main="sg",
         args={
             {name="mode", type="dial/stop", outline="<>"},
-            {name="entry", type="int", outline="<>"}
+            {name="entry", type="int", outline="[]"}
         },
         func=(function(...)
             local mode, entry = ...
@@ -412,10 +412,12 @@ local commands = {
     {
         main="transfer",
         args={
-            {name="mode", type="in/out", outline="<>"}
+            {name="mode", type="in/out", outline="<>"},
+            {name="first", type="int", outline="[]"},
+            {name="last", type="int", outline="[]"}
         },
         func=(function(...)
-            local mode = ...
+            local mode, first, last = ...
 
             if not modem or not mode then
                 return
@@ -473,15 +475,30 @@ local commands = {
                     end
                 end
 
+                local address_to_send = {}
+
+                for i1=(first or 1), (last or #address_book) do
+                    address_to_send[#address_to_send+1] = address_book[i1]
+                end
+
                 if connected then
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
                     write(1, h-2, "CONNECTED")
                     sleep(0.5)
-                    rednet.send(selected_id, address_book, "jjs_sg_transmit_data")
+                    rednet.send(selected_id, address_to_send, "jjs_sg_transmit_data")
                 end
             end
         end)
-    }
+    },
+    {
+        main="shell",
+        args={
+            {name="cmd", type="cmd", outline="<>"}
+        },
+        func=(function(...)
+            shell.run(...)
+        end)
+    },
 }
 
 local function getCommand(name)

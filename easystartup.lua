@@ -17,8 +17,8 @@ local file = read(nil, nil, path_completion)
 local startup_file = io.open("startup.lua", "w")
 
 local startup_program = ([[
-    print("Starting Program '&p' in 2s")
-    sleep(2)
+    print("Starting Program '&p' in 1s")
+    sleep(1)
     shell.execute("&p")
 ]])
 

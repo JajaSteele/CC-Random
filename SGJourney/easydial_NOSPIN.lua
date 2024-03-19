@@ -278,7 +278,7 @@ local function inputThread()
 
                         repeat
                             local event = os.pullEvent()
-                        until event == "stargate_disconnected" or event == "stargate_reset"
+                        until event == "stargate_disconnected"
 
                         if monitor then
                             monitor.clear()
@@ -331,8 +331,9 @@ local function autoInputThread()
         os.queueEvent("key", keys.space, false)
     end
     os.queueEvent("key", keys.enter, false)
-    repeat 
-        sleep()
+    
+    repeat
+        sleep(0.5)
     until sg.isStargateConnected()
 end
 
@@ -456,8 +457,30 @@ local function mainRemote()
     end
 end
 
+local function mainFailsafe()
+    while true do
+        local event, code = os.pullEvent()
+        if event == "stargate_reset" and code < 0 then
+            os.reboot()
+            return
+        end
+    end
+end
+
+local function mainRemoteCommands()
+    while true do
+        local id, msg, protocol = rednet.receive()
+        if protocol == "jjs_sg_disconnect" then
+            clearGate()
+            os.reboot()
+        elseif protocol == "jjs_sg_getlabel" then
+            rednet.send(id, config.label, "jjs_sg_sendlabel")
+        end
+    end
+end
+
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands)
 end)
 
 if not stat then

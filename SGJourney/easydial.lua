@@ -475,6 +475,25 @@ local function mainRemote()
             clearGate()
             is_dialing = true
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
+        end
+    end
+end
+
+local function mainFailsafe()
+    while true do
+        local event, code = os.pullEvent()
+        if event == "stargate_reset" and code < 0 then
+            os.reboot()
+            return
+        end
+    end
+end
+local function mainRemoteCommands()
+    while true do
+        local id, msg, protocol = rednet.receive()
+        if protocol == "jjs_sg_disconnect" then
+            clearGate()
+            os.reboot()
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, config.label, "jjs_sg_sendlabel")
         end
@@ -482,7 +501,7 @@ local function mainRemote()
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands)
 end)
 
 if not stat then

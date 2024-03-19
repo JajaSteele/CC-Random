@@ -345,20 +345,51 @@ local commands = {
         end)
     },
     {
-        main="dial",
+        main="sg",
         args={
+            {name="mode", type="dial/stop", outline="<>"},
             {name="entry", type="int", outline="<>"}
         },
         func=(function(...)
-            local entry = ...
+            local mode, entry = ...
 
-            local hosts = {rednet.lookup("jjs_sg_remotedial")}
+            if not (mode == "dial" or mode == "stop") then
+                return
+            end
+
+
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Fetching Gates..")
+
+            local hosts
+            for i1=1, 5 do
+                hosts = {rednet.lookup("jjs_sg_remotedial")}
+                if hosts[1] then
+                    break
+                end
+                sleep(0.5)
+                if i1 > 1 then
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Fetching Gates.. (x"..i1..")")
+                end
+            end
             local gates = {}
             local gates_completion = {}
 
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Fetching Labels..")
+
             for k,v in ipairs(hosts) do
                 rednet.send(v, "", "jjs_sg_getlabel")
-                local id, name = rednet.receive("jjs_sg_sendlabel")
+                local id, name
+                for i1=1, 5 do
+                    id, name = rednet.receive("jjs_sg_sendlabel", 1)
+                    if name then break end
+                    if i1 > 1 then
+                        fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                        write(1, h-2, "Fetching Gates.. (x"..i1..")")
+                    end
+                end
                 gates[name or "unknown"] = id
                 gates_completion[#gates_completion+1] = name
             end
@@ -370,7 +401,84 @@ local commands = {
             local selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
 
             if gates[selected_gate] then
-                rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+                if mode == "dial" and address_book[tonumber(entry)] then
+                    rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+                elseif mode == "stop" then
+                    rednet.send(gates[selected_gate], "", "jjs_sg_disconnect")
+                end
+            end
+        end)
+    },
+    {
+        main="transfer",
+        args={
+            {name="mode", type="in/out", outline="<>"}
+        },
+        func=(function(...)
+            local mode = ...
+
+            if not modem or not mode then
+                return
+            end
+
+            local connection_attempts = 0
+            local connected = false
+
+            if mode:lower() == "in" then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "(Current ID: "..os.getComputerID()..")")
+                term.setCursorPos(1, h-1)
+                term.write("> Waiting for Transmitter..")
+
+                local id, msg = rednet.receive("jjs_sg_transmit_confirm_client", 10)
+                
+                if (msg == "confirm") then
+                    rednet.send(id, "confirm", "jjs_sg_transmit_confirm_client")
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "CONNECTED")
+                    connected = true
+                else
+                    return
+                end
+
+                if connected then
+                    local id, entries_to_add = rednet.receive("jjs_sg_transmit_data", 10)
+                    for k,v in ipairs(entries_to_add) do
+                        address_book[#address_book+1] = v
+                    end
+                end
+
+            elseif mode:lower() == "out" then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Enter Receiver's ID:")
+                term.setCursorPos(1, h-1)
+                term.write("> ")
+
+                local selected_id = read(nil, nil, nil, "")
+                selected_id = tonumber(selected_id)
+                
+                if not selected_id then 
+                    return
+                end
+                
+                while true do
+                    rednet.send(selected_id, "confirm", "jjs_sg_transmit_confirm_client")
+                    local id, msg = rednet.receive("jjs_sg_transmit_confirm_client", 2)
+                    connection_attempts = connection_attempts+1
+                    if (id == selected_id and msg == "confirm") then
+                       connected = true
+                       break 
+                    elseif connection_attempts > 6 then
+                        break
+                    end
+                end
+
+                if connected then
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "CONNECTED")
+                    sleep(0.5)
+                    rednet.send(selected_id, address_book, "jjs_sg_transmit_data")
+                end
             end
         end)
     }

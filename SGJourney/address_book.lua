@@ -348,7 +348,7 @@ local commands = {
         main="sg",
         args={
             {name="mode", type="dial/stop", outline="<>"},
-            {name="entry", type="int", outline="[]"}
+            {name="entry", type="int/temp", outline="[]"},
         },
         func=(function(...)
             local mode, entry = ...
@@ -357,6 +357,21 @@ local commands = {
                 return
             end
 
+            local temp_address = {}
+
+            if entry == "temp" then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Adding: Address")
+                term.setCursorPos(1, h-1)
+                term.write("> ")
+                local new_address = read(nil, nil, function(text) write(1, h-2, "Enter Address ("..#(split(text, " ") or {}).." Symbols)") return completion.choice(text, {}) end, "")
+                local new_address_table = split(new_address, " ")
+                for k,v in ipairs(new_address_table) do
+                    if tonumber(v) then
+                        temp_address[#temp_address+1] = tonumber(v)
+                    end
+                end
+            end
 
             fill(1, h-2, w, h-1, colors.black, colors.white, " ")
             write(1, h-2, "Fetching Gates..")
@@ -401,8 +416,12 @@ local commands = {
             local selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
 
             if gates[selected_gate] then
-                if mode == "dial" and address_book[tonumber(entry)] then
-                    rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+                if mode == "dial" and (address_book[tonumber(entry)] or entry == "temp") then
+                    if entry == "temp" then
+                        rednet.send(gates[selected_gate], table.concat(temp_address, "-"), "jjs_sg_startdial")
+                    else
+                        rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
+                    end
                 elseif mode == "stop" then
                     rednet.send(gates[selected_gate], "", "jjs_sg_disconnect")
                 end

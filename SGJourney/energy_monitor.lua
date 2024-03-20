@@ -1,6 +1,12 @@
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
-local monitor = peripheral.find("monitor")
+local monitors = {peripheral.find("monitor")}
+local windows = {}
+
+for k,monitor in pairs(monitors) do
+    local width, height = monitor.getSize()
+    windows[#windows+1] = window.create(monitor, 1, 1, width, height)
+end
 
 local function prettyEnergy(energy)
     if energy > 1000000000000 then
@@ -17,44 +23,44 @@ local function prettyEnergy(energy)
 end
 
 local function fill(x,y,x1,y1,bg,fg,char)
-    local old_bg = monitor.getBackgroundColor()
-    local old_fg = monitor.getTextColor()
-    local old_posx,old_posy = monitor.getCursorPos()
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
+    local old_posx,old_posy = term.getCursorPos()
     if bg then
-        monitor.setBackgroundColor(bg)
+        term.setBackgroundColor(bg)
     end
     if fg then
-        monitor.setTextColor(fg)
+        term.setTextColor(fg)
     end
     for i1=1, (x1-x)+1 do
         for i2=1, (y1-y)+1 do
-            monitor.setCursorPos(x+i1-1,y+i2-1)
-            monitor.write(char or " ")
+            term.setCursorPos(x+i1-1,y+i2-1)
+            term.write(char or " ")
         end
     end
-    monitor.setTextColor(old_fg)
-    monitor.setBackgroundColor(old_bg)
-    monitor.setCursorPos(old_posx,old_posy)
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
 end
 
 local function write(x,y,text,bg,fg)
-    local old_posx,old_posy = monitor.getCursorPos()
-    local old_bg = monitor.getBackgroundColor()
-    local old_fg = monitor.getTextColor()
+    local old_posx,old_posy = term.getCursorPos()
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
 
     if bg then
-        monitor.setBackgroundColor(bg)
+        term.setBackgroundColor(bg)
     end
     if fg then
-        monitor.setTextColor(fg)
+        term.setTextColor(fg)
     end
 
-    monitor.setCursorPos(x,y)
-    monitor.write(text)
+    term.setCursorPos(x,y)
+    term.write(text)
 
-    monitor.setTextColor(old_fg)
-    monitor.setBackgroundColor(old_bg)
-    monitor.setCursorPos(old_posx,old_posy)
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
 end
 
 local max_energy
@@ -64,28 +70,69 @@ if peripheral.getType(interface) == "basic_interface" then
 elseif peripheral.getType(interface) == "crystal_interface" then
     max_energy = 100000000
 elseif peripheral.getType(interface) == "advanced_crystal_interface" then
-    max_energy = 100000000
+    max_energy = 1000000000
 end
 
-local width, height = monitor.getSize()
+local mode = 0
+local timer = 0
+
 
 while true do
-    local energy = interface.getEnergy()
-    if energy > max_energy then
-        max_energy = energy
+    if timer > 4 then
+        timer = 0
+        if mode > 0 then
+            mode = 0
+            if peripheral.getType(interface) == "basic_interface" then
+                max_energy = 0
+            elseif peripheral.getType(interface) == "crystal_interface" then
+                max_energy = 100000000
+            elseif peripheral.getType(interface) == "advanced_crystal_interface" then
+                max_energy = 1000000000
+            end
+        else
+            mode = mode+1
+            max_energy = interface.getEnergyTarget()
+        end
     end
+    for k,win in pairs(windows) do
+        local width, height = win.getSize()
+        term.redirect(win)
 
-    monitor.clear()
-    monitor.setCursorPos(1,1)
+        win.setVisible(false)
+        if mode == 0 then
+            local energy = interface.getEnergy()
+            if energy > max_energy then
+                max_energy = energy
+            end
 
-    fill(1,1, width,1, colors.black, colors.lightGray, "-")
-    fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
-    if (width*(energy/max_energy))%1 > 0.5 then
-        fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
+            win.clear()
+            win.setCursorPos(1,1)
+
+            fill(1,1, width,1, colors.black, colors.lightGray, "-")
+            fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+            if (width*(energy/max_energy))%1 > 0.5 then
+                fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
+            end
+            fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
+
+            write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.cyan)
+        elseif mode == 1 then
+            local energy = interface.getStargateEnergy()
+
+            win.clear()
+            win.setCursorPos(1,1)
+
+            fill(1,1, width,1, colors.black, colors.lightGray, "-")
+            fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+            if (width*(energy/max_energy))%1 > 0.5 then
+                fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
+            end
+            fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
+
+            write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.lime)
+        end
+        win.setVisible(true)
     end
-    fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
-
-    write(1, height, "Energy: "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.yellow)
-
-    sleep(0.25)
+    timer = timer+0.5
+    sleep(0.5)
 end

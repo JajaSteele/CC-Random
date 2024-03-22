@@ -143,6 +143,8 @@ local hold_shift = false
 local hold_alt = false
 local hold_ctrl = false
 
+local pocket_show_address = false
+
 local cmd_history = {}
 
 local w,h = term.getSize()
@@ -639,7 +641,7 @@ local function listThread()
                 fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
                 local address_string = addressToString(selected_address.address, "-", true)
 
-                if not config.pocket_mode or (config.pocket_mode and not hold_alt) then
+                if not config.pocket_mode or (config.pocket_mode and not pocket_show_address) then
                     term.setCursorPos(1, 1+i1)
                     term.write(selected_num..".")
                     if selected_address.security == "public" then
@@ -653,7 +655,7 @@ local function listThread()
                     term.write(selected_address.name)
                 end
                 
-                if not config.pocket_mode or (config.pocket_mode and hold_alt) then
+                if not config.pocket_mode or (config.pocket_mode and pocket_show_address) then
                     term.setCursorPos(w-#address_string, 1+i1)
                     term.write(address_string)
                 end
@@ -717,6 +719,7 @@ local function keyThread()
                     os.queueEvent("drawList")
                 elseif key == keys.leftAlt or key == keys.rightAlt then
                     hold_alt = true
+                    pocket_show_address = true
                     os.queueEvent("drawList")
                 elseif key == keys.leftCtrl or key == keys.rightCtrl then
                     hold_ctrl = true
@@ -728,6 +731,10 @@ local function keyThread()
                     os.queueEvent("drawList")
                 elseif key == keys.leftAlt or key == keys.rightAlt then
                     hold_alt = false
+
+                    if not hold_ctrl then
+                        pocket_show_address = false
+                    end
                     os.queueEvent("drawList")
                 elseif key == keys.leftCtrl or key == keys.rightCtrl then
                     hold_ctrl = false

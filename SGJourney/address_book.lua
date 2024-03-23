@@ -14,6 +14,7 @@ end
 
 if modem then
     rednet.open(peripheral.getName(modem))
+    rednet.host("jjs_sg_addressbook", tostring(os.getComputerID()))
 end
 
 local function fill(x,y,x1,y1,bg,fg,char)
@@ -745,4 +746,34 @@ local function keyThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread)
+local function lookupThread()
+    while true do
+        local id, msg, protocol = rednet.receive()
+        local return_data
+        if protocol == "jjs_sg_lookup_address" then
+            local to_search = table.concat(msg, "-")
+            for k,v in pairs(address_book) do
+                if table.concat(v.address, "-") == to_search then
+                    return_data = v
+                    break
+                end
+            end
+        elseif protocol == "jjs_sg_lookup_name" then
+            local to_search = msg
+            for k,v in pairs(address_book) do
+                if v.name == to_search then
+                    return_data = v
+                    break
+                end
+            end
+        end
+
+        if return_data then
+            rednet.send(id, return_data, "jjs_sg_lookup_return")
+        else
+            rednet.send(id, return_data, "jjs_sg_lookup_fail")
+        end
+    end
+end
+
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread)

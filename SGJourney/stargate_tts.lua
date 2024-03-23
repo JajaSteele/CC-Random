@@ -117,9 +117,6 @@ local function mainTTS()
                 is_active = true
                 playTTS("Gate activation detected.")
             end
-        elseif event[1] == "stargate_deconstructing_entity" or event[1] == "stargate_reconstructing_entity" then
-            print("entity passed")
-            passed_entities = passed_entities+1
         elseif event[1] == "stargate_incoming_wormhole" or event[1] == "stargate_outgoing_wormhole" then
             sleep(1.5)
             print("stargate_wormhole")
@@ -155,4 +152,14 @@ local function mainTTS()
     end
 end
 
-parallel.waitForAll(mainTTS)
+local function entityCounter()
+    while true do
+        local event = {os.pullEvent()}
+        if event[1] == "stargate_deconstructing_entity" or event[1] == "stargate_reconstructing_entity" then
+            print("entity passed")
+            passed_entities = passed_entities+1
+        end
+    end
+end
+
+parallel.waitForAll(mainTTS, entityCounter)

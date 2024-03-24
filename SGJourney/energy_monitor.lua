@@ -1,5 +1,7 @@
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
+local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
+
 local monitors = {peripheral.find("monitor")}
 local windows = {}
 
@@ -63,7 +65,12 @@ local function write(x,y,text,bg,fg)
     term.setCursorPos(old_posx,old_posy)
 end
 
+
 local max_energy
+local eta
+local last_energy = 0
+
+local energy_delta = {}
 
 if peripheral.getType(interface) == "basic_interface" then
     max_energy = 0
@@ -77,62 +84,79 @@ local mode = 0
 local timer = 0
 
 
-while true do
-    if timer > 4 then
-        timer = 0
-        if mode > 0 then
-            mode = 0
-            if peripheral.getType(interface) == "basic_interface" then
-                max_energy = 0
-            elseif peripheral.getType(interface) == "crystal_interface" then
-                max_energy = 100000000
-            elseif peripheral.getType(interface) == "advanced_crystal_interface" then
-                max_energy = 1000000000
+local stat, err = pcall(function()
+    while true do
+        if timer > 4 then
+            timer = 0
+            if mode > 0 then
+                mode = 0
+                if peripheral.getType(interface) == "basic_interface" then
+                    max_energy = 0
+                elseif peripheral.getType(interface) == "crystal_interface" then
+                    max_energy = 100000000
+                elseif peripheral.getType(interface) == "advanced_crystal_interface" then
+                    max_energy = 1000000000
+                end
+            else
+                mode = mode+1
+                max_energy = interface.getEnergyTarget()
             end
-        else
-            mode = mode+1
-            max_energy = interface.getEnergyTarget()
         end
-    end
-    for k,win in pairs(windows) do
-        local width, height = win.getSize()
-        term.redirect(win)
-
-        win.setVisible(false)
         if mode == 0 then
-            local energy = interface.getEnergy()
-            if energy > max_energy then
-                max_energy = energy
-            end
-
-            win.clear()
-            win.setCursorPos(1,1)
-
-            fill(1,1, width,1, colors.black, colors.lightGray, "-")
-            fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
-            if (width*(energy/max_energy))%1 > 0.5 then
-                fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
-            end
-            fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
-
-            write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.cyan)
+            energy_delta[mode] = (interface.getEnergy()-last_energy)
         elseif mode == 1 then
-            local energy = interface.getStargateEnergy()
-
-            win.clear()
-            win.setCursorPos(1,1)
-
-            fill(1,1, width,1, colors.black, colors.lightGray, "-")
-            fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
-            if (width*(energy/max_energy))%1 > 0.5 then
-                fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
-            end
-            fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
-
-            write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.lime)
+            energy_delta[mode] = (interface.getStargateEnergy()-last_energy)
         end
-        win.setVisible(true)
+        for k,win in pairs(windows) do
+            local width, height = win.getSize()
+            term.redirect(win)
+
+            win.setVisible(false)
+            if mode == 0 then
+                local energy = interface.getEnergy()
+                last_energy = energy
+                if energy > max_energy then
+                    max_energy = energy
+                end
+
+                win.clear()
+                win.setCursorPos(1,1)
+
+                fill(1,1, width,1, colors.black, colors.lightGray, "-")
+                fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+                if (width*(energy/max_energy))%1 > 0.5 then
+                    fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
+                end
+                fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
+
+                write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." Rate: "..prettyEnergy((energy_delta[mode]*4)/20).."/t", colors.black, colors.cyan)
+            elseif mode == 1 then
+                local energy = interface.getStargateEnergy()
+                last_energy = energy
+
+                win.clear()
+                win.setCursorPos(1,1)
+
+                fill(1,1, width,1, colors.black, colors.lightGray, "-")
+                fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+                if (width*(energy/max_energy))%1 > 0.5 then
+                    fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
+                end
+                fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
+
+                write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." Rate: "..prettyEnergy((energy_delta[mode]*4)/20).."/t", colors.black, colors.lime)
+            end
+            win.setVisible(true)
+            sleep()
+        end
+        timer = timer+0.5
+        sleep(0.5)
     end
-    timer = timer+0.5
-    sleep(0.5)
+end)
+
+if not stat then
+    term.redirect(term.native())
+    error(err)
+    sleep(1)
+    os.reboot()
 end

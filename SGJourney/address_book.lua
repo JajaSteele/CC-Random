@@ -410,6 +410,7 @@ local commands = {
                 end
                 gates[name or "unknown"] = id
                 gates_completion[#gates_completion+1] = name
+                sleep(0.125)
             end
 
             fill(1, h-2, w, h-1, colors.black, colors.white, " ")

@@ -14,7 +14,7 @@ end
 
 if modem then
     rednet.open(peripheral.getName(modem))
-    rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home")
+    rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home_"..os.getComputerID())
 end
 
 local function write(x,y,text,bg,fg)

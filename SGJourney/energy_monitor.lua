@@ -34,11 +34,9 @@ local function fill(x,y,x1,y1,bg,fg,char)
     if fg then
         term.setTextColor(fg)
     end
-    for i1=1, (x1-x)+1 do
-        for i2=1, (y1-y)+1 do
-            term.setCursorPos(x+i1-1,y+i2-1)
-            term.write(char or " ")
-        end
+    for i2=1, (y1-y)+1 do
+        term.setCursorPos(x,y+i2-1)
+        term.write(string.rep(char or " ", (x1-x)+1))
     end
     term.setTextColor(old_fg)
     term.setBackgroundColor(old_bg)
@@ -123,7 +121,7 @@ local stat, err = pcall(function()
                 win.setCursorPos(1,1)
 
                 fill(1,1, width,1, colors.black, colors.lightGray, "-")
-                fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+                fill(1,2, width*clamp(energy/max_energy, 0, 1), height-2, colors.red, colors.red, " ")
                 if (width*(energy/max_energy))%1 > 0.5 then
                     fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
                 end
@@ -138,7 +136,7 @@ local stat, err = pcall(function()
                 win.setCursorPos(1,1)
 
                 fill(1,1, width,1, colors.black, colors.lightGray, "-")
-                fill(1,2, width*(energy/max_energy), height-2, colors.red, colors.red, " ")
+                fill(1,2, width*clamp(energy/max_energy, 0, 1), height-2, colors.red, colors.red, " ")
                 if (width*(energy/max_energy))%1 > 0.5 then
                     fill((width*(energy/max_energy))+1,2, (width*(energy/max_energy))+1, height-2, colors.black, colors.red, "\x7F")
                 end

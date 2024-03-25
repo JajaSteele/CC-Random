@@ -705,7 +705,7 @@ local function scrollThread()
     while true do
         local event, scroll_input, x, y = os.pullEvent("mouse_scroll")
         if is_on_terminal then
-            scroll = clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, math.min(#address_book/(h-4))))
+            scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, math.min(#address_book/(h-4)))))
             os.queueEvent("drawList")
         end
     end

@@ -24,6 +24,15 @@ local function prettyEnergy(energy)
     end
 end
 
+local function disp_time(time)
+  local days = math.floor(time/86400)
+  local hours = math.floor((time % 86400)/3600)
+  local minutes = math.floor((time % 3600)/60)
+  local seconds = math.floor((time % 60))
+  return string.format("%d:%02d:%02d:%02d",days,hours,minutes,seconds)
+end
+
+
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
@@ -117,6 +126,8 @@ local stat, err = pcall(function()
                     max_energy = energy
                 end
 
+                eta = (max_energy/(energy_delta[mode]*4))
+
                 win.clear()
                 win.setCursorPos(1,1)
 
@@ -127,11 +138,13 @@ local stat, err = pcall(function()
                 end
                 fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
 
-                write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." Rate: "..prettyEnergy((energy_delta[mode]*4)/20).."/t", colors.black, colors.cyan)
+                write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.cyan)
             elseif mode == 1 then
                 local energy = interface.getStargateEnergy()
                 last_energy = energy
 
+                eta = (max_energy/(energy_delta[mode]*4))
+
                 win.clear()
                 win.setCursorPos(1,1)
 
@@ -142,7 +155,7 @@ local stat, err = pcall(function()
                 end
                 fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
 
-                write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." Rate: "..prettyEnergy((energy_delta[mode]*4)/20).."/t", colors.black, colors.lime)
+                write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.lime)
             end
             win.setVisible(true)
             sleep()

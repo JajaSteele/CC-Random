@@ -60,6 +60,9 @@ end
 local feedback_blacklist = {
     {code=-26, name="interrupted_by_incoming_connection"}
 }
+local is_energy_reached = false
+local has_announced_energy = false
+
 local function checkFeedbackBlacklist(code)
     if type(code) == "number" then
         for k,v in pairs(feedback_blacklist) do
@@ -148,6 +151,9 @@ local function mainTTS()
                 end
             end
             passed_entities = 0
+        elseif event[1] == "stargate_energy_full" then
+            print("stargate_energy_full")
+            playTTS("Gate successfully charged to energy target")
         end
     end
 end
@@ -162,4 +168,20 @@ local function entityCounter()
     end
 end
 
-parallel.waitForAll(mainTTS, entityCounter)
+local function energyCounter()
+    while true do
+        if interface.getStargateEnergy() >= interface.getEnergyTarget() then
+            is_energy_reached = true
+            if not has_announced_energy and is_energy_reached then
+                has_announced_energy = true
+                os.queueEvent("stargate_energy_full")
+            end
+        else
+            is_energy_reached = false
+            has_announced_energy = false
+        end
+        sleep(1)
+    end
+end
+
+parallel.waitForAll(mainTTS, entityCounter, energyCounter)

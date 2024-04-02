@@ -7,5 +7,5 @@ while true do
     monitor.clear()
     monitor.setCursorPos(1,1)
     monitor.write(interface.getCurrentSymbol())
-    sleep(0.25)
+    sleep()
 end

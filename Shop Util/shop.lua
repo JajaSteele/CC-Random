@@ -232,10 +232,18 @@ if args[1] == "setup" or not fs.exists("/price_shop.txt") then
         end
         local new_count = tonumber(read(nil, nil, function(text) return completion.choice(text, {old_count}) end, old_count))
 
+        term.write("Custom Label: ")
+        local old_label = ""
+        if shop_item then
+            old_label = shop_item.label
+        end
+        local new_label = read(nil, nil, function(text) return completion.choice(text, {old_label}) end, old_label)
+
         new_shop_items[#new_shop_items+1] = {
             name = v.name,
             price = new_price,
-            count = new_count
+            count = new_count,
+            label = new_label
         }
     end
 
@@ -345,10 +353,19 @@ local function drawMain()
             local print_y = 2+i1
             fill(1, print_y, width, print_y, colors.black, colors.white, " ")
             if entry then
-                local name = entry.name..((shifting and " (x16)") or "")
+                local temp_name = ""
+                if entry.label and entry.label ~= "" then
+                    temp_name = entry.label
+                else
+                    temp_name = entry.name
+                end
+                local name = temp_name..((shifting and " (x16)") or "")
 
                 local item_bg = colors.black
                 if filter ~= "" and entry.name:match(filter) then
+                    item_bg = colors.blue
+                end
+                if filter ~= "" and entry.label:match(filter) then
                     item_bg = colors.blue
                 end
 

@@ -327,9 +327,9 @@ local function autoInputThread()
         local symbol_string = tostring(v)
         for i1=1, #symbol_string do
             os.queueEvent("char", tostring(symbol_string:sub(i1,i1)))
-            os.sleep(0.125)
+            os.sleep(0.0625)
         end
-        os.sleep(0.25)
+        os.sleep(0.1)
         os.queueEvent("key", keys.space, false)
     end
     os.queueEvent("key", keys.enter, false)
@@ -365,6 +365,7 @@ local function mainThread()
     print("3. Clipboard")
     print("4. Exit")
     print("5. Set Label")
+    print("6. Set Energy Target")
 
     write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -426,6 +427,14 @@ local function mainThread()
         local new_label = read(nil, nil, nil, config.label)
         config.label = new_label
         writeConfig()
+        os.reboot()
+        return
+    elseif mode == 6 then
+        term.clear()
+        term.setCursorPos(1,1)
+        print("New Energy Target:")
+        local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
+        sg.setEnergyTarget(new_target or sg.getEnergyTarget())
         os.reboot()
         return
     end

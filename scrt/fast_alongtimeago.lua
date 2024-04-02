@@ -7,6 +7,10 @@ local filmText = [[
 
 filmText = filmText..file.readAll()
 
+file:close()
+
+filmText:gsub("sleep(", "print(")
+
 local monitor = peripheral.find("monitor")
 monitor.setTextScale(1)
 

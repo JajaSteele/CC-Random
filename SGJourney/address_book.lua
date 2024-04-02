@@ -468,8 +468,14 @@ local commands = {
 
                 if connected then
                     local id, entries_to_add = rednet.receive("jjs_sg_transmit_data", 10)
+                    local count = 0
                     for k,v in ipairs(entries_to_add) do
-                        address_book[#address_book+1] = v
+                        if first then
+                            table.insert(address_book, tonumber(first+count) or #address_book+1, v)
+                        else
+                            table.insert(address_book, #address_book+1, v)
+                        end
+                        count = count+1
                     end
                 end
 
@@ -520,6 +526,30 @@ local commands = {
         },
         func=(function(...)
             shell.run(...)
+        end)
+    },
+    {
+        main="clearall",
+        args={},
+        func=(function(...)
+            for i1=1, #address_book do
+                table.remove(address_book, 1)
+            end
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Cleared all data")
+            sleep(0.5)
+            write(1, h-2, "(Not permanent if unsaved)")
+            sleep(0.5)
+        end)
+    },
+    {
+        main="reload",
+        args={},
+        func=(function(...)
+            loadSave()
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Reloaded from file!")
+            sleep(0.5)
         end)
     },
 }
@@ -705,7 +735,7 @@ local function scrollThread()
     while true do
         local event, scroll_input, x, y = os.pullEvent("mouse_scroll")
         if is_on_terminal then
-            scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, math.min(#address_book/(h-4)))))
+            scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, #address_book)))
             os.queueEvent("drawList")
         end
     end

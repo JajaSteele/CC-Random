@@ -90,8 +90,12 @@ end
 local mode = 0
 local timer = 0
 
+local pause_timer = 0
 
-local stat, err = pcall(function()
+local manual_switch = 0
+
+
+local function mainThread()
     while true do
         if timer > 4 then
             timer = 0
@@ -126,7 +130,7 @@ local stat, err = pcall(function()
                     max_energy = energy
                 end
 
-                eta = (max_energy/(energy_delta[mode]*4))
+                eta = ((max_energy-energy)/(energy_delta[mode]*4))
 
                 win.clear()
                 win.setCursorPos(1,1)
@@ -138,12 +142,16 @@ local stat, err = pcall(function()
                 end
                 fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
 
-                write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.cyan)
+                if eta > 0 then
+                    write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.cyan)
+                else
+                    write(1, height, "Interface : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.cyan)
+                end
             elseif mode == 1 then
                 local energy = interface.getStargateEnergy()
                 last_energy = energy
 
-                eta = (max_energy/(energy_delta[mode]*4))
+                eta = ((max_energy-energy)/(energy_delta[mode]*4))
 
                 win.clear()
                 win.setCursorPos(1,1)
@@ -155,14 +163,52 @@ local stat, err = pcall(function()
                 end
                 fill(1,height-1, width,height-1, colors.black, colors.lightGray, "-")
 
-                write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.lime)
+                if eta > 0 then
+                    write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy).." ETA: "..disp_time(clamp(eta,0,720000)), colors.black, colors.lime)
+                else
+                    write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.lime)
+                end
             end
             win.setVisible(true)
             sleep()
+
+            fill(1,1, width*clamp(timer/4, 0, 1), 1, colors.black, colors.lightBlue, "-")
+            fill(1,height-1, width*clamp(timer/4, 0, 1), height-1, colors.black, colors.lightBlue, "-")
+            if pause_timer > 0 then
+                write(1, 1, "Locked for : "..pause_timer.."s", colors.black, colors.lightBlue)
+            else
+                if mode == 1 and interface.getStargateEnergy() < interface.getEnergyTarget() then
+                    timer = 0
+                    max_energy = interface.getEnergyTarget()
+                    write(1, 1, "Locked until gate is charged", colors.black, colors.lightBlue)
+                end
+            end
         end
-        timer = timer+0.5
+        if pause_timer <= 0 then
+            timer = timer+0.5
+        else
+            pause_timer = clamp(pause_timer-0.5, 0, pause_timer)
+        end
         sleep(0.5)
     end
+end
+
+local function touchThread()
+    while true do
+        local event = os.pullEvent("monitor_touch")
+        timer = 4.5
+        manual_switch = manual_switch+1
+        if manual_switch > 2 then
+            manual_switch = 0
+            pause_timer = 0
+        else
+            pause_timer = 120
+        end
+    end
+end
+
+local stat, err = pcall(function()
+    parallel.waitForAny(mainThread, touchThread)
 end)
 
 if not stat then

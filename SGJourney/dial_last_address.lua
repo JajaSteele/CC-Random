@@ -86,4 +86,10 @@ local function dialThread()
     end
 end
 
+if interface.isStargateConnected() and interface.getConnectedAddress then
+    last_address = interface.getConnectedAddress()
+    writeSave()
+    print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))
+end
+
 parallel.waitForAll(lastAddressSaverThread, rsThread, dialThread)

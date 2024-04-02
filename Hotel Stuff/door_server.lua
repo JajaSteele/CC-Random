@@ -116,7 +116,7 @@ local function detectPlayer()
     while true do
         local _, player = os.pullEvent("playerClick")
         if player == config.username or player == config.owner then
-            door_timer = 30
+            door_timer = config.delay
 
             if player == config.username then
                 config.date = getDate("shortdate")

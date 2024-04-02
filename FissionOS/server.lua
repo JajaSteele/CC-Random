@@ -115,8 +115,8 @@ local loggingLevels_emojis = {
 
 local logFileName = os.date("%d-%m-%Y_%H.%M.%S")..".log"
 
-local function getDate(mode)
-    if mode == "shortdate" then
+local function getDate(timeOnly)
+    if short then
         return os.date("%d/%m %H.%M.%S")
     elseif mode == "shorttime" then
         return os.date("%H.%M.%S")
@@ -310,7 +310,7 @@ local function reactorChecks()
                 reactor.scram()
                 fullLog("High temperature detected! SCRAM",1)
             end
-            if reactor.getWaste().amount >= reactor.getWasteCapacity() then
+            if reactor.getWaste().amount >= reactor.getWasteCapacity()*0.75 then
                 reactor.scram()
                 fullLog("Waste overfilling detected! SCRAM",1)
             end

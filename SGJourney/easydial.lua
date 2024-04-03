@@ -111,6 +111,12 @@ local function clearGate()
         sg.openChevron()
         sleep(0.25)
         sg.closeChevron()
+    else
+        if (0-sg.getCurrentSymbol()) % 39 < 19 then
+            sg.rotateAntiClockwise(0)
+        else
+            sg.rotateClockwise(0)
+        end
     end
 end
 
@@ -368,7 +374,15 @@ local dial_book = {
     {name="Chulak", address={8,1,22,14,36,19}}
 }
 
-clearGate()
+if sg.getChevronsEngaged() > 0 and not sg.isStargateConnected() then
+    sg.closeChevron()
+    sg.disconnectStargate()
+    if (0-sg.getCurrentSymbol()) % 39 < 19 then
+        sg.rotateAntiClockwise(0)
+    else
+        sg.rotateClockwise(0)
+    end
+end
 
 local function split(s, delimiter)
     local result = {};

@@ -16,6 +16,30 @@ end
 
 loadSave()
 
+local config = {}
+
+local function writeConfig()
+    local file = io.open("last_address_config.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+local function loadConfig()
+    if fs.exists("last_address_config.txt") then
+        local file = io.open("last_address_config.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    else
+        print("Select a mode (Crystal Interface only!):")
+        print("1 = Fast")
+        print("2 = Fancy-Quick (MW Only)")
+        config.mode = tonumber(read())
+        writeConfig()
+    end
+end
+
+loadConfig()
+
 local start_dialing = false
 local to_dial = {}
 
@@ -42,7 +66,6 @@ local function rsThread()
                     break
                 else
                     to_dial = last_address
-                    to_dial[#to_dial+1] = 0
                     start_dialing = true
                     break
                 end
@@ -61,9 +84,34 @@ local function dialThread()
             end
 
             print("Dialing: "..table.concat(to_dial, " "))
+
+            interface.closeChevron()
+
+            if interface.engageSymbol and config.mode == 2 then
+                if (0-interface.getCurrentSymbol()) % 39 < 19 then
+                    interface.rotateAntiClockwise(0)
+                else
+                    interface.rotateClockwise(0)
+                end
+                repeat
+                    sleep()
+                until interface.getCurrentSymbol() == 0
+
+                interface.rotateAntiClockwise(-1)
+            end
+
             for k,v in ipairs(to_dial) do
                 if interface.engageSymbol then
-                    interface.engageSymbol(v)
+                    if config.mode == 2 then
+                        repeat
+                            sleep()
+                        until ((interface.getCurrentSymbol()/38)*(#to_dial+1)) >= k
+                        interface.engageSymbol(v)
+                        os.sleep(0.25)
+                    else
+                        interface.engageSymbol(v)
+                        os.sleep(0.125)
+                    end
                 elseif interface.rotateClockwise then
                     if (v-interface.getCurrentSymbol()) % 39 < 19 then
                         interface.rotateAntiClockwise(v)
@@ -80,6 +128,33 @@ local function dialThread()
                     interface.closeChevron()
                 end
             end
+
+            if interface.engageSymbol and config.mode == 2 then
+                repeat
+                    local symbol = interface.getCurrentSymbol()
+                    sleep()
+                until symbol == 0
+                interface.rotateAntiClockwise(0)
+                sleep(0.25)
+                interface.openChevron()
+                sleep(0.75)
+                interface.closeChevron()
+            else
+                if (v-interface.getCurrentSymbol()) % 39 < 19 then
+                    interface.rotateAntiClockwise(v)
+                else
+                    interface.rotateClockwise(v)
+                end
+
+                repeat
+                    sleep(0.125)
+                until interface.isCurrentSymbol(v)
+
+                interface.openChevron()
+                sleep(0.35)
+                interface.closeChevron()
+            end
+            
             start_dialing = false
         end
         sleep(0.5)

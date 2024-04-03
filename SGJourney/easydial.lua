@@ -95,7 +95,7 @@ local function wait_for_key(pattern, key, mode)
 end
 
 local function clearGate()
-    if sg.isStargateConnected() then
+    if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 then
         sg.closeChevron()
         if (0-sg.getCurrentSymbol()) % 39 < 19 then
             sg.rotateAntiClockwise(0)
@@ -389,6 +389,7 @@ local function mainThread()
     print("3. Clipboard")
     print("4. Exit")
     print("5. Set Label")
+    print("6. Set Energy Target")
 
     write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -452,6 +453,14 @@ local function mainThread()
         writeConfig()
         os.reboot()
         return
+    elseif mode == 6 then
+        term.clear()
+        term.setCursorPos(1,1)
+        print("New Energy Target:")
+        local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
+        sg.setEnergyTarget(new_target or sg.getEnergyTarget())
+        os.reboot()
+        return
     end
 end
 
@@ -477,6 +486,8 @@ local function mainRemote()
             clearGate()
             is_dialing = true
             parallel.waitForAll(inputThread, dialThread, autoInputThread)
+        elseif protocol == "jjs_sg_getlabel" then
+            rednet.send(id, config.label, "jjs_sg_sendlabel")
         end
     end
 end

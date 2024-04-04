@@ -136,9 +136,7 @@ local function dialThread()
                 until symbol == 0
                 interface.rotateAntiClockwise(0)
                 sleep(0.25)
-                interface.openChevron()
-                sleep(0.75)
-                interface.closeChevron()
+                interface.engageSymbol(0)
             else
                 if (v-interface.getCurrentSymbol()) % 39 < 19 then
                     interface.rotateAntiClockwise(v)

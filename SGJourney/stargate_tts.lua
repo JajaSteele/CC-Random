@@ -1,6 +1,4 @@
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
-local dfpwm = require("cc.audio.dfpwm")
-local decoder = dfpwm.make_decoder()
 local speakers = {peripheral.find("speaker")}
 local completion = require("cc.completion")
 
@@ -24,16 +22,18 @@ if modem then
     if not settings.get("sg_tts.addressbook_id") then
         print("Select ID of addressbook to use:")
         local list_of_books = {rednet.lookup("jjs_sg_addressbook")}
-
+        
         for k,v in pairs(list_of_books) do
             list_of_books[k] = tostring(v)
         end
-
+        
         settings.set("sg_tts.addressbook_id", tonumber(read(nil, nil, function(text) return completion.choice(text, list_of_books) end, "")) or -1)
         settings.save()
     end
 end
 
+local dfpwm = require("cc.audio.dfpwm")
+local decoder = dfpwm.make_decoder()
 local tts_address = "http://jajasteele.duckdns.org:2456/"
 local voice = "Microsoft Zira Desktop"
 

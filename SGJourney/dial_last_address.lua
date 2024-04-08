@@ -85,7 +85,9 @@ local function dialThread()
 
             print("Dialing: "..table.concat(to_dial, " "))
 
-            interface.closeChevron()
+            if interface.closeChevron then
+                interface.closeChevron()
+            end
 
             if interface.engageSymbol and config.mode == 2 then
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then
@@ -134,19 +136,43 @@ local function dialThread()
                     local symbol = interface.getCurrentSymbol()
                     sleep()
                 until symbol == 0
-                interface.rotateAntiClockwise(0)
+
                 sleep(0.25)
+
+                if (0-interface.getCurrentSymbol()) % 39 < 19 then
+                    interface.rotateAntiClockwise(0)
+                else
+                    interface.rotateClockwise(0)
+                end
+
+                sleep(0.25)
+
+                if (0-interface.getCurrentSymbol()) % 39 < 19 then
+                    interface.rotateAntiClockwise(0)
+                else
+                    interface.rotateClockwise(0)
+                end
+
+                repeat
+                    local symbol = interface.getCurrentSymbol()
+                    sleep(0.125)
+                until symbol == 0
+                sleep(0.25)
+                interface.openChevron()
+                sleep(0.75)
+                interface.closeChevron()
+            elseif interface.engageSymbol and config.mode == 1 then
                 interface.engageSymbol(0)
             else
-                if (v-interface.getCurrentSymbol()) % 39 < 19 then
-                    interface.rotateAntiClockwise(v)
+                if (0-interface.getCurrentSymbol()) % 39 < 19 then
+                    interface.rotateAntiClockwise(0)
                 else
-                    interface.rotateClockwise(v)
+                    interface.rotateClockwise(0)
                 end
 
                 repeat
                     sleep(0.125)
-                until interface.isCurrentSymbol(v)
+                until interface.isCurrentSymbol(0)
 
                 interface.openChevron()
                 sleep(0.35)

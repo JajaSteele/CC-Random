@@ -93,7 +93,7 @@ local function addressLookup(lookup_value)
     end
 
     for i1=1, 5 do
-        local id, msg, protocol = rednet.receive(nil, 1)
+        local id, msg, protocol = rednet.receive(nil, 0.25)
         if id == id_to_send then
             if protocol == "jjs_sg_lookup_return" then
                 return msg
@@ -124,9 +124,9 @@ local function mainTTS()
             sleep(1.5)
             print("stargate_wormhole")
             if event[1] == "stargate_incoming_wormhole" then
-                playTTS("Incoming gate connection from "..addressLookup(event[2]).name)
+                playTTS("Incoming gate connection from "..(addressLookup(event[2]) or {name="UNKNOWN ADDRESS"}).name)
             else
-                playTTS("Gate successfully connected to "..addressLookup(event[2]).name)
+                playTTS("Gate successfully connected to "..(addressLookup(event[2]) or {name="UNKNOWN ADDRESS"}).name)
             end
             passed_entities = 0
         elseif event[1] == "stargate_disconnected" then

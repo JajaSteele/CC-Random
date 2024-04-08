@@ -7,7 +7,7 @@ local kill_mode = false
 local old_kill_mode = ""
 
 local blacklist = {
-    "Nathabe",
+    "Nathabe"
 }
 
 local dfpwm = require("cc.audio.dfpwm")

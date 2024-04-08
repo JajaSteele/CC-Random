@@ -19,7 +19,7 @@ local delay = read(nil, nil, nil, "1")
 local startup_file = io.open("startup.lua", "w")
 
 local startup_program = ([[
-    print("Starting Program '&p' in 1s")
+    print("Starting Program '&p' in ]]..delay..[[s")
     sleep(]]..delay..[[)
     shell.execute("&p")
 ]])

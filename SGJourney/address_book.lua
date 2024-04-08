@@ -137,6 +137,8 @@ local function writeConfig()
     file:close()
 end
 
+local exit = false
+
 loadConfig()
 
 config.pocket_mode = config.pocket_mode or false
@@ -258,7 +260,7 @@ local commands = {
         main="exit", 
         args={},
         func=(function(...)
-            os.reboot()
+            exit = true
         end)
     },
     {
@@ -807,4 +809,14 @@ local function lookupThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread)
+local function exitThread()
+    while true do
+        if exit then
+            return
+        end
+        sleep(0.5)
+    end
+end
+
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread)
+

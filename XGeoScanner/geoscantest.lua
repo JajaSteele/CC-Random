@@ -11,6 +11,8 @@ local filter
 
 local filter_preset = "default"
 
+local exit = false
+
 if fs.exists("GSX/preset.txt") then
     local file = io.open("GSX/preset.txt", "r")
     filter_preset = file:read("*a")
@@ -527,7 +529,7 @@ local buttons = {
         parallel.waitForAny(coreThread, drawPosThread)
     end,
     exit=function()
-        os.reboot()
+        exit = true
         return "EXIT NOW"
     end,
     setUsername=function()
@@ -587,6 +589,10 @@ while true do
                 break
             end
         end
+    end
+
+    if exit then
+        return
     end
 
     sleep(0.25)

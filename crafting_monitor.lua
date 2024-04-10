@@ -21,7 +21,7 @@ while true do
     mon_win.setCursorPos(1,1)
     mon_win.setTextColor(colors.yellow)
     mon_win.write("-= ME Crafting Monitor =-")
-    for k,v in ipairs(bridge.getCraftingCPUs()) do
+    for k,v in ipairs(bridge.getCraftingCPUs() or {}) do
         if v.isBusy and v.craftingJob then
             mon_win.setTextColor(colors.lime)
         else

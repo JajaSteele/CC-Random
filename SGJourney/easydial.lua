@@ -15,6 +15,8 @@ end
 if modem then
     rednet.open(peripheral.getName(modem))
     rednet.host("jjs_sg_remotedial", "jjs_sg_remotedial_home_"..os.getComputerID())
+    
+    modem.open(2707)
 end
 
 local function write(x,y,text,bg,fg)
@@ -405,6 +407,7 @@ local function mainThread()
     print("4. Exit")
     print("5. Set Label")
     print("6. Set Energy Target")
+    print("7. Toggle Monitor ("..tostring(config.monitor)..")")
 
     write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -524,6 +527,7 @@ local function mainFailsafe()
         end
     end
 end
+
 local function mainRemoteCommands()
     while true do
         local id, msg, protocol = rednet.receive()
@@ -536,8 +540,19 @@ local function mainRemoteCommands()
     end
 end
 
+local function mainRemoteDistance()
+    while true do
+        local event, side, channel, reply_channel, message, distance = os.pullEvent("modem_message")
+        if type(message) == "table" then
+            if message.protocol == "jjs_sg_dialer_ping" and message.message == "request_ping" then
+                modem.transmit(reply_channel, 2707, {protocol="jjs_sg_dialer_ping", message="response_ping", id=os.getComputerID(), label=config.label})
+            end
+        end
+    end
+end
+
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance)
 end)
 
 if not stat then

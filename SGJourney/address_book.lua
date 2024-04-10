@@ -489,6 +489,9 @@ commands = {
 
                 local temp_gates = {}
 
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Found "..(#temp_gates).." gates..")
+
                 local failed_attempts = 0
                 while true do
                     local timeout_timer = os.startTimer(0.075)
@@ -498,7 +501,7 @@ commands = {
                         if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
                             failed_attempts = 0
                             os.cancelTimer(timeout_timer)
-                            if event[6] then
+                            if event[6] and event[6] < 200 then  
                                 temp_gates[#temp_gates+1] = {
                                     id = event[5].id,
                                     distance = event[6] or math.huge,
@@ -529,10 +532,11 @@ commands = {
                     selected_gate = temp_gates[1].label
 
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                    write(1, h-2, "Using: "..selected_gate)
+                    write(1, h-2, "Nearest gate: ")
+                    write(1, h-1, "> "..selected_gate)
                 else
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                    write(1, h-2, "Couldn't find a gate!", colors.black, colors.red)
+                    write(1, h-1, "> Couldn't find a gate!", colors.black, colors.red)
                     sleep(0.75)
                 end
             end
@@ -549,7 +553,9 @@ commands = {
                 end
             end
 
-            sleep(1)
+            if mode == "quickdial" or mode == "quickstop" then
+                sleep(2)
+            end
         end),
         short_description={
             "Various remote Stargate commands",

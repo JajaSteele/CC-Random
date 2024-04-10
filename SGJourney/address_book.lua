@@ -498,11 +498,13 @@ commands = {
                         if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
                             failed_attempts = 0
                             os.cancelTimer(timeout_timer)
-                            temp_gates[#temp_gates+1] = {
-                                id = event[5].id,
-                                distance = event[6] or math.huge,
-                                label = event[5].label
-                            }
+                            if event[6] then
+                                temp_gates[#temp_gates+1] = {
+                                    id = event[5].id,
+                                    distance = event[6] or math.huge,
+                                    label = event[5].label
+                                }
+                            end
                         end
                     elseif event[1] == "timer" then
                         if event[2] == timeout_timer then
@@ -522,8 +524,17 @@ commands = {
 
                 table.sort(temp_gates, function(a,b) return (a.distance < b.distance) end)
 
-                gates[temp_gates[1].label] = temp_gates[1].id
-                selected_gate = temp_gates[1].label
+                if temp_gates[1] then
+                    gates[temp_gates[1].label] = temp_gates[1].id
+                    selected_gate = temp_gates[1].label
+
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Using: "..selected_gate)
+                else
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Couldn't find a gate!", colors.black, colors.red)
+                    sleep(0.75)
+                end
             end
 
             if gates[selected_gate] then
@@ -537,6 +548,8 @@ commands = {
                     rednet.send(gates[selected_gate], "", "jjs_sg_disconnect")
                 end
             end
+
+            sleep(1)
         end),
         short_description={
             "Various remote Stargate commands",

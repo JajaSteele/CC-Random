@@ -219,7 +219,6 @@ local function playerRadar()
         end
 
         if #security_data > 0 then
-            print(textutils.serialize(security_data))
             logPlayers(security_data)
         end
 

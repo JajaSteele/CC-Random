@@ -53,6 +53,9 @@ local function write(x,y,text,bg,fg)
     term.setCursorPos(old_posx,old_posy)
 end
 
+local rom_programs = {
+    "lua",
+}
 local program_list = {}
 local function updateList()
     file_list = fs.list("/")
@@ -62,6 +65,10 @@ local function updateList()
             program_list[#program_list+1] = getFileName(fs.getName(v))
         end
     end
+    for k,v in pairs(rom_programs) do
+        program_list[#program_list+1] = v
+    end
+    table.sort(program_list)
 end
 
 local width, height = term.getSize()
@@ -169,7 +176,7 @@ end
 
 while true do
     local stat, err = pcall(function()
-        parallel.waitForAll(drawMenu, scrollInput, clickThread)
+        parallel.waitForAny(drawMenu, scrollInput, clickThread)
     end)
 
     if not stat then
@@ -181,13 +188,13 @@ while true do
 
             term.clear()
             term.setCursorPos(1,1)
-            print("Starting Homepage")
+            print("Terminate again to exit!")
             local stat2, err2 = pcall(function()
-                for i1=1, 7 do
+                for i1=1, 14 do
                     write(1,2,"[", colors.lightBlue, colors.red)
                     write(width,2,"]", colors.lightBlue, colors.red)
-                    fill(2,2,(width-1)*(i1/7), 2, colors.lightBlue, colors.red, "/")
-                    sleep(0.1)
+                    fill(2,2,(width-1)*(i1/14), 2, colors.lightBlue, colors.red, "/")
+                    sleep(0.025)
                 end
             end)
             term.setTextColor(colors.red)
@@ -199,18 +206,19 @@ while true do
                 if err2 == "Terminated" then
                     term.setTextColor(colors.white)
                     term.setBackgroundColor(colors.black)
+                    term.clear()
+                    term.setCursorPos(1,1)
                     print("Exited Program")
                     return
                 else
                     term.setTextColor(colors.white)
                     term.setBackgroundColor(colors.black)
+                    term.clear()
+                    term.setCursorPos(1,1)
                     error(err2)
                 end
             else
-                term.setTextColor(colors.white)
-                term.setBackgroundColor(colors.black)
-                print("Exited Program")
-                return
+                run_threads = true
             end
         end
     end

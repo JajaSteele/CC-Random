@@ -39,6 +39,7 @@ end
 
 local config = {}
 config.label = "Computer "..os.getComputerID()
+config.monitor = true
 local function loadConfig()
     if fs.exists("saved_config_easydial.txt") then
         local file = io.open("saved_config_easydial.txt", "r")
@@ -70,7 +71,7 @@ local input_text = ""
 local auto_address_call = {}
 
 local monitor = peripheral.find("monitor")
-if monitor then
+if monitor and config.monitor then
     local mw, mh = monitor.getSize()
     monitor.setTextScale(1)
     monitor.setBackgroundColor(colors.black)
@@ -143,7 +144,7 @@ local function inputThread()
         term.setTextColor(colors.lightGray)
         term.write(input_text)
 
-        if monitor then
+        if monitor and config.monitor then
             monitor.setPaletteColor(colors.white, 0xFFDEAA)
             monitor.setPaletteColor(colors.black, 0x100500)
             monitor.setBackgroundColor(colors.black)
@@ -238,7 +239,7 @@ local function inputThread()
                     term.setTextColor(colors.white)
                     term.write("-")
                     
-                    if monitor then
+                    if monitor and config.monitor then
                         local mw, mh = monitor.getSize()
 
                         monitor.clear()
@@ -282,7 +283,7 @@ local function inputThread()
                     end
 
                     if address[#address].dialed and sg.isStargateConnected() and sg.getOpenTime() > (20*1) then
-                        if monitor then
+                        if monitor and config.monitor then
                             local mw, mh = monitor.getSize()
                             monitor.setTextColor(colors.green)
                             monitor.setCursorPos(1,3)
@@ -302,7 +303,7 @@ local function inputThread()
                             local event = os.pullEvent()
                         until event == "stargate_disconnected" or event == "stargate_reset"
 
-                        if monitor then
+                        if monitor and config.monitor then
                             monitor.clear()
                         end
 
@@ -473,6 +474,14 @@ local function mainThread()
         print("New Energy Target:")
         local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
         sg.setEnergyTarget(new_target or sg.getEnergyTarget())
+        os.reboot()
+        return
+    elseif mode == 7 then
+        term.clear()
+        term.setCursorPos(1,1)
+        config.monitor = not (config.monitor or true)
+        print("Set to: "..tostring(config.monitor))
+        writeConfig()
         os.reboot()
         return
     end

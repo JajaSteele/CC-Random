@@ -15,6 +15,8 @@ end
 if modem then
     rednet.open(peripheral.getName(modem))
     rednet.host("jjs_sg_addressbook", tostring(os.getComputerID()))
+
+    modem.open(2707)
 end
 
 local function fill(x,y,x1,y1,bg,fg,char)
@@ -148,6 +150,10 @@ local hold_ctrl = false
 
 local pocket_show_address = false
 
+local input_text = ""
+local is_on_help = false
+local scroll = 0
+
 local cmd_history = {}
 
 local w,h = term.getSize()
@@ -166,11 +172,13 @@ local function addressToString(address, separator, hasPrefixSuffix)
     return output
 end
 
-local commands = {
+local commands
+
+commands = {
     {
         main="edit", 
         args={
-            {name="entry", type="int", outline="<>"}
+            {name="entry", type="int", outline="<>", desc="Which entry to edit"}
         },
         func=(function(...)
             local entry_num = ...
@@ -204,12 +212,19 @@ local commands = {
                     selected_entry.security = "private"
                 end
             end
-        end)
+        end),
+        short_description={
+            "Edits the specified entry",
+        },
+        long_description={
+            "Edits the specified entry",
+            "Use the 'save' command to save the change",
+        }
     },
     {
         main="new", 
         args={
-            {name="entry", type="int", outline="<>"}
+            {name="entry", type="int", outline="<>", desc="Where to place the new entry (If empty, will place new entry at the bottom)"}
         },
         func=(function(...)
             local entry_num = ...
@@ -244,37 +259,63 @@ local commands = {
                 end
                 table.insert(address_book, tonumber(entry_num) or #address_book+1, selected_entry)
             end
-        end)
+        end),
+        short_description={
+            "Creates a new entry",
+        },
+        long_description={
+            "Creates a new entry",
+            "Use the 'save' command to save the change",
+        }
     },
     {
         main="remove", 
         args={
-            {name="entry", type="int", outline="<>"}
+            {name="entry", type="int", outline="<>", desc="Which entry to delete"}
         },
         func=(function(...)
             local entry_num = ...
             table.remove(address_book, entry_num)
-        end)
+        end),
+        short_description={
+            "Removes the specified entry",
+        },
+        long_description={
+            "Removes the specified entry",
+            "Use the 'save' command to save the change",
+        }
     },
     {
         main="exit", 
         args={},
         func=(function(...)
             exit = true
-        end)
+        end),
+        short_description={
+            "Exits the program",
+        },
+        long_description={
+            "Exits the program",
+        }
     },
     {
         main="save", 
         args={},
         func=(function(...)
             writeSave()
-        end)
+        end),
+        short_description={
+            "Saves the address book to file",
+        },
+        long_description={
+            "Saves the address book to the save file , NO BACKUPS ARE MADE!",
+        }
     },
     {
         main="print", 
         args={
-            {name="compact", type="bool", outline="<>"},
-            {name="security", type="public or private or both", outline="[]"},
+            {name="compact", type="bool", outline="<>", desc="Changes the printing format"},
+            {name="security", type="public or private or both", outline="[]", desc="Which entries to print"},
         },
         func=(function(...)
             local mode , security = ...
@@ -314,13 +355,19 @@ local commands = {
                 end
             end
             endPage()
-        end)
+        end),
+        short_description={
+            "Prints the address book on paper using a printer",
+        },
+        long_description={
+            "Prints the address book on paper using a printer",
+        }
     },
     {
         main="chat", 
         args={
-            {name="entry", type="int", outline="<>"},
-            {name="player", type="username", outline="[]"},
+            {name="entry", type="int", outline="<>", desc="Which entry to share"},
+            {name="player", type="username", outline="[]", desc="Player who will receive the address in chat"},
         },
         func=(function(...)
             local entry_num, username = ...
@@ -339,7 +386,14 @@ local commands = {
             else
                 chat_box.sendFormattedMessage(msg_text, "Address Book")
             end
-        end)
+        end),
+        short_description={
+            "Shares the specified address to chat",
+        },
+        long_description={
+            "Shares the specified address to global chat, or to the specified player if [player] is included",
+            "Tip: You can click in the chat to copy the address/name!"
+        }
     },
     {
         main="pocket",
@@ -347,18 +401,24 @@ local commands = {
         func=(function()
             config.pocket_mode = not config.pocket_mode
             writeConfig()
-        end)
+        end),
+        short_description={
+            "Toggles pocket mode",
+        },
+        long_description={
+            "Pocket mode only displays addresses when holding Alt (can also hold Ctrl before releasing Alt to lock the display)",
+        }
     },
     {
         main="sg",
         args={
-            {name="mode", type="dial/stop", outline="<>"},
-            {name="entry", type="int/temp", outline="[]"},
+            {name="mode", type="(quick)dial/(quick)stop", outline="<>", desc="What action to execute on the gate (Can also add 'quick' to use the closest gate, egs: 'sg quickdial 1')"},
+            {name="entry", type="int/temp", outline="[]", desc="Which entry to dial, if using dial/quickdial"},
         },
         func=(function(...)
             local mode, entry = ...
 
-            if not (mode == "dial" or mode == "stop") then
+            if not (mode == "dial" or mode == "quickdial" or mode == "stop" or mode == "quickstop") then
                 return
             end
 
@@ -381,65 +441,117 @@ local commands = {
             fill(1, h-2, w, h-1, colors.black, colors.white, " ")
             write(1, h-2, "Fetching Gates..")
 
-            local hosts
-            for i1=1, 5 do
-                hosts = {rednet.lookup("jjs_sg_remotedial")}
-                if hosts[1] then
-                    break
-                end
-                sleep(0.5)
-                if i1 > 1 then
-                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                    write(1, h-2, "Fetching Gates.. (x"..i1..")")
-                end
-            end
+            local selected_gate 
             local gates = {}
-            local gates_completion = {}
-
-            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-            write(1, h-2, "Fetching Labels..")
-
-            for k,v in ipairs(hosts) do
-                rednet.send(v, "", "jjs_sg_getlabel")
-                local id, name
+            
+            if mode == "dial" or mode == "stop" then
+                local hosts
                 for i1=1, 5 do
-                    id, name = rednet.receive("jjs_sg_sendlabel", 1)
-                    if name then break end
+                    hosts = {rednet.lookup("jjs_sg_remotedial")}
+                    if hosts[1] then
+                        break
+                    end
+                    sleep(0.5)
                     if i1 > 1 then
                         fill(1, h-2, w, h-1, colors.black, colors.white, " ")
                         write(1, h-2, "Fetching Gates.. (x"..i1..")")
                     end
                 end
-                gates[name or "unknown"] = id
-                gates_completion[#gates_completion+1] = name
-                sleep(0.125)
+                local gates_completion = {}
+
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Fetching Labels..")
+
+                for k,v in ipairs(hosts) do
+                    rednet.send(v, "", "jjs_sg_getlabel")
+                    local id, name
+                    for i1=1, 5 do
+                        id, name = rednet.receive("jjs_sg_sendlabel", 1)
+                        if name then break end
+                        if i1 > 1 then
+                            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                            write(1, h-2, "Fetching Gates.. (x"..i1..")")
+                        end
+                    end
+                    gates[name or "unknown"] = id
+                    gates_completion[#gates_completion+1] = name
+                    sleep(0.125)
+                end
+
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Select Gate")
+                term.setCursorPos(1, h-1)
+                term.write("> ")
+                
+                selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
+            elseif mode == "quickdial" or mode == "quickstop" then
+                modem.transmit(2707, 2707, {protocol="jjs_sg_dialer_ping", message="request_ping"})
+
+                local temp_gates = {}
+
+                local failed_attempts = 0
+                while true do
+                    local timeout_timer = os.startTimer(0.075)
+                    local event = {os.pullEvent()}
+
+                    if event[1] == "modem_message" then
+                        if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
+                            failed_attempts = 0
+                            os.cancelTimer(timeout_timer)
+                            temp_gates[#temp_gates+1] = {
+                                id = event[5].id,
+                                distance = event[6] or math.huge,
+                                label = event[5].label
+                            }
+                        end
+                    elseif event[1] == "timer" then
+                        if event[2] == timeout_timer then
+                            failed_attempts = failed_attempts+1
+                        else
+                            os.cancelTimer(timeout_timer)
+                        end
+                    end
+
+                    if failed_attempts > 4 then
+                        break
+                    end
+
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Found "..(#temp_gates).." gates..")
+                end
+
+                table.sort(temp_gates, function(a,b) return (a.distance < b.distance) end)
+
+                gates[temp_gates[1].label] = temp_gates[1].id
+                selected_gate = temp_gates[1].label
             end
 
-            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-            write(1, h-2, "Select Gate")
-            term.setCursorPos(1, h-1)
-            term.write("> ")
-            local selected_gate = read(nil, nil, function(text) return completion.choice(text, gates_completion) end, "")
-
             if gates[selected_gate] then
-                if mode == "dial" and (address_book[tonumber(entry)] or entry == "temp") then
+                if (mode == "dial" or mode == "quickdial") and (address_book[tonumber(entry)] or entry == "temp") then
                     if entry == "temp" then
                         rednet.send(gates[selected_gate], table.concat(temp_address, "-"), "jjs_sg_startdial")
                     else
                         rednet.send(gates[selected_gate], table.concat(address_book[tonumber(entry)].address, "-"), "jjs_sg_startdial")
                     end
-                elseif mode == "stop" then
+                elseif (mode == "stop" or mode == "quickstop") then
                     rednet.send(gates[selected_gate], "", "jjs_sg_disconnect")
                 end
             end
-        end)
+        end),
+        short_description={
+            "Various remote Stargate commands",
+        },
+        long_description={
+            "'dial' will send the specified entry's address to the gate you select afterward (or nearest gate if using quick mode), Shortcut: Middle-click or Shift+Click",
+            "'stop' will stop the gate you select afterward (or nearest gate if using quick mode), Shortcut: F4",
+        }
     },
     {
         main="transfer",
         args={
-            {name="mode", type="in/out", outline="<>"},
-            {name="first", type="int", outline="[]"},
-            {name="last", type="int", outline="[]"}
+            {name="mode", type="in/out", outline="<>", desc="Which way the transfer is going"},
+            {name="first", type="int", outline="[]", desc="First entry to send (or place of the new addresses if incoming)"},
+            {name="last", type="int", outline="[]", desc="Last entry to send"}
         },
         func=(function(...)
             local mode, first, last = ...
@@ -519,16 +631,32 @@ local commands = {
                     rednet.send(selected_id, address_to_send, "jjs_sg_transmit_data")
                 end
             end
-        end)
+        end),
+        short_description={
+            "Transfer the specified addresses to another computer",
+        },
+        long_description={
+            "Transfers all the addresses between [first] and [last] entry nums (or all of them if un-specified)",
+            "1. the transmitting computer will do 'transfer out [first] [last]'",
+            "2. the receiving computer will do 'transfer in [first]'",
+            "3. and now the transmitting computer will have to rapidly input the receiver's ID, then press Enter"
+        }
     },
     {
         main="shell",
         args={
-            {name="cmd", type="cmd", outline="<>"}
+            {name="cmd", type="string", outline="<>", desc="What command and args to use"}
         },
         func=(function(...)
             shell.run(...)
-        end)
+        end),
+        short_description={
+            "Execute a shell command"
+        },
+        long_description={
+            "Executes a shell command/program with",
+            "the provided args"
+        }
     },
     {
         main="clearall",
@@ -542,7 +670,14 @@ local commands = {
             sleep(0.5)
             write(1, h-2, "(Not permanent if unsaved)")
             sleep(0.5)
-        end)
+        end),
+        short_description={
+            "Temp. clear the address book"
+        },
+        long_description={
+            "Temporarily clears the address book",
+            "(Until you use the save command, or reload the program/list)"
+        }
     },
     {
         main="reload",
@@ -552,8 +687,127 @@ local commands = {
             fill(1, h-2, w, h-1, colors.black, colors.white, " ")
             write(1, h-2, "Reloaded from file!")
             sleep(0.5)
-        end)
+        end),
+        short_description={
+            "Reloads the address book"
+        },
+        long_description={
+            "Reloads the address book from the save file, Shortcut: F5"
+        }
     },
+    {
+        main="help",
+        args={},
+        func=(function()
+            is_on_help = true
+            scroll = 0
+            
+            local is_displaying_cmd = false
+
+            local function helpDrawThread()
+                while true do
+                    if not is_displaying_cmd then
+                        term.setCursorPos(1,1)
+                        term.setTextColor(colors.white)
+                        term.write("Command Guide")
+                        fill(1,2, w, h-1, colors.black, colors.white, " ")
+                        term.setCursorPos(1,2)
+                        local count = 0
+                        for i1=1, #commands do
+                            local cmd_entry_num = (i1+scroll)
+                            local cmd_entry = commands[cmd_entry_num]
+
+                            if cmd_entry then
+                                term.setTextColor(colors.yellow)
+                                print(cmd_entry.main)
+                            end
+                        end
+                    end
+                    os.pullEvent("drawHelp")
+                end
+            end
+
+            local function helpClickThread()
+                while true do
+                    local event, button, x, y = os.pullEvent("mouse_click")
+
+                    if button == 1 then
+                        if y > 1 then
+                            local cmd_num = ((y-1)+scroll)
+                            local cmd_entry = commands[cmd_num]
+
+                            if cmd_entry then
+                                while true do
+                                    is_displaying_cmd = true
+                                    fill(1,1, w, h-1, colors.black, colors.white, " ")
+                                    term.setCursorPos(1,2)
+
+                                    write(1, 1, "Command Guide", colors.black, colors.white)
+                                    write(1, 2, cmd_entry.main, colors.black, colors.yellow)
+
+                                    write(1, 4, "Arguments:", colors.black, colors.white)
+                                    for i1=1, #(cmd_entry.args) do
+                                        local arg = cmd_entry.args[i1]
+                                        write(1, 4+i1, arg.outline:sub(1,1)..arg.name..arg.outline:sub(2,2), colors.black, colors.lightGray)
+                                    end
+
+                                    write(1, 4+(#(cmd_entry.args))+2, "Description:", colors.black, colors.white)
+                                    term.setTextColor(colors.lightGray)
+                                    term.setCursorPos(1, 4+(#(cmd_entry.args))+3)
+                                    print(table.concat(cmd_entry.short_description, "\n"))
+                                    
+                                    local event1, button1, x1, y1 = os.pullEvent("mouse_click")
+
+                                    if button1 == 1 then
+                                        if y1 > 4 then
+                                            if y1 >= (4+(#(cmd_entry.args))+2) then
+                                                fill(1, 4, w, h, colors.black, colors.lightGray, " ")
+                                                write(1, 4, "Full Description:", colors.black, colors.white)
+                                                term.setTextColor(colors.lightGray)
+                                                term.setCursorPos(1, 4+3)
+                                                print(table.concat(cmd_entry.long_description, "\n\n"))
+                                            else
+                                                local arg_num = (y1-4)
+                                                local arg = cmd_entry.args[arg_num]
+                                                
+                                                if arg then
+                                                    fill(1, 4, w, h, colors.black, colors.lightGray, " ")
+                                                    write(1, 4, arg.name, colors.black, colors.white)
+                                                    write(1, 4+1, arg.type, colors.black, colors.lightGray)
+                                                    term.setTextColor(colors.gray)
+                                                    term.setCursorPos(1, 4+3)
+                                                    print(arg.desc)
+                                                end
+                                            end
+                                            local event2, button2 = os.pullEvent("mouse_click")
+                                        end
+                                    elseif button1 == 2 then
+                                        break
+                                    end
+                                end
+                                is_displaying_cmd = false
+                                os.queueEvent("drawHelp")
+                            end
+                        end
+                    elseif button == 2 then
+                        break
+                    end
+                end
+            end
+
+            parallel.waitForAny(helpDrawThread, helpClickThread)
+            is_on_help = false
+
+            term.setTextColor(colors.white)
+            term.setBackgroundColor(colors.black)
+        end),
+        short_description={
+            "Shows a (shitty) command guide"
+        },
+        long_description={
+            "Shows a (shitty) command guide"
+        }
+    }
 }
 
 local function getCommand(name)
@@ -624,9 +878,6 @@ local function getCommandNameList()
     return cmd_list
 end
 
-
-local scroll = 0
-
 local cmd_list_scroll = 0
 
 local is_on_terminal = false
@@ -635,6 +886,7 @@ loadSave()
 term.clear()
 
 local function command_autocomplete(text)
+    input_text = text
     local cmd_split = split(text, " ")
     local cmd_completion = {}
     cmd_completion = getCommandList()
@@ -667,6 +919,7 @@ local function listThread()
     while true do
         local old_x, old_y = term.getCursorPos()
         term.setCursorPos(1,1)
+        term.clearLine()
         term.write("Address Book")
         for i1=1, h-4 do
             local selected_num = i1+scroll
@@ -736,9 +989,13 @@ end
 local function scrollThread()
     while true do
         local event, scroll_input, x, y = os.pullEvent("mouse_scroll")
-        if is_on_terminal then
+        if is_on_terminal and not is_on_help then
             scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, #address_book)))
             os.queueEvent("drawList")
+        end
+        if is_on_help then
+            scroll = math.ceil(clamp(scroll+(scroll_input*1), 0, #commands))
+            os.queueEvent("drawHelp")
         end
     end
 end
@@ -746,7 +1003,7 @@ end
 local function keyThread()
     while true do
         local event, key, holding = os.pullEvent()
-        if (event == "key" or event == "key_up") and not holding then
+        if (event == "key" or event == "key_up") and not holding and not is_on_help then
             if event == "key" then
                 if key == keys.leftShift or key == keys.rightShift then
                     hold_shift = true
@@ -758,6 +1015,50 @@ local function keyThread()
                 elseif key == keys.leftCtrl or key == keys.rightCtrl then
                     hold_ctrl = true
                     os.queueEvent("drawList")
+                end
+
+                if is_on_terminal then
+                    if key == keys.f4 then
+                        for i1=1, #input_text do
+                            os.queueEvent("key", keys.backspace, false)
+                        end
+
+                        local text_to_input = "sg quickstop"
+                        for i1=1, #text_to_input do
+                            os.queueEvent("char", text_to_input:sub(i1,i1))
+                        end
+                        os.queueEvent("key", keys.enter, false)
+                    elseif key == keys.f3 then
+                        for i1=1, #input_text do
+                            os.queueEvent("key", keys.backspace, false)
+                        end
+
+                        local text_to_input = "sg quickdial temp"
+                        for i1=1, #text_to_input do
+                            os.queueEvent("char", text_to_input:sub(i1,i1))
+                        end
+                        os.queueEvent("key", keys.enter, false)
+                    elseif key == keys.f5 then
+                        for i1=1, #input_text do
+                            os.queueEvent("key", keys.backspace, false)
+                        end
+
+                        local text_to_input = "reload"
+                        for i1=1, #text_to_input do
+                            os.queueEvent("char", text_to_input:sub(i1,i1))
+                        end
+                        os.queueEvent("key", keys.enter, false)
+                    elseif key == keys.f1 then
+                        for i1=1, #input_text do
+                            os.queueEvent("key", keys.backspace, false)
+                        end
+
+                        local text_to_input = "help"
+                        for i1=1, #text_to_input do
+                            os.queueEvent("char", text_to_input:sub(i1,i1))
+                        end
+                        os.queueEvent("key", keys.enter, false)
+                    end
                 end
             elseif event == "key_up" then
                 if key == keys.leftShift or key == keys.rightShift then
@@ -809,14 +1110,50 @@ local function lookupThread()
     end
 end
 
+local function clickThread()
+    while true do
+        local event, button, x, y = os.pullEvent()
+        if (event == "mouse_click" or event == "monitor_touch") and y > 1 and y < h-2 and is_on_terminal then
+            local entry_num = (y-1)+scroll
+            local text_to_input = ""
+            local auto_enter = false
+            local full_erase = true
+            if hold_shift or button == 3 then
+                text_to_input = "sg quickdial "..entry_num
+                auto_enter = true
+            else
+                text_to_input = tostring(entry_num)
+                full_erase = false
+            end
+
+            if full_erase then
+                for i1=1, #input_text do
+                    os.queueEvent("key", keys.backspace, false)
+                end
+            end
+
+            for i1=1, #text_to_input do
+                os.queueEvent("char", text_to_input:sub(i1,i1))
+            end
+            if auto_enter then
+                os.queueEvent("key", keys.enter, false)
+            end
+        end
+    end
+end
+
 local function exitThread()
     while true do
         if exit then
+            term.setTextColor(colors.white)
+            term.setBackgroundColor(colors.black)
+            term.clear()
+            term.setCursorPos(1,1)
             return
         end
         sleep(0.5)
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread)
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread)
 

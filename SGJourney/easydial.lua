@@ -1,4 +1,5 @@
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
+local completion = require("cc.completion")
 
 local modems = {peripheral.find("modem")}
 
@@ -42,6 +43,7 @@ end
 local config = {}
 config.label = "Computer "..os.getComputerID()
 config.monitor = true
+config.address_book_id = nil
 local function loadConfig()
     if fs.exists("saved_config_easydial.txt") then
         local file = io.open("saved_config_easydial.txt", "r")
@@ -54,6 +56,7 @@ local function writeConfig()
     file:write(textutils.serialise(config))
     file:close()
 end
+
 
 loadConfig()
 
@@ -81,6 +84,19 @@ if monitor and config.monitor then
     monitor.setPaletteColor(colors.white, 0xFFFFFF)
     monitor.setPaletteColor(colors.black, 0x000000)
 end
+local function fancyReboot()
+    if monitor and config.monitor then
+        monitor.setPaletteColor(colors.black, 0x110000)
+        local width, height = monitor.getSize()
+        local monitor_text = "Rebooting.."
+        monitor.clear()
+        monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
+        monitor.clearLine()
+        monitor.setTextColor(colors.red)
+        monitor.write(monitor_text)
+    end
+    os.reboot()
+end
 
 local function wait_for_key(pattern, key, mode)
     while true do
@@ -92,6 +108,30 @@ local function wait_for_key(pattern, key, mode)
         elseif event[1] == "key" and mode ~= "char" then
             if event[2] == key then
                 return event[2]
+            end
+        end
+    end
+end
+
+local function addressLookup(lookup_value)
+    if not lookup_value then
+        return {name="Unknown Address"}
+    end
+
+    local id_to_send = config.address_book_id or 0
+    if type(lookup_value) == "string" then
+        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_name")
+    elseif type(lookup_value) == "table" then
+        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_address")
+    end
+
+    for i1=1, 5 do
+        local id, msg, protocol = rednet.receive(nil, 0.075)
+        if id == id_to_send then
+            if protocol == "jjs_sg_lookup_return" then
+                return msg
+            else
+                return {name="Unknown Address"}
             end
         end
     end
@@ -244,11 +284,12 @@ local function inputThread()
                     if monitor and config.monitor then
                         local mw, mh = monitor.getSize()
 
-                        monitor.clear()
                         monitor.setCursorPos(1,1)
+                        monitor.clearLine()
                         monitor.setTextColor(colors.white)
                         monitor.write("Address:")
                         monitor.setCursorPos(1,2)
+                        monitor.clearLine()
 
                         local display_text = ""
                         for k,v in ipairs(address) do
@@ -264,18 +305,55 @@ local function inputThread()
                                     monitor.setTextColor(colors.gray)
                                 end
                                 monitor.write(v.num)
-                                display_text = display_text..v.num      
+                                display_text = display_text..v.num
+                                if config.address_book_id and k == #address then
+                                    local address_to_lookup = {}
+                                    for k, v in ipairs(address) do
+                                        if v.num ~= 0 then
+                                            address_to_lookup[k] = v.num
+                                        end
+                                    end
+                                    local address_name = addressLookup(address_to_lookup)
+
+                                    if address_name then
+                                        local old_pos_x, old_pos_y = monitor.getCursorPos()
+                                        monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#(address_name.name)/2), mh)
+                                        monitor.setTextColor(colors.orange)
+                                        monitor.clearLine()
+                                        monitor.write(address_name.name)
+                                        monitor.setCursorPos(old_pos_x, old_pos_y)
+                                    end
+                                end
                             elseif v.num == 0 and (v.dialing or v.dialed) then
                                 monitor.setTextColor(colors.white)
                                 monitor.write("-")
 
                                 monitor.setTextColor(colors.orange)
                                 monitor.setCursorPos(1,3)
+                                monitor.clearLine()
                                 monitor.write("[["..string.rep(" ", mw-4).."]]")
                                 local text = "!STAND BACK!"
                                 monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#text/2), 3)
                                 monitor.setTextColor(colors.red)
+                                monitor.clearLine()
                                 monitor.write(text)
+
+                                if config.address_book_id then
+                                    local address_to_lookup = {}
+                                    for k, v in ipairs(address) do
+                                        if v.num ~= 0 then
+                                            address_to_lookup[k] = v.num
+                                        end
+                                    end
+                                    local address_name = addressLookup(address_to_lookup) or {name="Unknown Address"}
+
+                                    local old_pos_x, old_pos_y = monitor.getCursorPos()
+                                    monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#(address_name.name)/2), mh)
+                                    monitor.setTextColor(colors.yellow)
+                                    monitor.clearLine()
+                                    monitor.write(address_name.name)
+                                    monitor.setCursorPos(old_pos_x, old_pos_y)
+                                end
                             end
                         end
                         if not (address[#address].dialing or address[#address].dialed) then
@@ -309,7 +387,7 @@ local function inputThread()
                             monitor.clear()
                         end
 
-                        os.reboot()
+                        fancyReboot()
                         return
                     end
                     
@@ -408,6 +486,7 @@ local function mainThread()
     print("5. Set Label")
     print("6. Set Energy Target")
     print("7. Toggle Monitor ("..tostring(config.monitor)..")")
+    print("8. Set Addressbook ID ("..tostring(config.address_book_id)..")")
 
     write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -469,7 +548,7 @@ local function mainThread()
         local new_label = read(nil, nil, nil, config.label)
         config.label = new_label
         writeConfig()
-        os.reboot()
+        fancyReboot()
         return
     elseif mode == 6 then
         term.clear()
@@ -477,15 +556,32 @@ local function mainThread()
         print("New Energy Target:")
         local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
         sg.setEnergyTarget(new_target or sg.getEnergyTarget())
-        os.reboot()
+        fancyReboot()
         return
     elseif mode == 7 then
         term.clear()
         term.setCursorPos(1,1)
-        config.monitor = not (config.monitor or true)
+        config.monitor = (not config.monitor)
         print("Set to: "..tostring(config.monitor))
+        sleep(1)
         writeConfig()
-        os.reboot()
+        fancyReboot()
+        return
+    elseif mode == 8 then
+        term.clear()
+        term.setCursorPos(1,1)
+        local list_of_books = {rednet.lookup("jjs_sg_addressbook")}
+        
+        for k,v in pairs(list_of_books) do
+            list_of_books[k] = tostring(v)
+        end
+        print("Address Book ID:")
+        local new_address_book = read(nil, nil, function(text) return completion.choice(text, list_of_books) end, config.address_book_id)
+        if tonumber(new_address_book) then
+            config.address_book_id = tonumber(new_address_book)
+            writeConfig()
+        end
+        fancyReboot()
         return
     end
 end
@@ -522,7 +618,7 @@ local function mainFailsafe()
     while true do
         local event, code = os.pullEvent()
         if event == "stargate_reset" and code < 0 then
-            os.reboot()
+            fancyReboot()
             return
         end
     end
@@ -533,7 +629,7 @@ local function mainRemoteCommands()
         local id, msg, protocol = rednet.receive()
         if protocol == "jjs_sg_disconnect" then
             clearGate()
-            os.reboot()
+            fancyReboot()
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, config.label, "jjs_sg_sendlabel")
         end
@@ -551,13 +647,100 @@ local function mainRemoteDistance()
     end
 end
 
+local screensaver_text = "  Stargate Idle  "
+local screensaver_color = colors.gray
+
+local function screenSaverMonitor()
+    if monitor and config.monitor then
+        local width, height = monitor.getSize()
+        local scroll = 0
+        monitor.setPaletteColor(colors.gray, 0x222222)
+        while true do
+            if is_dialing then
+                break
+            end
+            local old_x, old_y = monitor.getCursorPos()
+            
+            monitor.setCursorPos(1-(#screensaver_text) + scroll, 2)
+            monitor.clearLine()
+            monitor.setTextColor(screensaver_color)
+            monitor.write(string.rep(screensaver_text.."-", math.ceil(width/#screensaver_text)+2))
+
+            monitor.setCursorPos(1-(#screensaver_text) - scroll, 4)
+            monitor.clearLine()
+            monitor.setTextColor(screensaver_color)
+            monitor.write(string.rep(screensaver_text.."-", math.ceil(width/#screensaver_text)+2))
+
+            monitor.setCursorPos(old_x, old_y)
+            scroll = scroll+1
+            if scroll > #screensaver_text then
+                scroll = 0
+            end
+            sleep(0.5)
+        end
+        monitor.setPaletteColor(colors.gray, term.nativePaletteColor(colors.gray))
+    end
+end
+
+local function gateIncomingMonitor()
+    if monitor and config.monitor then
+        local width, height = monitor.getSize()
+        while true do
+            local old_x, old_y = monitor.getCursorPos()
+            local event = {os.pullEvent("stargate_incoming_wormhole")}
+
+            local monitor_text = ""
+            screensaver_text = "  Incoming Wormhole  "
+            screensaver_color = colors.orange
+            if event[2] then
+                local address_incoming = addressLookup(event[2])
+                if address_incoming then
+                    monitor_text = address_incoming.name
+                else
+                    monitor_text = table.concat(event[2], "-")
+                end
+                monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
+                monitor.clearLine()
+                monitor.setTextColor(colors.yellow)
+                monitor.write(monitor_text)
+            end
+            monitor.setCursorPos(old_x, old_y)
+        end
+    end
+end
+
+local function gateClosingMonitor()
+    if monitor and config.monitor then
+        local width, height = monitor.getSize()
+        while true do
+            local old_x, old_y = monitor.getCursorPos()
+            local event = {os.pullEvent("stargate_disconnected")}
+
+            local monitor_text = ""
+            screensaver_text = "  Stargate Idle  "
+            screensaver_color = colors.gray
+            monitor.setCursorPos(1, 3)
+            monitor.clearLine()
+            monitor.setCursorPos(old_x, old_y)
+        end
+    end
+end
+
+if sg.isStargateConnected() and not sg.isStargateDialingOut() then
+    if sg.getConnectedAddress then
+        os.queueEvent("stargate_incoming_wormhole", sg.getConnectedAddress())
+    else
+        os.queueEvent("stargate_incoming_wormhole", nil)
+    end
+end
+
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateIncomingMonitor, gateClosingMonitor)
 end)
 
 if not stat then
     if err == "Terminated" then
-        os.reboot()
+        fancyReboot()
     else
         error(err)
     end

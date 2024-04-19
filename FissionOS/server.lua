@@ -115,8 +115,8 @@ local loggingLevels_emojis = {
 
 local logFileName = os.date("%d-%m-%Y_%H.%M.%S")..".log"
 
-local function getDate(timeOnly)
-    if short then
+local function getDate(mode)
+    if mode == "shortdate" then
         return os.date("%d/%m %H.%M.%S")
     elseif mode == "shorttime" then
         return os.date("%H.%M.%S")
@@ -160,6 +160,7 @@ local function fullLog(text,level)
     if not fs.isDir("/FissionOS_logs") then
         fs.makeDir("/FissionOS_logs")
     end
+    if not text then text = "" end
     if (level <= config.chatLoggingLevel or level == 4) then
         local logFileRead = io.open("/FissionOS_logs/"..logFileName,"r")
         local txt

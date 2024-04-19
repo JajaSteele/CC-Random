@@ -137,6 +137,7 @@ local function dialThread()
                     sleep()
                 until symbol == 0
 
+                interface.endRotation()
                 sleep(0.25)
 
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then

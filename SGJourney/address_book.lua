@@ -132,20 +132,30 @@ loadConfig()
 config.pocket_mode = config.pocket_mode or false
 config.master_id = config.master_id or nil
 
+local function writeSave()
+    local file = io.open("saved_address.txt", "w")
+    file:write(textutils.serialise(address_book))
+    file:close()
+end
 local function loadSave()
     if fs.exists("saved_address.txt") then
         local file = io.open("saved_address.txt", "r")
         address_book = textutils.unserialise(file:read("*a"))
         file:close()
     end
-    -- if config.master_id then
-    --     rednet.send()
-    -- end
-end
-local function writeSave()
-    local file = io.open("saved_address.txt", "w")
-    file:write(textutils.serialise(address_book))
-    file:close()
+    if config.master_id then
+        rednet.send(config.master_id, "", "jjs_sg_sync_request")
+        local attempts = 0
+        local id, msg, protocol
+        repeat
+            id, msg, protocol = rednet.receive("jjs_sg_sync_data", 0.075)
+            attempts = attempts+1
+        until id == config.master_id or attempts >= 5
+        if msg then
+            address_book = msg
+            writeSave()
+        end
+    end
 end
 
 local hold_shift = false
@@ -307,6 +317,7 @@ commands = {
         args={},
         func=(function(...)
             writeSave()
+            rednet.broadcast("", "jjs_sg_sync_reload")
         end),
         short_description={
             "Saves the address book to file",
@@ -874,29 +885,9 @@ commands = {
             {name="id", type="int", outline="<>", desc="ID of the master computer"}
         },
         func=(function(...)
-            local mode = ...
-
-            if mode == "import" then
-                if fs.exists("/disk/saved_address.txt") then
-                    local import_file = io.open("/disk/saved_address.txt", "r")
-                    local import_book = textutils.unserialise(import_file:read("*a"))
-                    import_file:close()
-                        
-                    address_book = import_book
-
-                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                    write(1, h-2, "Imported from disk")
-                    sleep(0.5)
-                end
-            elseif mode == "export" then
-                local export_file = io.open("/disk/saved_address.txt", "w")
-                export_file:write(textutils.serialise(address_book))
-                export_file:close()
-
-                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                write(1, h-2, "Exported to disk")
-                sleep(0.5)
-            end
+            local master_id = ...
+            config.master_id = tonumber(master_id)
+            writeConfig()
         end),
         short_description={
             "Turns addressbook into a slave computer"
@@ -1019,6 +1010,9 @@ local function listThread()
         term.setCursorPos(1,1)
         term.clearLine()
         term.write("Address Book ["..os.getComputerID().."]")
+        if config.master_id then
+            term.write(" <"..tostring(config.master_id)..">")
+        end
         for i1=1, h-4 do
             local selected_num = i1+scroll
             local selected_address = address_book[selected_num]
@@ -1240,6 +1234,25 @@ local function clickThread()
     end
 end
 
+local function masterThread()
+    while true do
+        local id, msg, protocol = rednet.receive("jjs_sg_sync_request")
+        local file = io.open("saved_address.txt", "r")
+        rednet.send(id, textutils.unserialise(file:read("*a")), "jjs_sg_sync_data")
+        file:close()
+    end
+end
+
+local function reloadSlaveThread()
+    while true do
+        local id, msg, protocol = rednet.receive("jjs_sg_sync_reload")
+        if id == config.master_id then
+            loadSave()
+            os.queueEvent("drawList")
+        end
+    end
+end
+
 local function exitThread()
     while true do
         if exit then
@@ -1253,5 +1266,5 @@ local function exitThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread)
+parallel.waitForAll(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread)
 

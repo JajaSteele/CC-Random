@@ -1,0 +1,425 @@
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+local modems = {peripheral.find("modem")}
+
+local modem
+
+for k,v in pairs(modems) do
+    if v.isWireless() == true then
+        modem = modems[k]
+    end
+end
+
+local modems = {peripheral.find("modem")}
+local modem
+portNum = 1204
+for k,v in pairs(modems) do
+    if v.isWireless() == true then
+        modem = modems[k]
+    end
+end
+addresses = nil
+function getAddessesFile()
+    file = http.get("https://pastebin.com/raw/ZQYfH1z5")
+    addresses = textutils.unserialise(file.readAll())
+    file.close()
+end
+getAddessesFile()
+addressToView = nil
+page = 1
+local address_display_table = {} -- Creates a new table, the one you're gonna use to display stuff
+for k,v in pairs(addresses) do -- Loops through every entries in addressesDatabase
+    address_display_table[#address_display_table+1] = {name=v.name, input_name=v.inputName, code = v.code} -- Adds the name of the address to address_display_table
+end
+table.sort(address_display_table, function(a,b) return (a.name < b.name) end) --Sorts the table by the name of each address, normally it should be alphabetically sorted
+targetAddress = nil
+
+local completion = require "cc.completion"
+
+local autoComp = {"dialer", "view", "dhd", "cmds", "term", "reboot"}
+
+num = 2
+listNum = 2
+scroll = 0
+
+local settings = {
+    dialer = "dialer",
+    database = "database",
+    dhd = "dhd",
+    cmds = "cmds",
+    list = "list"
+}
+dialType = 1
+sendId = 40
+local mode = settings.dialer
+rednet.open("back")
+target = nil
+
+local w, h = term.getSize()
+term.clear()
+inputMenu = window.create(term.current(), 1, 18, w, h)
+inputMenu.setVisible(true)
+mainMenu = window.create(term.current(), 1, 1, w, 16)
+mainMenu.setVisible(true)
+pageWindow = window.create(term.current(), 1, h-3, w, h)
+pageWindow.setVisible = true
+
+local function getNearestGate()
+    modem.transmit(portNum, portNum, {protocol="aspect_sg_ping", message="request_ping"})
+
+    local temp_gates = {}
+
+    local failed_attempts = 0
+    while true do
+        local timeout_timer = os.startTimer(0.075)
+        local event = {os.pullEvent()}
+
+        if event[1] == "modem_message" then
+            if type(event[5]) == "table" and event[5].protocol == "aspect_sg_ping" and event[5].message == "response_ping" then
+                failed_attempts = 0
+                os.cancelTimer(timeout_timer)
+                if event[6] and event[6] < 200 then  
+                    temp_gates[#temp_gates+1] = {
+                        id = event[5].id,
+                        distance = event[6] or math.huge
+                    }
+                end
+            end
+        elseif event[1] == "timer" then
+            if event[2] == timeout_timer then
+                failed_attempts = failed_attempts+1
+            else
+                os.cancelTimer(timeout_timer)
+            end
+        end
+
+        if failed_attempts > 4 then
+            break
+        end
+    end
+
+    table.sort(temp_gates, function(a,b) return (a.distance < b.distance) end)
+
+    if temp_gates[1] then
+        return temp_gates[1]
+    else
+        return nil
+    end
+end
+
+local function centerPad(text, width)
+    local text = tostring(text)
+    local pad = (width - string.len(text)) / 2
+    if pad <= 0 then
+        return text
+    end
+    return string.rep(" ", math.floor(pad))
+        .. text
+        .. string.rep(' ', math.ceil(pad))
+end
+
+function createTopMenu()
+    mainMenu.setTextColor(colors.red)
+    mainMenu.write("[] ")
+    mainMenu.setTextColor(colors.lightBlue)
+    if dialType == 1 then
+        mainMenu.write("Norm")
+    elseif dialType == 2 then
+        mainMenu.write("Fast")
+    end
+    mainMenu.setTextColor(colors.red)
+    mainMenu.setCursorPos(9,1)
+    mainMenu.write("[] ")
+    mainMenu.setTextColor(colors.lightGray)
+    mainMenu.write("Close")
+    mainMenu.setCursorPos(18,1)
+    if target == "prev" then
+        mainMenu.setTextColor(colors.lime)
+    else
+        mainMenu.setTextColor(colors.red)
+    end
+    mainMenu.write("[] ")
+    mainMenu.setTextColor(colors.lightGray)
+    mainMenu.write("Prev")
+end
+
+function createInputDisplay()
+    inputMenu.setCursorPos(1,1)
+    inputMenu.setTextColor(colors.gray)
+    inputMenu.write(string.rep("=", w))
+    inputMenu.setCursorPos(1,3)
+    inputMenu.setTextColor(colors.gray)
+    inputMenu.write(string.rep("=", w))
+    pageWindow.setCursorPos(1,1)
+    pageWindow.setTextColor(colors.lightGray)
+    pageWindow.write("[<]")
+    pageWindow.setCursorPos(w-2,1)
+    pageWindow.write("[>]")
+end
+
+function createMainMenu()
+    local old_pos_x, old_pos_y = term.getCursorPos()
+    if mode == settings.dialer then
+        num = 2
+        mainMenu.clear()
+        mainMenu.setCursorPos(1,1)
+        createTopMenu()
+        mainMenu.setCursorPos(1,2)
+        mainMenu.setTextColor(colors.gray)
+        mainMenu.write(string.rep("=", w))
+        mainMenu.setCursorPos(1,3)
+        for i1=(14*(page-1))+1, (14*page) do
+            if address_display_table[i1] then
+                local entry = address_display_table[i1+scroll]
+                if entry then
+                    mainMenu.setCursorPos(1, num+1)
+                    if target == entry.input_name.."View" then
+                        mainMenu.setTextColor(colors.lime)
+                    else
+                        mainMenu.setTextColor(colors.red)
+                    end
+                    mainMenu.write("[] ")
+                    mainMenu.setTextColor(colors.lightGray)
+                    mainMenu.write(entry.name)
+                    num = num+1
+                end
+            end
+        end
+    elseif mode == settings.dhd then
+        mainMenu.clear()
+        mainMenu.setCursorPos(1,1)
+        createTopMenu()
+        mainMenu.setCursorPos(1,2)
+        mainMenu.setTextColor(colors.gray)
+        mainMenu.write(string.rep("=", w))
+        mainMenu.redraw()
+        mainMenu.setCursorPos(1,10)
+        mainMenu.setTextColor(colors.lightBlue)
+        mainMenu.write(centerPad("Awaiting Input",w))
+    elseif mode == settings.database then
+        mainMenu.clear()
+        mainMenu.setCursorPos(1,1)
+        createTopMenu()
+        mainMenu.setCursorPos(1,2)
+        mainMenu.setTextColor(colors.gray)
+        mainMenu.write(string.rep("=", w))
+        mainMenu.redraw()
+        mainMenu.setCursorPos(1,10)
+        mainMenu.setTextColor(colors.lightBlue)
+        if addressToView ~= nil then
+            mainMenu.write(centerPad(addressToView,w))
+        else
+            mainMenu.write(centerPad("Awaiting Input",w))
+        end
+    elseif mode == settings.cmds then
+        mainMenu.clear()
+        mainMenu.setCursorPos(1,1)
+        createTopMenu()
+        mainMenu.setCursorPos(1,2)
+        mainMenu.setTextColor(colors.gray)
+        mainMenu.write(string.rep("=", w))
+        mainMenu.redraw()
+        mainMenu.setCursorPos(1,3)
+        mainMenu.setTextColor(colors.lightBlue)
+        print("- dial <input>: Dials the address of the selected gate")
+        print("- dial: Displays the dialing screen")
+        print("- close: Closes gate's connection")
+        print("- view <input>: Displays the address of the selected gate")
+        print("- last: Dials the address of the last connected gate")
+        print("- dhd: Opens the manual dialer (ex of a manual address: <1,2,3,4,5,6,7,8>")
+        print("- term: Shuts down the computer")
+        print("- reboot: Reboots the dialing program")
+    elseif mode == settings.list then
+        listNum = 2
+        mainMenu.clear()
+        mainMenu.setCursorPos(1,1)
+        createTopMenu()
+        mainMenu.setCursorPos(1,2)
+        mainMenu.setTextColor(colors.gray)
+        mainMenu.write(string.rep("=", w))
+        mainMenu.setCursorPos(1,3)
+        for i1=1, #address_display_table do --Loops for a certain number of times, in this case it loops #(length of address_display_table) times
+            local entry = address_display_table[i1+scroll] -- This sets an "entry" variable , which is gonna be the same as "v" in the old loop, except now "scroll" can offset it
+            if entry then
+                mainMenu.setCursorPos(1, listNum+1)
+                mainMenu.setTextColor(colors.lightBlue)
+                mainMenu.write("- ")
+                mainMenu.write(entry.input_name)
+                listNum = listNum+1
+            end
+        end
+    end
+    term.setCursorPos(old_pos_x, old_pos_y)
+end
+
+function awaitInput()
+    while true do
+        inputMenu.setCursorPos(1,2)
+        inputMenu.setTextColor(colors.lightGray)
+        local input = read(nil, nil, function(text) return completion.choice(text, autoComp) end, nil)
+        for k,v in pairs(addresses) do
+            --[[if input == "dial "..v.inputName then
+                inputMenu.setCursorPos(1,2)
+                inputMenu.clearLine()
+
+                local gate_to_dial = getNearestGate()
+                if gate_to_dial then
+                    rednet.send(gate_to_dial.id, {type="dial", data=v})
+                    target = v.inputName
+                    inputMenu.setCursorPos(1,1)
+                    createMainMenu()
+                end
+            elseif input == "fastdial "..v.inputName then
+                inputMenu.setCursorPos(1,2)
+                inputMenu.clearLine()
+
+                local gate_to_dial = getNearestGate()
+                if gate_to_dial then
+                    rednet.send(gate_to_dial.id, {type="dialfast", data=v})
+                    target = v.inputName
+                    createMainMenu()
+                end
+            elseif input == "quickdial "..v.inputName then
+                inputMenu.setCursorPos(1,2)
+                inputMenu.clearLine()
+                rednet.send(sendId,{type="quickdial", data=v})
+                target = v.inputName
+                createMainMenu()]]
+            if input == "view "..v.inputName then
+                mode = settings.database
+                addressToView = table.concat(v.code, ",")
+                createMainMenu()
+                inputMenu.setCursorPos(1,2)
+                inputMenu.clearLine()
+            end
+        end
+        if input == "dialer" then
+            mode = settings.dialer
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+            createMainMenu()
+        elseif input == "list" then
+            mode = settings.list
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+            createMainMenu()
+        elseif input == "view" then
+            mode = settings.database
+            createMainMenu()
+            mainMenu.setCursorPos(1,10)
+            mainMenu.setTextColor(colors.lightBlue)
+            mainMenu.write(centerPad("AWAITING SELECTION",w))
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+        elseif input == "dhd" then
+            mode = settings.dhd
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+            createMainMenu()
+        elseif input == "term" then
+            os.shutdown()
+        elseif input == "reboot" then
+            os.reboot()
+        elseif input == "close" then
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+            target = nil
+            local gate_to_close = getNearestGate()
+            if gate_to_close then
+                rednet.send(gate_to_close.id,"close")
+            end
+            createMainMenu()
+        elseif input ~= "" and mode == settings.dhd then
+            local temp_address = split(input, ",")
+            local newaddress= {}
+            for k,v in ipairs(temp_address) do
+                if tonumber(v) then
+                    newaddress[#newaddress+1] = tonumber(v)
+                end
+            end
+            if newaddress[#newaddress] ~= 0 then
+                newaddress[#newaddress+1] = 0
+            end
+            if newaddress then
+                local gate_to_dial = getNearestGate()
+                if gate_to_dial then
+                    rednet.send(gate_to_dial.id, {type="dial", data={code=newaddress}})
+                    inputMenu.setCursorPos(1,2)
+                    inputMenu.clearLine()
+                    createMainMenu()
+                end
+            end
+        else
+            inputMenu.setCursorPos(1,2)
+            inputMenu.clearLine()
+            createMainMenu()
+        end
+    end
+end
+
+function awaitClickInput()
+    while true do
+        sleep()
+        local event, button, x, y = os.pullEvent("mouse_click")
+        for k = 1, 14 do
+            local v = addresses[k + (14 * (page - 1))]
+            if (x>=1 and x<=2 and y == k + 2) then
+                local gate_to_dial = getNearestGate()
+                target = v.inputName
+                createMainMenu()
+                if gate_to_dial then
+                    if dialType == 1 then
+                        rednet.send(gate_to_dial.id, {type="dial", data=v})
+                    elseif dialType == 2 then
+                        rednet.send(gate_to_dial.id, {type="dialfast", data=v})
+                    end
+                end
+            end
+        end
+        if (x>=1 and x<=2 and y == 17) then
+            if page ~= 1 then
+                page = page -1
+                createMainMenu()
+            end
+        elseif (x>=w-2 and x<=w and y == 17) then
+            if page < math.ceil(#address_display_table / 14) then
+                page = page + 1
+                createMainMenu()
+            end
+        elseif (x>=1 and x<=2 and y == 1) then
+            if dialType == 1 then
+                dialType = 2
+            elseif dialType == 2 then
+                dialType = 1
+            end
+            createMainMenu()
+        elseif (x>=9 and x<=10 and y == 1) then
+            target = nil
+            local gate_to_close = getNearestGate()
+            if gate_to_close then
+                rednet.send(gate_to_close.id,"close")
+            end
+            createMainMenu()
+        elseif (x>=18 and x<=19 and y == 1) then
+            if gate_to_dial then
+                if dialType == 1 then
+                    rednet.send(gate_to_dial.id,"lastAddress")
+                elseif dialType == 2 then
+                    rednet.send(gate_to_dial.id,"lastAddressFast")
+                end
+                target = "prev"
+                createMainMenu()
+            end
+        end
+    end
+end
+
+createMainMenu()
+createInputDisplay()
+
+parallel.waitForAll(awaitInput,awaitClickInput)

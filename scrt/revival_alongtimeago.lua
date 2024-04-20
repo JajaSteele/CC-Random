@@ -8,7 +8,7 @@ local filmText = [[
 filmText = filmText..file.readAll()
 
 local monitor = peripheral.find("monitor")
-monitor.setTextScale(1)
+monitor.setTextScale(0.5)
 
 local stat, err = pcall(load(filmText))
 

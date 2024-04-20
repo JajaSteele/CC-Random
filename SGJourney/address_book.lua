@@ -110,20 +110,6 @@ local function endPage()
 end
 
 local address_book = {}
-
-local function loadSave()
-    if fs.exists("saved_address.txt") then
-        local file = io.open("saved_address.txt", "r")
-        address_book = textutils.unserialise(file:read("*a"))
-        file:close()
-    end
-end
-local function writeSave()
-    local file = io.open("saved_address.txt", "w")
-    file:write(textutils.serialise(address_book))
-    file:close()
-end
-
 local config = {}
 
 local function loadConfig()
@@ -144,6 +130,24 @@ local exit = false
 loadConfig()
 
 config.pocket_mode = config.pocket_mode or false
+config.master_id = config.master_id or nil
+
+local function loadSave()
+    if fs.exists("saved_address.txt") then
+        local file = io.open("saved_address.txt", "r")
+        address_book = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+    -- if config.master_id then
+    --     rednet.send()
+    -- end
+end
+local function writeSave()
+    local file = io.open("saved_address.txt", "w")
+    file:write(textutils.serialise(address_book))
+    file:close()
+end
+
 local hold_shift = false
 local hold_alt = false
 local hold_ctrl = false
@@ -826,7 +830,82 @@ commands = {
         long_description={
             "Shows a (shitty) command guide"
         }
-    }
+    },
+    {
+        main="disk",
+        args={
+            {name="direction", type="import/export", outline="<>", desc="'import' from disk or 'export' to disk"}
+        },
+        func=(function(...)
+            local mode = ...
+
+            if mode == "import" then
+                if fs.exists("/disk/saved_address.txt") then
+                    local import_file = io.open("/disk/saved_address.txt", "r")
+                    local import_book = textutils.unserialise(import_file:read("*a"))
+                    import_file:close()
+                        
+                    address_book = import_book
+
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Imported from disk")
+                    sleep(0.5)
+                end
+            elseif mode == "export" then
+                local export_file = io.open("/disk/saved_address.txt", "w")
+                export_file:write(textutils.serialise(address_book))
+                export_file:close()
+
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Exported to disk")
+                sleep(0.5)
+            end
+        end),
+        short_description={
+            "Imports or exports the addresses to/from the disk/pocket in disk drive"
+        },
+        long_description={
+            "Imports or exports the addresses to/from the disk/pocket in disk drive",
+        }
+    },
+    {
+        main="slave",
+        args={
+            {name="id", type="int", outline="<>", desc="ID of the master computer"}
+        },
+        func=(function(...)
+            local mode = ...
+
+            if mode == "import" then
+                if fs.exists("/disk/saved_address.txt") then
+                    local import_file = io.open("/disk/saved_address.txt", "r")
+                    local import_book = textutils.unserialise(import_file:read("*a"))
+                    import_file:close()
+                        
+                    address_book = import_book
+
+                    fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                    write(1, h-2, "Imported from disk")
+                    sleep(0.5)
+                end
+            elseif mode == "export" then
+                local export_file = io.open("/disk/saved_address.txt", "w")
+                export_file:write(textutils.serialise(address_book))
+                export_file:close()
+
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Exported to disk")
+                sleep(0.5)
+            end
+        end),
+        short_description={
+            "Turns addressbook into a slave computer"
+        },
+        long_description={
+            "Turns addressbook into a slave computer",
+            "The addresses will automatically be copied from master address book on startup/reload"
+        }
+    },
 }
 
 local function getCommand(name)
@@ -939,7 +1018,7 @@ local function listThread()
         local old_x, old_y = term.getCursorPos()
         term.setCursorPos(1,1)
         term.clearLine()
-        term.write("Address Book")
+        term.write("Address Book ["..os.getComputerID().."]")
         for i1=1, h-4 do
             local selected_num = i1+scroll
             local selected_address = address_book[selected_num]

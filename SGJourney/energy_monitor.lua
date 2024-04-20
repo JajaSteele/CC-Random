@@ -169,9 +169,8 @@ local function mainThread()
                     write(1, height, "Stargate : "..prettyEnergy(energy).."/"..prettyEnergy(max_energy), colors.black, colors.lime)
                 end
             end
-            win.setVisible(true)
             sleep()
-
+            
             fill(1,1, width*clamp(timer/4, 0, 1), 1, colors.black, colors.lightBlue, "-")
             fill(1,height-1, width*clamp(timer/4, 0, 1), height-1, colors.black, colors.lightBlue, "-")
             if pause_timer > 0 then
@@ -180,9 +179,11 @@ local function mainThread()
                 if mode == 1 and interface.getStargateEnergy() < interface.getEnergyTarget() then
                     timer = 0
                     max_energy = interface.getEnergyTarget()
+                    
                     write(1, 1, "Locked until gate is charged", colors.black, colors.lightBlue)
                 end
             end
+            win.setVisible(true)
         end
         if pause_timer <= 0 then
             timer = timer+0.5

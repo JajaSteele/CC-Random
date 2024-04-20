@@ -102,6 +102,7 @@ local function addressLookup(lookup_value)
             end
         end
     end
+    return {name="Unknown Address"}
 end
 
 local is_active = false

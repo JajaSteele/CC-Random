@@ -1,5 +1,6 @@
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local monitor = peripheral.find("monitor")
+local last_address = {}
 
 monitor.setTextScale(0.5)
 local width, height = monitor.getSize()
@@ -8,10 +9,33 @@ monitor.setCursorPos(1,1)
 
 local button_list = {}
 
+local function findButton(num)
+    for k,v in pairs(button_list) do
+        if v.symbol == num then
+            return v
+        end
+    end
+end
+
 local building_num = 1
 
 monitor.setPaletteColor(colors.black, 0x1f1b19)
 monitor.setPaletteColor(colors.white, 0x0e0c0b)
+
+local function loadSave()
+    if fs.exists("last_address.txt") then
+        local file = io.open("last_address.txt", "r")
+        last_address = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeSave()
+    local file = io.open("last_address.txt", "w")
+    file:write(textutils.serialise(last_address))
+    file:close()
+end
+
+loadSave()
 
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = monitor.getBackgroundColor()
@@ -73,6 +97,7 @@ end
 local text = "#-#"
 monitor.setCursorPos(7, 2)
 monitor.write(text)
+button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=69, glow=false, text="#-#"}
 
 local text = "1-9"
 monitor.setCursorPos(7, height-1)
@@ -80,8 +105,8 @@ monitor.write(text)
 button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=building_num, glow=true, text=text}
 building_num = building_num+1
 
-monitor.setPaletteColor(colors.red, 0x400d0d)
-monitor.setPaletteColor(colors.gray, 0x350808)
+monitor.setPaletteColor(colors.gray, 0x400d0d)
+monitor.setPaletteColor(colors.red, 0x350808)
 fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
 fill(7, 4, 7+2, height-3,colors.red, colors.gray, "\x7F")
 
@@ -122,20 +147,30 @@ local function inputThread()
                         monitor.setPaletteColor(colors.red, 0xcd3a2d)
                         monitor.setPaletteColor(colors.gray, 0xe66828)
                     end
+                    if v.symbol == 69 then
+                        os.queueEvent("dialAutoStart", last_address)
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.blue)
+                        monitor.write(v.text)
+                        monitor.setTextColor(colors.white)
+                        break
+                    end
                     if interface.engageSymbol then
                         interface.engageSymbol(v.symbol)
                     else
-                        if (v.symbol-sg.getCurrentSymbol()) % 39 < 19 then
-                            sg.rotateAntiClockwise(v.symbol)
+                        if (v.symbol-interface.getCurrentSymbol()) % 39 < 19 then
+                            interface.rotateAntiClockwise(v.symbol)
                         else
-                            sg.rotateClockwise(v.symbol)
+                            interface.rotateClockwise(v.symbol)
                         end
                         
                         repeat
                             sleep()
-                        until sg.getCurrentSymbol() == v.symbol
-                        sg.openChevron()
-                        sg.closeChevron()
+                        until interface.getCurrentSymbol() == v.symbol
+
+                        interface.openChevron()
+                        sleep(0.25)
+                        interface.closeChevron()
                     end
                     break
                 end
@@ -147,7 +182,7 @@ end
 local function resetThread()
     while true do
         local event = {os.pullEvent()}
-        if event[1] == "stargate_reset" then
+        if event[1] == "stargate_reset" or event[1] == "stargate_disconnected" then
             sleep()
             print("resetting")
             for k,v in pairs(button_list) do
@@ -155,12 +190,88 @@ local function resetThread()
                 monitor.setTextColor(colors.white)
                 monitor.write(v.text)
                 if v.symbol == 0 then
-                    monitor.setPaletteColor(colors.red, 0x400d0d)
-                    monitor.setPaletteColor(colors.gray, 0x350808)
+                    monitor.setPaletteColor(colors.gray, 0x400d0d)
+                    monitor.setPaletteColor(colors.red, 0x350808)
                 end
             end
         end
     end
 end
 
-parallel.waitForAny(inputThread,resetThread)
+local function externalThread()
+    while true do
+        local event = {os.pullEvent()}
+        if event[1] == "stargate_chevron_engaged" then
+            local symbol = event[6]
+            if symbol then
+                local button = findButton(symbol)
+                if button.glow then
+                    monitor.setCursorPos(button.x, button.y)
+                    monitor.setTextColor(colors.orange)
+                    monitor.write(button.text)
+                    monitor.setTextColor(colors.white)
+                elseif button.symbol == 0 then
+                    monitor.setPaletteColor(colors.red, 0xcd3a2d)
+                    monitor.setPaletteColor(colors.gray, 0xe66828)
+                end
+            end
+        elseif event[1] == "stargate_incoming_wormhole" or event[1] == "stargate_outgoing_wormhole" then
+            monitor.setPaletteColor(colors.red, 0xcd3a2d)
+            monitor.setPaletteColor(colors.gray, 0xe66828)
+        end
+    end
+end
+
+local function lastAddressThread()
+    while true do
+        local event = {os.pullEvent()}
+        if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+            last_address = event[2]
+            writeSave()
+            print("Set last address to: "..table.concat(event[2], " "))
+        end
+    end
+end
+
+local function dialAutoThread()
+    while true do
+        local event, address = os.pullEvent("dialAutoStart")
+        if (0-interface.getCurrentSymbol()) % 39 < 19 then
+            interface.rotateAntiClockwise(0)
+        else
+            interface.rotateClockwise(0)
+        end
+
+        for k,v in ipairs(address) do
+            sleep(0.5)
+            local button = findButton(v)
+            os.queueEvent("monitor_touch", "top", button.x, button.y)
+            print(v)
+        end
+
+        repeat
+            sleep()
+        until interface.getCurrentSymbol() == 0
+
+        
+        sleep(0.5)
+        interface.openChevron()
+        sleep(0.5)
+        interface.closeChevron()
+        local button = findButton(69)
+        monitor.setCursorPos(button.x, button.y)
+        monitor.setTextColor(colors.green)
+        monitor.write(button.text)
+        monitor.setTextColor(colors.white)
+    end
+end
+
+if interface.isStargateConnected() and interface.getConnectedAddress then
+    last_address = interface.getConnectedAddress()
+    writeSave()
+    print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))
+end
+
+print("Last Address is: "..table.concat(last_address, " "))
+
+parallel.waitForAny(inputThread,resetThread, lastAddressThread, dialAutoThread, externalThread)

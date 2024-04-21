@@ -1266,5 +1266,5 @@ local function exitThread()
     end
 end
 
-parallel.waitForAll(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread)
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread)
 

@@ -422,8 +422,12 @@ end
 
 local dial_book = {
     {name="Earth", address={31,21,11,1,16,14,18,12}},
+    {name="Nether", address={27,23,4,34,12,28}},
+    {name="The End", address={13,24,2,19,3,30}},
     {name="Abydos", address={26,6,14,31,11,29}},
-    {name="Chulak", address={8,1,22,14,36,19}}
+    {name="Chulak", address={8,1,22,14,36,19}},
+    {name="Black Hole", address={18,7,3,36,25,15}},
+    {name="Lantea", address={29,5,17,34,6,12}},
 }
 
 

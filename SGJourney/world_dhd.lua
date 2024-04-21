@@ -202,8 +202,9 @@ local function externalThread()
     while true do
         local event = {os.pullEvent()}
         if event[1] == "stargate_chevron_engaged" then
-            local symbol = event[6]
+            local symbol = event[5]
             if symbol then
+                print(symbol.." engaged")
                 local button = findButton(symbol)
                 if button.glow then
                     monitor.setCursorPos(button.x, button.y)
@@ -236,28 +237,40 @@ end
 local function dialAutoThread()
     while true do
         local event, address = os.pullEvent("dialAutoStart")
-        if (0-interface.getCurrentSymbol()) % 39 < 19 then
-            interface.rotateAntiClockwise(0)
-        else
-            interface.rotateClockwise(0)
-        end
+        if interface.rotateAntiClockwise then
+            if (0-interface.getCurrentSymbol()) % 39 < 19 then
+                interface.rotateAntiClockwise(0)
+            else
+                interface.rotateClockwise(0)
+            end
 
-        for k,v in ipairs(address) do
+            for k,v in ipairs(address) do
+                sleep(0.5)
+                local button = findButton(v)
+                os.queueEvent("monitor_touch", "top", button.x, button.y)
+                print(v)
+            end
+
+            repeat
+                sleep()
+            until interface.getCurrentSymbol() == 0
+
+            
             sleep(0.5)
-            local button = findButton(v)
-            os.queueEvent("monitor_touch", "top", button.x, button.y)
-            print(v)
+            interface.openChevron()
+            sleep(0.5)
+            interface.closeChevron()
+        else
+            for k,v in ipairs(address) do
+                sleep(0.5)
+                local button = findButton(v)
+                os.queueEvent("monitor_touch", "top", button.x, button.y)
+                print(v)
+            end
+            sleep(0.5)
+            local brb = findButton(0)
+            os.queueEvent("monitor_touch", "top", brb.x, brb.y)
         end
-
-        repeat
-            sleep()
-        until interface.getCurrentSymbol() == 0
-
-        
-        sleep(0.5)
-        interface.openChevron()
-        sleep(0.5)
-        interface.closeChevron()
         local button = findButton(69)
         monitor.setCursorPos(button.x, button.y)
         monitor.setTextColor(colors.green)

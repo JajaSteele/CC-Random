@@ -342,7 +342,7 @@ local function inputThread()
                         end
                     end
 
-                    if address[#address].dialed and sg.isStargateConnected() and sg.getOpenTime() > (20*1) then
+                    if address[#address].dialed and sg.isStargateConnected() and sg.getOpenTime() > (20*0.5) then
                         if monitor and config.monitor then
                             local mw, mh = monitor.getSize()
                             monitor.setTextColor(colors.green)
@@ -371,7 +371,7 @@ local function inputThread()
                         return
                     end
                     
-                    sleep(0.5)
+                    sleep()
                 end
             elseif event[2] == keys.space then
                 address[#address+1] = {
@@ -408,9 +408,9 @@ local function autoInputThread()
         local symbol_string = tostring(v)
         for i1=1, #symbol_string do
             os.queueEvent("char", tostring(symbol_string:sub(i1,i1)))
-            os.sleep(0.0625)
+            os.sleep()
         end
-        os.sleep(0.1)
+        os.sleep()
         os.queueEvent("key", keys.space, false)
     end
     os.queueEvent("key", keys.enter, false)

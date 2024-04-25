@@ -107,7 +107,7 @@ local function scrollInput()
     while true do
         local event, scroll_dir = os.pullEvent("mouse_scroll")
         if run_threads then
-            scroll = math.ceil(clamp(scroll+(scroll_dir*1), 0, clamp(#program_list-(height-4), 0, #program_list)))
+            scroll = clamp(scroll+scroll_dir, 0, #program_list)
             os.queueEvent("redraw_list")
         end
     end

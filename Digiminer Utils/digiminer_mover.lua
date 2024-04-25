@@ -55,7 +55,7 @@ turtle.equipLeft()
 rednet.open(peripheral.getName(peripheral.find("modem")))
 
 local turtle_x, turtle_y, turtle_z = gps.locate()
-rednet.broadcast({x=turtle_x, y=turtle_y, z=turtle_z, label=os.getComputerLabel()}, "jjs_turtle_newpos")
+rednet.broadcast({x=turtle_x, y=turtle_y, z=turtle_z, label=os.getComputerLabel(), fuel=turtle.getFuelLevel(), fuel_max=turtle.getFuelLimit()}, "jjs_turtle_newpos")
 
 turtle.equipLeft()
 turtle.select(15)

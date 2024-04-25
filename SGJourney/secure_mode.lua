@@ -16,7 +16,7 @@ while true do
     os.pullEvent("stargate_incoming_wormhole")
     repeat
         sleep()
-    until sg.isStargateConnected() and sg.getOpenTime() > (20*0.5)
+    until sg.isStargateConnected() and sg.isWormholeOpen()
     sg.disconnectStargate()
 
     print("Blocked one incoming wormhole")

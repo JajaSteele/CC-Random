@@ -20,6 +20,17 @@ if modem then
     modem.open(2707)
 end
 
+local dl = peripheral.find("Create_DisplayLink")
+
+local function writeToDisplayLink(line1, line2)
+    dl.clear()
+    dl.setCursorPos(1,1)
+    dl.write(line1 or "")
+    dl.setCursorPos(1,2)
+    dl.write(line2 or "")
+    dl.update()
+end
+
 local function write(x,y,text,bg,fg)
     local old_posx,old_posy = term.getCursorPos()
     local old_bg = term.getBackgroundColor()
@@ -89,6 +100,7 @@ local function fancyReboot()
         monitor.setPaletteColor(colors.black, 0x110000)
         local width, height = monitor.getSize()
         local monitor_text = "Rebooting.."
+        writeToDisplayLink("Rebooting..")
         monitor.clear()
         monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
         monitor.clearLine()

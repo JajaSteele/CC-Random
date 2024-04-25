@@ -20,6 +20,33 @@ if modem then
     modem.open(2707)
 end
 
+local dl = peripheral.find("Create_DisplayLink")
+
+local function writeToDisplayLink(line1, line2, center1, center2, instant_update)
+    local stat, err = pcall(function()
+        if dl then
+            local dl_height, dl_width = dl.getSize()
+            dl.clear()
+            if center1 then
+                dl.setCursorPos(math.ceil(dl_width/2)-math.ceil(#(line1 or "")/2), 1)
+            else
+                dl.setCursorPos(1,1)
+            end
+            dl.write(line1 or "")
+            if center1 then
+                dl.setCursorPos(math.ceil(dl_width/2)-math.ceil(#(line2 or "")/2), 2)
+            else
+                dl.setCursorPos(1,2)
+            end
+            dl.write(line2 or "")
+            if instant_update then
+                dl.update()
+            end
+        end
+    end)
+    if not stat then print(err) end
+end
+
 local function write(x,y,text,bg,fg)
     local old_posx,old_posy = term.getCursorPos()
     local old_bg = term.getBackgroundColor()
@@ -84,11 +111,50 @@ if monitor and config.monitor then
     monitor.setPaletteColor(colors.white, 0xFFFFFF)
     monitor.setPaletteColor(colors.black, 0x000000)
 end
+writeToDisplayLink()
+
+local address_cache = {}
+local function addressLookupCached(lookup_value)
+    if not lookup_value then
+        return {name="Unknown Address"}
+    end
+
+    local id_to_send = config.address_book_id or 0
+    if type(lookup_value) == "string" then
+        if address_cache[lookup_value] then
+            return address_cache[lookup_value]
+        end
+        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_name")
+    elseif type(lookup_value) == "table" then
+        if address_cache[(table.concat(lookup_value, "-"))] then
+            return address_cache[(table.concat(lookup_value, "-"))]
+        end
+        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_address")
+    end
+
+    for i1=1, 5 do
+        local id, msg, protocol = rednet.receive(nil, 0.075)
+        if id == id_to_send then
+            if protocol == "jjs_sg_lookup_return" then
+                if type(lookup_value) == "string" then
+                    address_cache[lookup_value] = msg
+                elseif type(lookup_value) == "table" then
+                    address_cache[(table.concat(lookup_value, "-"))] = msg
+                end
+                return msg
+            else
+                return {name="Unknown Address"}
+            end
+        end
+    end
+end
+
 local function fancyReboot()
     if monitor and config.monitor then
         monitor.setPaletteColor(colors.black, 0x110000)
         local width, height = monitor.getSize()
         local monitor_text = "Rebooting.."
+        writeToDisplayLink("Rebooting..", "-=-=-=-=-=-", true, true, true)
         monitor.clear()
         monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
         monitor.clearLine()
@@ -143,6 +209,16 @@ local function clearGate()
     end
 end
 
+local function displayLinkUpdater()
+    while true do
+        if dl then
+            dl.update()
+        end
+        sleep(1)
+    end
+end
+
+local address_txt = ""
 local function inputThread()
     while true do
         term.clear()
@@ -160,12 +236,12 @@ local function inputThread()
                 term.setTextColor(colors.gray)
             end
             term.write(v.num)
+            address_txt = address_txt..tostring(v.num)
         end
         term.setTextColor(colors.white)
         term.write("-")
         term.setTextColor(colors.lightGray)
         term.write(input_text)
-
         if monitor and config.monitor then
             monitor.setPaletteColor(colors.white, 0xFFDEAA)
             monitor.setPaletteColor(colors.black, 0x100500)
@@ -293,7 +369,7 @@ local function inputThread()
                                             address_to_lookup[k] = v.num
                                         end
                                     end
-                                    local address_name = addressLookup(address_to_lookup)
+                                    local address_name = addressLookupCached(address_to_lookup)
 
                                     if address_name then
                                         local old_pos_x, old_pos_y = monitor.getCursorPos()
@@ -325,7 +401,7 @@ local function inputThread()
                                             address_to_lookup[k] = v.num
                                         end
                                     end
-                                    local address_name = addressLookup(address_to_lookup) or {name="Unknown Address"}
+                                    local address_name = addressLookupCached(address_to_lookup) or {name="Unknown Address"}
 
                                     local old_pos_x, old_pos_y = monitor.getCursorPos()
                                     monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#(address_name.name)/2), mh)
@@ -340,6 +416,19 @@ local function inputThread()
                             monitor.setTextColor(colors.white)
                             monitor.write("-")    
                         end
+                    end
+                    if config.address_book_id and dl then
+                        local address_to_lookup = {}
+                        for k, v in ipairs(address) do
+                            if v.num ~= 0 then
+                                address_to_lookup[k] = v.num
+                            end
+                        end
+                        local address_name = addressLookupCached(address_to_lookup)
+
+                        writeToDisplayLink(table.concat(display_address, "-"), address_name.name, true, true, false)
+                    else
+                        writeToDisplayLink(table.concat(display_address, "-"), "Unknown Address", true, true, false)
                     end
 
                     if address[#address].dialed and sg.isStargateConnected() and sg.getOpenTime() > (20*0.5) then
@@ -371,7 +460,7 @@ local function inputThread()
                         return
                     end
                     
-                    sleep()
+                    sleep(0)
                 end
             elseif event[2] == keys.space then
                 address[#address+1] = {
@@ -649,56 +738,70 @@ local function screenSaverMonitor()
 end
 
 local function gateMonitor()
-    if monitor and config.monitor then
-        local width, height = monitor.getSize()
-        while true do
-            local old_x, old_y = monitor.getCursorPos()
-            local event = {os.pullEvent()}
+    while true do
+        local width, height
+        local old_x, old_y
+        if monitor and config.monitor then
+            width, height = monitor.getSize()
+            old_x, old_y = monitor.getCursorPos()
+        end
+        local event = {os.pullEvent()}
 
-            local monitor_text = ""
-            if event[1] == "stargate_incoming_wormhole" then
-                screensaver_text = "  Incoming Wormhole  "
-                screensaver_color = colors.orange
-                if event[2] then
-                    local address_incoming = addressLookup(event[2])
-                    if address_incoming then
-                        monitor_text = address_incoming.name
-                    else
-                        monitor_text = table.concat(event[2], "-")
-                    end
+        local monitor_text = ""
+        if event[1] == "stargate_incoming_wormhole" then
+            screensaver_text = "  Incoming Wormhole  "
+            screensaver_color = colors.orange
+            if event[2] then
+                local address_incoming = addressLookupCached(event[2])
+                if address_incoming then
+                    monitor_text = address_incoming.name
+                else
+                    monitor_text = table.concat(event[2], "-")
+                end
+                if monitor and config.monitor then
                     monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
                     monitor.clearLine()
                     monitor.setTextColor(colors.yellow)
                     monitor.write(monitor_text)
                 end
-            elseif event[1] == "stargate_outgoing_wormhole" then
-                screensaver_text = "  Outgoing Wormhole  "
-                screensaver_color = colors.green
-                if event[2] then
-                    local address_outgoing = addressLookup(event[2])
-                    if address_outgoing then
-                        monitor_text = address_outgoing.name
-                    else
-                        monitor_text = table.concat(event[2], "-")
-                    end
+                writeToDisplayLink("Incoming Wormhole", monitor_text, true, true, false)
+            end
+        elseif event[1] == "stargate_outgoing_wormhole" then
+            screensaver_text = "  Outgoing Wormhole  "
+            screensaver_color = colors.green
+            if event[2] then
+                local address_outgoing = addressLookupCached(event[2])
+                if address_outgoing then
+                    monitor_text = address_outgoing.name
+                else
+                    monitor_text = table.concat(event[2], "-")
+                end
+                if monitor and config.monitor then
                     monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
                     monitor.clearLine()
                     monitor.setTextColor(colors.yellow)
                     monitor.write(monitor_text)
+                end
+                if not is_dialing then
+                    writeToDisplayLink("Outgoing Wormhole", monitor_text, true, true, false)
                 end
             end
+        end
+        if monitor and config.monitor then
             monitor.setCursorPos(old_x, old_y)
         end
     end
 end
 
 local function gateClosingMonitor()
-    if monitor and config.monitor then
-        local width, height = monitor.getSize()
-        while true do
-            local old_x, old_y = monitor.getCursorPos()
-            local event = {os.pullEvent("stargate_disconnected")}
-
+    while true do
+        local width, height
+        local old_x, old_y
+        local event = {os.pullEvent("stargate_disconnected")}
+        
+        if monitor and config.monitor then
+            old_x, old_y = monitor.getCursorPos()
+            width, height = monitor.getSize()
             local monitor_text = ""
             screensaver_text = "  Stargate Idle  "
             screensaver_color = colors.gray
@@ -706,19 +809,29 @@ local function gateClosingMonitor()
             monitor.clearLine()
             monitor.setCursorPos(old_x, old_y)
         end
+
+        writeToDisplayLink()
     end
 end
 
-if sg.isStargateConnected() and not sg.isStargateDialingOut() then
-    if sg.getConnectedAddress then
-        os.queueEvent("stargate_incoming_wormhole", sg.getConnectedAddress())
+if sg.isStargateConnected() then
+    if sg.isStargateDialingOut() then
+        if sg.getConnectedAddress then
+            os.queueEvent("stargate_outgoing_wormhole", sg.getConnectedAddress())
+        else
+            os.queueEvent("stargate_outgoing_wormhole", nil)
+        end
     else
-        os.queueEvent("stargate_incoming_wormhole", nil)
+        if sg.getConnectedAddress then
+            os.queueEvent("stargate_incoming_wormhole", sg.getConnectedAddress())
+        else
+            os.queueEvent("stargate_incoming_wormhole", nil)
+        end
     end
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater)
 end)
 
 if not stat then

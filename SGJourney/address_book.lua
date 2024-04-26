@@ -209,9 +209,11 @@ commands = {
                 term.setCursorPos(1, h-1)
                 term.write("> ")
                 local new_address = read(nil, nil, function(text) write(1, h-2, "Editing: Address ("..#(split(text, " ") or {}).." Symbols)") return completion.choice(text, {table.concat(selected_entry.address, " ")}) end, table.concat(selected_entry.address, " "))
-                local new_address_table = split(new_address, " ")
-                for k,v in pairs(new_address_table) do
-                    new_address_table[k] = tonumber(v)
+                new_address = new_address:gsub("-", " ")
+                local temp_address = split(new_address, " ")
+                local new_address_table = {}
+                for k,v in pairs(temp_address) do
+                    new_address_table[#new_address_table+1] = tonumber(v)
                 end
                 selected_entry.address = new_address_table
 
@@ -255,9 +257,11 @@ commands = {
                 term.setCursorPos(1, h-1)
                 term.write("> ")
                 local new_address = read(nil, nil, function(text) write(1, h-2, "Editing: Address ("..#(split(text, " ") or {}).." Symbols)") return completion.choice(text, {table.concat(selected_entry.address or {}, " ")}) end, table.concat(selected_entry.address or {}, " "))
-                local new_address_table = split(new_address, " ")
-                for k,v in pairs(new_address_table) do
-                    new_address_table[k] = tonumber(v)
+                new_address = new_address:gsub("-", " ")
+                local temp_address = split(new_address, " ")
+                local new_address_table = {}
+                for k,v in pairs(temp_address) do
+                    new_address_table[#new_address_table+1] = tonumber(v)
                 end
                 selected_entry.address = new_address_table
 
@@ -445,6 +449,7 @@ commands = {
                 term.setCursorPos(1, h-1)
                 term.write("> ")
                 local new_address = read(nil, nil, function(text) write(1, h-2, "Enter Address ("..#(split(text, " ") or {}).." Symbols)") return completion.choice(text, {}) end, "")
+                new_address = new_address:gsub("-", " ")
                 local new_address_table = split(new_address, " ")
                 for k,v in ipairs(new_address_table) do
                     if tonumber(v) then
@@ -552,7 +557,7 @@ commands = {
                 else
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
                     write(1, h-1, "> Couldn't find a gate!", colors.black, colors.red)
-                    sleep(0.75)
+                    sleep(0.5)
                 end
             end
 
@@ -569,7 +574,7 @@ commands = {
             end
 
             if mode == "quickdial" or mode == "quickstop" then
-                sleep(2)
+                sleep(0.5)
             end
         end),
         short_description={
@@ -1194,10 +1199,12 @@ local function lookupThread()
             end
         end
 
-        if return_data then
-            rednet.send(id, return_data, "jjs_sg_lookup_return")
-        else
-            rednet.send(id, return_data, "jjs_sg_lookup_fail")
+        if protocol == "jjs_sg_lookup_address" or protocol == "jjs_sg_lookup_name" then
+            if return_data then
+                rednet.send(id, return_data, "jjs_sg_lookup_return")
+            else
+                rednet.send(id, return_data, "jjs_sg_lookup_fail")
+            end
         end
     end
 end

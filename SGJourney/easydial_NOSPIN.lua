@@ -669,15 +669,6 @@ local function mainRemote()
     end
 end
 
-local function mainFailsafe()
-    while true do
-        local event, code = os.pullEvent()
-        if event == "stargate_reset" and code < 0 then
-            fancyReboot()
-            return
-        end
-    end
-end
 
 local function mainRemoteCommands()
     while true do
@@ -698,6 +689,15 @@ local function mainRemoteDistance()
             if message.protocol == "jjs_sg_dialer_ping" and message.message == "request_ping" then
                 modem.transmit(reply_channel, 2707, {protocol="jjs_sg_dialer_ping", message="response_ping", id=os.getComputerID(), label=config.label})
             end
+        end
+    end
+end
+local function mainFailsafe()
+    while true do
+        local event, code = os.pullEvent()
+        if event == "stargate_reset" and code < 0 then
+            fancyReboot()
+            return
         end
     end
 end

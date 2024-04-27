@@ -100,7 +100,7 @@ local function mainRemoteCommands()
     end
 end
 
-local function mainRemoteDistance()
+local function mainRemotePing()
     while true do
         local event, side, channel, reply_channel, message, distance = os.pullEvent("modem_message")
         if type(message) == "table" then
@@ -114,7 +114,7 @@ end
 while true do
     local stat, err = pcall(function()
         print("Starting threads")
-        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemoteDistance)
+        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing)
     end)
     if not stat then
         if err == "Terminated" then

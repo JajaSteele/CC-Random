@@ -39,18 +39,22 @@ local voice = "Microsoft Zira Desktop"
 
 local function playAudio(link)
     local request = http.get(link,nil,true)
-    while true do
-        local chunk = request.read(16*1024)
-        if chunk == nil then break end
-        local buffer = decoder(chunk)
-        
-        for k,speaker in pairs(speakers) do
-            while not speaker.playAudio(buffer) do
-                os.pullEvent("speaker_audio_empty")
+    if request then
+        while true do
+            local chunk = request.read(16*1024)
+            if chunk == nil then break end
+            local buffer = decoder(chunk)
+            
+            for k,speaker in pairs(speakers) do
+                while not speaker.playAudio(buffer) do
+                    os.pullEvent("speaker_audio_empty")
+                end
             end
         end
+        request.close()
+    else
+        print("Couldn't reach TTS Server")
     end
-    request.close()
 end
 
 local function playTTS(msg, voice_name)

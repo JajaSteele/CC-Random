@@ -147,6 +147,7 @@ local function addressLookupCached(lookup_value)
             end
         end
     end
+    return {name="Unknown Address"}
 end
 
 local function fancyReboot()

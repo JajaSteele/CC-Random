@@ -432,7 +432,7 @@ local function inputThread()
                         writeToDisplayLink(table.concat(display_address, "-"), "Unknown Address", true, true, false)
                     end
 
-                    if address[#address].dialed and sg.isStargateConnected() and sg.getOpenTime() > (20*0.5) then
+                    if address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen() then
                         if monitor and config.monitor then
                             local mw, mh = monitor.getSize()
                             monitor.setTextColor(colors.green)

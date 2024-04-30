@@ -250,6 +250,40 @@ local function inputThread()
             end
         elseif input[1] == "pause" then
             is_paused = true
+        elseif input[1] == "playlist" then
+            write(1, height-2, "Playlist Link:", colors.black, colors.white)
+            term.setCursorPos(1, height-1)
+            term.clearLine()
+            term.setTextColor(colors.orange)
+            term.write("> ")
+            term.setTextColor(colors.white)
+            local playlist_url = read(nil, nil, nil)
+            local playlist_id = playlist_url:match("[&?]list=([^&]+)")
+            local youtube_id
+            if playlist_url:match(".+//(%w+%.%w+)") == "youtu.be" then
+                youtube_id = playlist_url:match("https://.-/(...........)")
+            else
+                youtube_id = playlist_url:match("[?&]v=(...........)")
+            end
+            local playlist_req = http.get("http://jajasteele.duckdns.org:7277/?playlist="..playlist_id.."&vidid="..youtube_id, nil, nil)
+            local playlist_list = {}
+            if playlist_req then
+                playlist_list = split(playlist_req:readAll(), "\n")
+                playlist_req:close()
+            end
+            for k,v in ipairs(playlist_list) do
+                local youtube_url = v
+                local youtube_id 
+                if youtube_url:match(".+//(%w+%.%w+)") == "youtu.be" then
+                    youtube_id = youtube_url:match("https://.-/(...........)")
+                else
+                    youtube_id = youtube_url:match("[?&]v=(...........)")
+                end
+            
+                if youtube_id and youtube_id ~= "dQw4w9WgXcQ" then
+                    table.insert(playlist, #playlist+1, youtube_id)
+                end
+            end
         elseif input[1] == "mass" then
             while true do
                 write(1, height-2, "Waiting for CTRL+V..", colors.black, colors.yellow, true)
@@ -299,16 +333,25 @@ local function audioThread()
         if event[1] == "startPlaying" then
             while is_playing do
                 local current_id = playlist[play_position]
-                write(1, height, "Loading..", colors.black, colors.blue, true)
-                playAudio("http://jajasteele.duckdns.org:7277/?vidid="..textutils.urlEncode(current_id))
-                if not skip_mode then
-                    play_position = play_position+1
+                if current_id then
+                    write(1, height, "Loading..", colors.black, colors.blue, true)
+                    playAudio("http://jajasteele.duckdns.org:7277/?vidid="..textutils.urlEncode(current_id))
+                    if not skip_mode then
+                        play_position = play_position+1
+                        os.queueEvent("redrawPlaylist")
+                    else
+                        skip_mode = false
+                        os.queueEvent("redrawPlaylist")
+                    end
+                    if play_position > #playlist then
+                        is_playing = false
+                        os.queueEvent("redrawPlaylist")
+                        os.queueEvent("stopPlaying")
+                        write(1, height, "Stopped", colors.black, colors.red, true)
+                        break
+                    end
                 else
-                    skip_mode = false
-                end
-                if play_position > #playlist then
                     is_playing = false
-                    break
                 end
             end
         elseif event[1] == "stopPlaying" then

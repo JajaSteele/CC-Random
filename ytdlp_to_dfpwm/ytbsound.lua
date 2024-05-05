@@ -64,7 +64,7 @@ local function playAudio(link)
                 sleep(0.1)
             end
             write(1,height, string.rep("-", (width*(count/size))-1).."\x07", colors.black, colors.lightBlue)
-            local chunk = request.read(2*1024)
+            local chunk = request.read(1*1024)
             if chunk == nil then break end
             count = count+#chunk
             local buffer = decoder(chunk)
@@ -250,6 +250,12 @@ local function inputThread()
             end
         elseif input[1] == "pause" then
             is_paused = true
+        elseif input[1] == "clear" then
+            playlist = {}
+            play_position = 1
+            is_playing = false
+            os.queueEvent("stopPlaying")
+            write(1, height, "Cleared Playlist", colors.black, colors.red, true)
         elseif input[1] == "playlist" then
             write(1, height-2, "Playlist Link:", colors.black, colors.white)
             term.setCursorPos(1, height-1)

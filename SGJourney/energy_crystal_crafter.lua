@@ -79,11 +79,6 @@ while true do
                 moveItem("minecraft:redstone", barrel, crystallizer, 1, 3-slot_3)
                 print("Refilled Slot 3 of "..peripheral.getName(crystallizer))
             end
-
-            if (not crystallizer.tanks()[1]) or (crystallizer.tanks()[1] or {amount=0}).amount == 0 then
-                tank.pushFluid(peripheral.getName(crystallizer), 200-(crystallizer.tanks()[1] or {amount=0}).amount)
-                print("Refilled Liquid of "..peripheral.getName(crystallizer))
-            end
         end    
         
         if getItemSlot("sgjourney:energy_crystal", crystallizer) then

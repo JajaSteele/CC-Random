@@ -486,7 +486,7 @@ local function dialThread()
                 address[k].dialing = false
                 address[k].dialed = true
             end
-            sleep(0.25)
+            sleep(0.125)
         end
         sleep()
     end
@@ -506,7 +506,7 @@ local function autoInputThread()
     os.queueEvent("key", keys.enter, false)
     
     repeat
-        sleep(0.5)
+        sleep(0.25)
     until sg.isStargateConnected()
 end
 
@@ -707,10 +707,17 @@ local screensaver_text = "  Stargate Idle  "
 local screensaver_color = colors.gray
 
 local function screenSaverMonitor()
+    writeToDisplayLink("Stargate Idle", config.label, true, true, false)
     if monitor and config.monitor then
         local width, height = monitor.getSize()
         local scroll = 0
         monitor.setPaletteColor(colors.gray, 0x222222)
+        local mon_text = config.label
+
+        monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
+        monitor.clearLine()
+        monitor.setTextColor(colors.lightGray)
+        monitor.write(mon_text)
         while true do
             if is_dialing then
                 break
@@ -808,10 +815,16 @@ local function gateClosingMonitor()
             screensaver_color = colors.gray
             monitor.setCursorPos(1, 3)
             monitor.clearLine()
+            local mon_text = config.label
+
+            monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
+            monitor.clearLine()
+            monitor.setTextColor(colors.lightGray)
+            monitor.write(mon_text)
             monitor.setCursorPos(old_x, old_y)
         end
 
-        writeToDisplayLink()
+        writeToDisplayLink("Stargate Idle", config.label, true, true, false)
     end
 end
 

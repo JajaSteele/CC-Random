@@ -130,7 +130,7 @@ local function mainThread()
                     max_energy = energy
                 end
 
-                eta = ((max_energy-energy)/(energy_delta[mode]*4))
+                eta = ((max_energy-energy)/(energy_delta[mode]*10))
 
                 win.clear()
                 win.setCursorPos(1,1)
@@ -151,7 +151,7 @@ local function mainThread()
                 local energy = interface.getStargateEnergy()
                 last_energy = energy
 
-                eta = ((max_energy-energy)/(energy_delta[mode]*4))
+                eta = ((max_energy-energy)/(energy_delta[mode]*10))
 
                 win.clear()
                 win.setCursorPos(1,1)
@@ -174,7 +174,7 @@ local function mainThread()
             fill(1,1, width*clamp(timer/4, 0, 1), 1, colors.black, colors.lightBlue, "-")
             fill(1,height-1, width*clamp(timer/4, 0, 1), height-1, colors.black, colors.lightBlue, "-")
             if pause_timer > 0 then
-                write(1, 1, "Locked for : "..pause_timer.."s", colors.black, colors.lightBlue)
+                write(1, 1, "Locked for : "..string.format("%.1f", pause_timer).."s", colors.black, colors.lightBlue)
             else
                 if mode == 1 and interface.getStargateEnergy() < interface.getEnergyTarget() then
                     timer = 0
@@ -186,11 +186,11 @@ local function mainThread()
             win.setVisible(true)
         end
         if pause_timer <= 0 then
-            timer = timer+0.5
+            timer = timer+0.1
         else
-            pause_timer = clamp(pause_timer-0.5, 0, pause_timer)
+            pause_timer = clamp(pause_timer-0.1, 0, pause_timer)
         end
-        sleep(0.5)
+        sleep(0.1)
     end
 end
 

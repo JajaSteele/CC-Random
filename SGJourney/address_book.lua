@@ -131,6 +131,7 @@ loadConfig()
 
 config.pocket_mode = config.pocket_mode or false
 config.master_id = config.master_id or nil
+config.nearest_range = config.nearest_range or 200
 
 local function writeSave()
     local file = io.open("saved_address.txt", "w")
@@ -521,7 +522,7 @@ commands = {
                         if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
                             failed_attempts = 0
                             os.cancelTimer(timeout_timer)
-                            if event[6] and event[6] < 200 then  
+                            if event[6] and event[6] < config.nearest_range then  
                                 temp_gates[#temp_gates+1] = {
                                     id = event[5].id,
                                     distance = event[6] or math.huge,
@@ -552,7 +553,7 @@ commands = {
                     selected_gate = temp_gates[1].label
 
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                    write(1, h-2, "Nearest gate: ")
+                    write(1, h-2, "Nearest gate: (# < "..config.nearest_range..")")
                     write(1, h-1, "> "..selected_gate)
                 else
                     fill(1, h-2, w, h-1, colors.black, colors.white, " ")
@@ -900,6 +901,26 @@ commands = {
         long_description={
             "Turns addressbook into a slave computer",
             "The addresses will automatically be copied from master address book on startup/reload"
+        }
+    },
+    {
+        main="range",
+        args={
+            {name="range", type="int", outline="<>", desc="Range in blocks"}
+        },
+        func=(function(...)
+            local nearest_range = ...
+            config.nearest_range = tonumber(nearest_range) or config.nearest_range
+            writeConfig()
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "Set range to: "..config.nearest_range)
+            sleep(0.5)
+        end),
+        short_description={
+            "Sets the range for Quickdial and Quickstop"
+        },
+        long_description={
+            "Sets the maximum range for Quickdial and Quickstop"
         }
     },
 }

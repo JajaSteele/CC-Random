@@ -712,12 +712,14 @@ local function screenSaverMonitor()
         local width, height = monitor.getSize()
         local scroll = 0
         monitor.setPaletteColor(colors.gray, 0x222222)
-        local mon_text = config.label
+        if not sg.isStargateConnected() then
+            local mon_text = config.label
 
-        monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
-        monitor.clearLine()
-        monitor.setTextColor(colors.lightGray)
-        monitor.write(mon_text)
+            monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
+            monitor.clearLine()
+            monitor.setTextColor(colors.lightGray)
+            monitor.write(mon_text)
+        end
         while true do
             if is_dialing then
                 break

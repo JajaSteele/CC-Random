@@ -53,6 +53,9 @@ end
 
 loadSave()
 
+local player_data = {}
+local afk_positions = {}
+
 local function chatListener()
     while true do
         local event, username, msg, uuid, hidden = os.pullEvent("chat")
@@ -164,4 +167,82 @@ local function chatManager()
     end
 end
 
-parallel.waitForAll(chatListener, chatManager, joinListener)
+local save_pos_delay = (1000*60)
+local save_pos_timer = os.epoch("utc") + 500
+
+local function rangeEqual(a,b, range)
+    return (a < b+range and a > b-range)
+end
+local function compareData(a,b, max_range)
+    if a.dim == b.dim then
+        return (rangeEqual(a.x, b.x, max_range) and rangeEqual(a.y, b.y, max_range) and rangeEqual(a.z, b.z, max_range))
+    end
+end
+
+local function isImmobile(data, freedom)
+    local immobile = true
+    for k,v in pairs(data) do
+        if not compareData(v.pos, data[#data].pos, freedom) then
+            immobile = false
+            break
+        end
+    end
+    return immobile
+end
+
+local function autoAFK()
+    while true do
+        local player_list = player.getOnlinePlayers()
+
+        for k,v in pairs(player_list) do
+            local data = player.getPlayer(v)
+            local data_tosave = {
+                pos = {
+                    x = data.x,
+                    y = data.y,
+                    z = data.z,
+                    dim = data.dimension
+                }
+            }
+
+            if os.epoch("utc") >= save_pos_timer then
+                if not player_data[v] then
+                    player_data[v] = {data_tosave}
+                else
+                    player_data[v][#(player_data[v])+1] = data_tosave
+                    if #(player_data[v]) > 5 then
+                        table.remove(player_data[v], 1)
+                    end
+                end
+
+                if #(player_data[v]) >= 5 then
+                    local last_data = player_data[v]
+                    if isImmobile(last_data, 1) then
+                        if not afk_statuses[v] then
+                            afk_positions[v] = data_tosave.pos
+                            afk_statuses[v] = true
+                            print("AutoAFK: "..v.." is now AFK")
+                            queueMessage("\xA7a"..v.." is now AFK", "!", "<>")
+                            queueToast("\xA7cNo movement for 5min, AFK enabled automatically!", "Auto-AFK", v, "!", "<>")
+                        end
+                    end
+                end
+            end
+
+            if not isImmobile(player_data[v] or {}, 3) then
+                if afk_statuses[v] then
+                    afk_statuses[v] = false
+                    print("AutoAFK: "..v.." is no longer AFK")
+                    queueMessage("\xA7c"..v.." is no longer AFK", "!", "<>")
+                    queueToast("\xA7aMovement detected, AFK disabled automatically!", "Auto-AFK", v, "!", "<>")
+                end
+            end
+        end
+        if os.epoch("utc") >= save_pos_timer then
+            save_pos_timer = os.epoch("utc") + save_pos_delay
+        end
+        sleep(1)
+    end
+end
+
+parallel.waitForAll(chatListener, chatManager, joinListener, autoAFK)

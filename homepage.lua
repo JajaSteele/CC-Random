@@ -55,6 +55,7 @@ end
 
 local rom_programs = {
     "lua",
+    "equip"
 }
 local program_list = {}
 local function updateList()

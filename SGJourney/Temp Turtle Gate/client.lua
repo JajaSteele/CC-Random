@@ -30,12 +30,12 @@ local function getInterfaceItem()
     end
 end
 
-local function getSlabItem()
+local function getShulkerItem()
     for i1=1, 16 do
         turtle.select(i1)
         local item = turtle.getItemDetail()
         if item then
-            if item.name:match("slab") then
+            if item.name:match("shulker") then
                 return i1
             end
         end
@@ -63,25 +63,45 @@ local function findEquip(name)
     end
 end
 
+term.clear()
+term.setCursorPos(1, 1)
+
+print("Turtle Fuel Level:")
+print(turtle.getFuelLevel().." / "..turtle.getFuelLimit().." - "..string.format("%.1f%%", (turtle.getFuelLevel()/turtle.getFuelLimit())*100))
+
 local stargate_slot
 local interface_slot
-local slab_slot
+local shulker_slot
 
 if (peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")) then
     stargate_slot = 1
     interface_slot = 2
-    slab_slot = 3
+    shulker_slot = 3
 else
-    print("Please put stargate, an interface, and a stair in inventory..")
+    print("Please put shulker in inventory..")
+
+    repeat
+        shulker_slot = getShulkerItem()
+    until shulker_slot
+
+    print("Shulker detected!")
+
+    turtle.select(shulker_slot)
+    turtle.place()
+
+    sleep(0.25)
+
+    print("Pulling out items..")
+    repeat
+        local stat = turtle.suck()
+    until not stat
 
     repeat
         stargate_slot = getStargateItem()
         interface_slot = getInterfaceItem()
-        slab_slot = getSlabItem()
-    until stargate_slot and interface_slot and slab_slot
+    until stargate_slot and interface_slot
 
-    turtle.select(slab_slot)
-    turtle.place()
+    print("Setting up gate..")
     turtle.back()
     turtle.select(stargate_slot)
     turtle.place()
@@ -172,6 +192,15 @@ local function mainRemoteCommands()
     end
 end
 
+local function quitOnDisconnect()
+    while true do
+        local event = {os.pullEvent()}
+        if event[1] == "stargate_disconnected" then
+            return
+        end
+    end
+end
+
 local function mainRemotePing()
     while true do
         local event, side, channel, reply_channel, message, distance = os.pullEvent("modem_message")
@@ -183,10 +212,12 @@ local function mainRemotePing()
     end
 end
 
-parallel.waitForAny(mainRemote, mainRemoteCommands, mainRemotePing)
+print("Gate Dialer ready!")
+parallel.waitForAny(mainRemote, mainRemoteCommands, mainRemotePing, quitOnDisconnect)
 
 sleep(1)
 
+print("Starting return to home..")
 findEquip("diamond_pickaxe")
 
 turtle.select(interface_slot)
@@ -195,9 +226,20 @@ turtle.forward()
 turtle.select(stargate_slot)
 turtle.dig()
 turtle.forward()
-turtle.select(slab_slot)
+
+print("Storing items in shulker..")
+for i1=1, 16 do
+    turtle.select(i1)
+    local item = turtle.getItemDetail()
+    if item and not item.name:match("end_automata") then
+        turtle.drop()
+    end
+end
+
+turtle.select(shulker_slot)
 turtle.dig()
 
+print("Going home!")
 local automata = findEquip("end_automata")
 
 automata.savePoint("last_location")

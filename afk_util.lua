@@ -77,6 +77,23 @@ local function chatListener()
 
                 if afk_statuses[username] then
                     queueMessage("\xA7a"..username.." is now AFK", "!", "<>")
+                    local data = player.getPlayer(username)
+                    local data_toadd = {
+                        pos = {
+                            x = data.x,
+                            y = data.y,
+                            z = data.z,
+                            dim = data.dimension
+                        }
+                    }
+                    player_data[username] = {
+                        data_toadd,
+                        data_toadd,
+                        data_toadd,
+                        data_toadd,
+                        data_toadd
+                    }
+                    afk_positions[username] = data_toadd.pos
                 else
                     queueMessage("\xA7c"..username.." is no longer AFK", "!", "<>")
                 end
@@ -229,7 +246,7 @@ local function autoAFK()
                 end
             end
 
-            if not isImmobile(player_data[v] or {}, 3) then
+            if not compareData(data_tosave.pos, afk_positions[v] or {}, 5) then
                 if afk_statuses[v] then
                     afk_statuses[v] = false
                     print("AutoAFK: "..v.." is no longer AFK")
@@ -245,4 +262,10 @@ local function autoAFK()
     end
 end
 
-parallel.waitForAll(chatListener, chatManager, joinListener, autoAFK)
+while true do
+    local stat, err = pcall(function()
+        parallel.waitForAll(chatListener, chatManager, joinListener, autoAFK)
+    end)
+    if not stat then print(err) end
+    sleep(0.25)
+end

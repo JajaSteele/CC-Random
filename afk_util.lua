@@ -62,7 +62,7 @@ local function chatListener()
         if hidden then
             if msg == "afk" then
                 afk_statuses[username] = not (afk_statuses[username] or false)
-                print("New Status:", afk_statuses[username])
+                print("Manual: "..username.." is now AFK", afk_statuses[username])
 
                 if not afk_triggers[username] then
                     afk_triggers[username] = {
@@ -96,6 +96,8 @@ local function chatListener()
                     afk_positions[username] = data_toadd.pos
                 else
                     queueMessage("\xA7c"..username.." is no longer AFK", "!", "<>")
+                    print("Manual: "..username.." is no longer AFK", afk_statuses[username])
+                    player_data[username] = {}
                 end
             elseif msg:match("^triggers") then
                 local new_triggers = {}
@@ -252,6 +254,7 @@ local function autoAFK()
                     print("AutoAFK: "..v.." is no longer AFK")
                     queueMessage("\xA7c"..v.." is no longer AFK", "!", "<>")
                     queueToast("\xA7aMovement detected, AFK disabled automatically!", "Auto-AFK", v, "!", "<>")
+                    player_data[v] = {}
                 end
             end
         end

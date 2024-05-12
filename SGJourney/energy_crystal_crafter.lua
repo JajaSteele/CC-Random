@@ -12,6 +12,7 @@ print(pattern)
 local function getItemSlot(name, storage)
     local item_list = storage.list()
 
+    if not item_list then return end
     for k,v in pairs(item_list) do
         if v.name == name then
             return k

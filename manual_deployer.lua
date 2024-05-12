@@ -27,9 +27,9 @@ while true do
             counter = counter+1
         end
     end
-    if counter > input_inv.size() then
+    if counter > (input_inv.size() or 27) then
         if input_inv.getItemDetail(1) == nil then
-            break
+            os.reboot()
         else
             counter = 1
         end

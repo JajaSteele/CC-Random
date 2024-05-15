@@ -4,6 +4,7 @@ local completion = require("cc.completion")
 local registry = peripheral.find("informative_registry")
 local storage = peripheral.find("nbtStorage")
 local lua_lzw = require("lualzw")
+local tinyStructure = require("tinystructure")
 
 local perlin = require("perlin")
 
@@ -221,8 +222,9 @@ while true do
         config.terrain_grass = input_split[4] or "mycelium"
         config.terrain_deco = input_split[5] or "red_mushroom"
     elseif input_split[1] == "save" then
-        print("Serializing..")
-        local serialized_data = textutils.serialise(decoded_data, {compact=true})
+        print("Encoding..")
+        --FIXME: Switch to using proper sorting of registry values
+        local serialized_data = tinyStructure.encode(tinyStructure.convertSparsePosMatrixToDenseMatrix(decoded_data), registry.list("block"))
         print("Compressing data.. ("..prettySize(#serialized_data)..")")
         local compressed_data = lua_lzw.compress(serialized_data)
         print("Saving.. ("..prettySize(#compressed_data)..")")
@@ -235,8 +237,9 @@ while true do
             print("Decompressing.. ("..prettySize(#compressed_data)..")")
             local decompressed_data = lua_lzw.decompress(compressed_data)
             if decompressed_data then
-                print("Unserializing.. ("..prettySize(#decompressed_data)..")")
-                decoded_data = textutils.unserialise(decompressed_data)
+                print("Decoding.. ("..prettySize(#decompressed_data)..")")
+                --FIXME: Switch to using proper sorting of registry values
+                decoded_data = tinyStructure.convertDenseMatrixToSparsePosMatrix(tinyStructure.decode(decompressed_data, registry.list("block")))
                 print("Loaded!")
             else
                 colorPrint(colors.red, "Unable to decompress data!")

@@ -121,4 +121,4 @@ function perlin.lerp(t, a, b)
     return a + t * (b - a)
 end
 
-print(perlin:noise(5,5,5))
+print(perlin:noise(5.1,5.5,5.2))

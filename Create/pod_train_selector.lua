@@ -1,5 +1,6 @@
 local station = peripheral.find("Create_Station")
 local monitor = peripheral.find("monitor")
+local disk_drive = peripheral.find("drive")
 
 local mon = window.create(monitor, 1,1, monitor.getSize())
 local width, height = monitor.getSize()
@@ -10,12 +11,12 @@ local args = {...}
 
 local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
 
-if fs.exists("/disk/station_list.txt") and args[1] ~= "edit" then
-    local list_file = io.open("/disk/station_list.txt", "r")
+if fs.exists(disk_drive.getMountPath().."/station_list.txt") and args[1] ~= "edit" then
+    local list_file = io.open(disk_drive.getMountPath().."/station_list.txt", "r")
     station_list = textutils.unserialise(list_file:read("*a"))
     list_file:close()
 else
-    local list_file = io.open("/disk/station_list.txt", "w")
+    local list_file = io.open(disk_drive.getMountPath().."/station_list.txt", "w")
     term.clear()
     term.setCursorPos(1,1)
     while true do

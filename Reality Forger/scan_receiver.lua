@@ -5,6 +5,8 @@ local registry = peripheral.find("informative_registry")
 local storage = peripheral.find("nbtStorage")
 local lua_lzw = require("lualzw")
 
+local perlin = require("perlin")
+
 local cached_anchor_list = forge.detectAnchors()
 
 local forger_bounds = {
@@ -122,7 +124,11 @@ local function split(s, delimiter)
 end
 
 local config = {
-    clear_block = "stone"
+    clear_block = "stone",
+    terrain_stone = "stone",
+    terrain_dirt = "dirt",
+    terrain_grass = "mycelium",
+    terrain_deco = "red_mushroom"
 }
 
 local function loadConfig()
@@ -148,15 +154,18 @@ local offset_z = 0
 
 local cmd_list = {
     "receive",
-    "clear",
-    "draw",
+    "clear <instant y/n>",
+    "draw <clear y/n>",
     "offset <x> <y> <z>",
     "fill <block>",
     "random",
     "setclear <block>",
     "bounds",
     "save",
-    "load"
+    "load",
+    "perlin <divider>",
+    "terrain <divider>",
+    "setterrain <stone> <dirt> <grass> <decoration>"
 }
 
 while true do
@@ -175,6 +184,11 @@ while true do
         print("Received scan! Size:")
         print(#data)
         decoded_data = textutils.unserialise(data)
+    elseif input_split[1] == "setterrain" then
+        config.terrain_stone = input_split[2] or "stone"
+        config.terrain_dirt = input_split[3] or "dirt"
+        config.terrain_grass = input_split[4] or "mycelium"
+        config.terrain_deco = input_split[5] or "red_mushroom"
     elseif input_split[1] == "save" then
         print("Serializing..")
         local serialized_data = textutils.serialise(decoded_data, {compact=true})
@@ -269,22 +283,27 @@ while true do
         local anchor_list = forge.detectAnchors()
         local instructions = {}
         print("Clearing chamber..")
-        for k,coords in pairs(anchor_list) do
-            instructions[#instructions+1] = {{coords}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
-        end
-        local instructions_layers = {}
-        for k,v in pairs(instructions) do
-            if not instructions_layers[v[1][1].y] then
-                instructions_layers[v[1][1].y] = {}
+        if input_split[2] == "true" or input_split[2] == "y" or input_split[2] == "1" then
+            print("Clearing..")
+            forge.forgeReality({block=config.clear_block}, {playerPassable=true, lightPassable=true, invisible=false})
+        else
+            for k,coords in pairs(anchor_list) do
+                instructions[#instructions+1] = {{coords}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
             end
-            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
-        end
-        local write_x, write_y = term.getCursorPos()
-        for i1=1, (#instructions_layers) do
-            term.setCursorPos(write_x, write_y)
-            term.clearLine()
-            term.write(string.format("%.0f%%", (i1/#instructions_layers)*100))
-            forge.batchForgeRealityPieces(instructions_layers[(#instructions_layers-i1)+1])
+            local instructions_layers = {}
+            for k,v in pairs(instructions) do
+                if not instructions_layers[v[1][1].y] then
+                    instructions_layers[v[1][1].y] = {}
+                end
+                instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
+            end
+            local write_x, write_y = term.getCursorPos()
+            for i1=1, (#instructions_layers) do
+                term.setCursorPos(write_x, write_y)
+                term.clearLine()
+                term.write(string.format("%.0f%%", (i1/#instructions_layers)*100))
+                forge.batchForgeRealityPieces(instructions_layers[(#instructions_layers-i1)+1])
+            end
         end
         print("")
     elseif input_split[1] == "fill" then
@@ -319,7 +338,103 @@ while true do
             forge.batchForgeRealityPieces(v)
         end
         print("")
-    end 
+    elseif input_split[1] == "perlin" then
+        local divider = tonumber(input_split[2]) or 8
+        local anchor_list = forge.detectAnchors()
+        
+        print("Generating..")
+        local instructions = {}
+        for k,coords in pairs(anchor_list) do
+            if perlin:noise((coords.x/divider)+0.5, (coords.y/divider)+0.5, (coords.z/divider)+0.5) > 0 then
+                instructions[#instructions+1] = {{coords}, {block="stone"}, {invisible=false, playerPassable=true, lightPassable=false}}
+            else
+                instructions[#instructions+1] = {{coords}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
+            end
+        end
+        local instructions_layers = {}
+        for k,v in pairs(instructions) do
+            if not instructions_layers[v[1][1].y] then
+                instructions_layers[v[1][1].y] = {}
+            end
+            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
+        end
+
+        print("Drawing..")
+        local write_x, write_y = term.getCursorPos()
+        for k,v in ipairs(instructions_layers) do
+            term.setCursorPos(write_x, write_y)
+            term.clearLine()
+            term.write(string.format("%.0f%%", (k/#instructions_layers)*100))
+            forge.batchForgeRealityPieces(v)
+        end
+        print("")
+    elseif input_split[1] == "terrain" then
+
+        local divider = tonumber(input_split[2]) or 16
+        
+        print("Generating..")
+        local instructions = {}
+        for coords_x=forger_bounds.neg_x, forger_bounds.pos_x do
+            for coords_z=forger_bounds.neg_z, forger_bounds.pos_z do
+                local noise = perlin:noise((coords_x/divider)+0.5, (1/divider)+0.5, (coords_z/divider)+0.5)
+                local level = (noise+1)/2
+                local check_level = (level*4)+4
+                local shroom_noise = perlin:noise(((coords_x+32)/8)+0.5, (1/16)+0.5, ((coords_z+32)/8)+0.5)
+                local shroom_chance
+                if shroom_noise > 0.125 then
+                    shroom_chance = ((shroom_noise+1)/2)*16
+                else
+                    shroom_chance = 0
+                end
+                for i1=1, (math.abs(forger_bounds.pos_y)+math.abs(forger_bounds.neg_y))-10 do
+                    local elevation = i1+10
+                    if i1 <= check_level then
+                        if i1+3 > check_level then
+                            if i1+1 > check_level then
+                                instructions[#instructions+1] = {{{x=coords_x, y=elevation, z=coords_z}}, {block=config.terrain_grass}, {invisible=false, playerPassable=false, lightPassable=false}}
+                            else
+                                instructions[#instructions+1] = {{{x=coords_x, y=elevation, z=coords_z}}, {block=config.terrain_dirt}, {invisible=false, playerPassable=false, lightPassable=false}}
+                            end
+                        else
+                            instructions[#instructions+1] = {{{x=coords_x, y=elevation, z=coords_z}}, {block=config.terrain_stone}, {invisible=false, playerPassable=false, lightPassable=false}}
+                        end
+                    else
+                        if i1-1 <= check_level and math.random(0,100) < shroom_chance then
+                            print(shroom_chance)
+                            instructions[#instructions+1] = {{{x=coords_x, y=elevation, z=coords_z}}, {block=config.terrain_deco}, {invisible=false, playerPassable=true, lightPassable=true}}
+                        else
+                            instructions[#instructions+1] = {{{x=coords_x, y=elevation, z=coords_z}}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
+                        end
+                    end
+                end
+                for i1=1, 10 do
+                    if math.abs(perlin:noise((coords_x/divider)+0.5, (i1/(divider/2))+0.5, (coords_z/divider)+0.5)) < 0.125 then
+                        instructions[#instructions+1] = {{{x=coords_x, y=i1, z=coords_z}}, {block="stone"}, {invisible=false, playerPassable=false, lightPassable=false}}
+                    else
+                        instructions[#instructions+1] = {{{x=coords_x, y=i1, z=coords_z}}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
+                    end
+                end
+            end
+        end
+
+        local instructions_layers = {}
+        for k,v in pairs(instructions) do
+            if not instructions_layers[v[1][1].y] then
+                instructions_layers[v[1][1].y] = {}
+            end
+            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
+        end
+
+        print("Drawing..")
+        local write_x, write_y = term.getCursorPos()
+        for k,v in ipairs(instructions_layers) do
+            term.setCursorPos(write_x, write_y)
+            term.clearLine()
+            term.write(string.format("%.0f%%", (k/#instructions_layers)*100))
+            forge.batchForgeRealityPieces(v)
+        end
+        print("")
+    end
     print()
     print("Command executed.")
     print("Press any key to exit")

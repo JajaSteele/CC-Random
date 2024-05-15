@@ -63,6 +63,7 @@ local function getTableSize(tbl)
     return count
 end
 
+
 local function getBlockCount(data)
     local count = 0
     for k,v in pairs(data) do
@@ -121,6 +122,36 @@ local function split(s, delimiter)
         table.insert(result, match);
     end
     return result;
+end
+
+local function sanitizeInstructions(instructions)
+    local new_instructions = {}
+    for k,instruction in pairs(instructions) do
+        local new_part = {{}, instruction[2], instruction[3]}
+        for k, coords in pairs(instruction[1]) do
+            if coords.x ~= 0 or coords.z ~= 0 or coords.y > 0 then
+                new_part[1][#new_part[1]+1] = coords
+            end
+        end
+        new_instructions[#new_instructions+1] = new_part
+    end
+
+    return new_instructions
+end
+
+local function layerInstructions(instructions)
+    local layer_list = {}
+
+    local instructions_layers = {}
+    for k,v in pairs(instructions) do
+        if not instructions_layers[v[1][1].y] then
+            instructions_layers[v[1][1].y] = {}
+            layer_list[#layer_list+1] = v[1][1].y
+        end
+        instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
+    end
+
+    return instructions_layers, layer_list
 end
 
 local config = {
@@ -290,19 +321,16 @@ while true do
             for k,coords in pairs(anchor_list) do
                 instructions[#instructions+1] = {{coords}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
             end
-            local instructions_layers = {}
-            for k,v in pairs(instructions) do
-                if not instructions_layers[v[1][1].y] then
-                    instructions_layers[v[1][1].y] = {}
-                end
-                instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
-            end
+
+            instructions = sanitizeInstructions(instructions)
+
+            local instructions_layers, layer_list = layerInstructions(instructions)
             local write_x, write_y = term.getCursorPos()
-            for i1=1, (#instructions_layers) do
+            for k,v in ipairs(layer_list) do
                 term.setCursorPos(write_x, write_y)
                 term.clearLine()
-                term.write(string.format("%.0f%%", (i1/#instructions_layers)*100))
-                forge.batchForgeRealityPieces(instructions_layers[(#instructions_layers-i1)+1])
+                term.write(string.format("%.0f%%", (k/#layer_list)*100).." - "..k)
+                forge.batchForgeRealityPieces(instructions_layers[v])
             end
         end
         print("")
@@ -320,22 +348,18 @@ while true do
             end
         end
 
-        local instructions_layers = {}
-        for k,v in pairs(instructions) do
-            if not instructions_layers[v[1][1].y] then
-                instructions_layers[v[1][1].y] = {}
-            end
-            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
-        end
+        
+        instructions = sanitizeInstructions(instructions)
+        local instructions_layers, layer_list = layerInstructions(instructions)
 
         print("Filling random blocks..")
 
         local write_x, write_y = term.getCursorPos()
-        for k,v in ipairs(instructions_layers) do
+        for k,v in ipairs(layer_list) do
             term.setCursorPos(write_x, write_y)
             term.clearLine()
-            term.write(string.format("%.0f%%", (k/#instructions_layers)*100))
-            forge.batchForgeRealityPieces(v)
+            term.write(string.format("%.0f%%", (k/#layer_list)*100).." - "..k)
+            forge.batchForgeRealityPieces(instructions_layers[v])
         end
         print("")
     elseif input_split[1] == "perlin" then
@@ -351,21 +375,16 @@ while true do
                 instructions[#instructions+1] = {{coords}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
             end
         end
-        local instructions_layers = {}
-        for k,v in pairs(instructions) do
-            if not instructions_layers[v[1][1].y] then
-                instructions_layers[v[1][1].y] = {}
-            end
-            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
-        end
+
+        local instructions_layers, layer_list = layerInstructions(instructions)
 
         print("Drawing..")
         local write_x, write_y = term.getCursorPos()
-        for k,v in ipairs(instructions_layers) do
+        for k,v in ipairs(layer_list) do
             term.setCursorPos(write_x, write_y)
             term.clearLine()
-            term.write(string.format("%.0f%%", (k/#instructions_layers)*100))
-            forge.batchForgeRealityPieces(v)
+            term.write(string.format("%.0f%%", (k/#layer_list)*100).." - "..k)
+            forge.batchForgeRealityPieces(instructions_layers[v])
         end
         print("")
     elseif input_split[1] == "terrain" then
@@ -417,21 +436,15 @@ while true do
             end
         end
 
-        local instructions_layers = {}
-        for k,v in pairs(instructions) do
-            if not instructions_layers[v[1][1].y] then
-                instructions_layers[v[1][1].y] = {}
-            end
-            instructions_layers[v[1][1].y][#instructions_layers[v[1][1].y]+1] = v
-        end
+        local instructions_layers, layer_list = layerInstructions(instructions)
 
         print("Drawing..")
         local write_x, write_y = term.getCursorPos()
-        for k,v in ipairs(instructions_layers) do
+        for k,v in ipairs(layer_list) do
             term.setCursorPos(write_x, write_y)
             term.clearLine()
-            term.write(string.format("%.0f%%", (k/#instructions_layers)*100))
-            forge.batchForgeRealityPieces(v)
+            term.write(string.format("%.0f%%", (k/#layer_list)*100).." - "..k)
+            forge.batchForgeRealityPieces(instructions_layers[v])
         end
         print("")
     end

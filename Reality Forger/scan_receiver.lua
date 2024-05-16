@@ -80,6 +80,12 @@ local function colorPrint(color, ...)
     term.setTextColor(old_color)
 end
 
+local function debugFile(name, ...)
+    local debug_file = io.open(name, "w")
+    debug_file:write(textutils.serialise(...))
+    debug_file:close()
+end
+
 local function within_bounds(pos)
     if (pos.x >= forger_bounds.neg_x and pos.x <= forger_bounds.pos_x) and (pos.y >= forger_bounds.neg_y and pos.y <= forger_bounds.pos_y) and (pos.z >= forger_bounds.neg_z and pos.z <= forger_bounds.pos_z) then
         return true
@@ -134,10 +140,23 @@ local function sanitizeInstructions(instructions)
                 new_part[1][#new_part[1]+1] = coords
             end
         end
-        new_instructions[#new_instructions+1] = new_part
+        if #new_part[1] > 0 then
+            new_instructions[#new_instructions+1] = new_part
+        end
     end
 
     return new_instructions
+end
+
+local function sanitizePositions(positions)
+    local new_positions = {}
+    for k,coords in pairs(positions) do
+        if coords.x ~= 0 or coords.z ~= 0 or coords.y > 0 then
+            new_positions[#new_positions+1] = coords
+        end
+    end
+
+    return new_positions
 end
 
 local function layerInstructions(instructions)
@@ -180,9 +199,9 @@ loadConfig()
 
 local decoded_data = {}
 
-local offset_x = 0
-local offset_y = 0
-local offset_z = 0
+local offset_x = -25
+local offset_y = -25
+local offset_z = -25
 
 local cmd_list = {
     "receive",
@@ -288,11 +307,13 @@ while true do
             print("Clearing..")
             forge.forgeReality({block=config.clear_block}, {playerPassable=true, lightPassable=true, invisible=false})
         end
+
         
         print("Drawing scan..")
         local progress = 0
         local write_x, write_y = term.getCursorPos()
         for block,positions in pairs(modified_data) do
+            local positions = sanitizePositions(positions)
             term.setCursorPos(write_x, write_y)
             term.clearLine()
             term.write(string.format("%.0f%%", (progress/block_type_count)*100))
@@ -408,8 +429,8 @@ while true do
                 else
                     shroom_chance = 0
                 end
-                for i1=1, (math.abs(forger_bounds.pos_y)+math.abs(forger_bounds.neg_y))-10 do
-                    local elevation = i1+10
+                for i1=1, (math.abs(forger_bounds.pos_y)+math.abs(forger_bounds.neg_y)) do
+                    local elevation = i1
                     if i1 <= check_level then
                         if i1+3 > check_level then
                             if i1+1 > check_level then
@@ -429,15 +450,17 @@ while true do
                         end
                     end
                 end
-                for i1=1, 10 do
-                    if math.abs(perlin:noise((coords_x/divider)+0.5, (i1/(divider/2))+0.5, (coords_z/divider)+0.5)) < 0.125 then
-                        instructions[#instructions+1] = {{{x=coords_x, y=i1, z=coords_z}}, {block="stone"}, {invisible=false, playerPassable=false, lightPassable=false}}
+                for i1=1, 24 do
+                    if math.abs(perlin:noise((coords_x/divider)+0.5, (i1/(divider/2))+0.5, (coords_z/divider)+0.5)) < 0.25 then
+                        instructions[#instructions+1] = {{{x=coords_x, y=i1-24, z=coords_z}}, {block="stone"}, {invisible=false, playerPassable=false, lightPassable=false}}
                     else
-                        instructions[#instructions+1] = {{{x=coords_x, y=i1, z=coords_z}}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
+                        instructions[#instructions+1] = {{{x=coords_x, y=i1-24, z=coords_z}}, {block=config.clear_block}, {invisible=false, playerPassable=true, lightPassable=true}}
                     end
                 end
             end
         end
+
+        --local instructions = sanitizeInstructions(instructions)
 
         local instructions_layers, layer_list = layerInstructions(instructions)
 

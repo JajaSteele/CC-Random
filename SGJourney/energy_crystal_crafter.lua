@@ -10,33 +10,43 @@ print(tank)
 print(pattern)
 
 local function getItemSlot(name, storage)
-    local item_list = storage.list()
+    if storage then
+        local item_list = storage.list()
 
-    if not item_list then return end
-    for k,v in pairs(item_list) do
-        if v.name == name then
-            return k
+        if not item_list then return end
+        for k,v in pairs(item_list) do
+            if v.name == name then
+                return k
+            end
         end
     end
 end
 
 local function getItemCount(name, storage)
-    local item_list = storage.list()
-    local count = 0
+    if storage then
+        local item_list = storage.list()
+        local count = 0
 
-    for k,v in pairs(item_list) do
-        if v.name == name then
-            count = count+v.count
+        for k,v in pairs(item_list) do
+            if v.name == name then
+                count = count+v.count
+            end
         end
-    end
 
-    return count
+        return count
+    else
+        return 0
+    end
 end
 
 local function getSlotCount(name, storage, slot)
-    local item = storage.getItemDetail(slot)
+    if storage then
+        local item = storage.getItemDetail(slot)
 
-    return (item or {count=0}).count
+        return (item or {count=0}).count
+    else
+        return {count=0}
+    end
 end
 
 local function getNaquadahAmount()

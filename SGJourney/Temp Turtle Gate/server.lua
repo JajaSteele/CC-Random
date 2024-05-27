@@ -36,7 +36,7 @@ local function mainThread()
                     if turtle_slot then
                         print("Sending turtle and shulker to player!")
                         chatbox.sendMessageToPlayer("\xA7eSending items..", username, chat_name)
-                        turtle_storage.pushItems(peripheral.getName(modular_router), turtle_slot)
+                        inv_manager.addItemToPlayer("front", {fromSlot=turtle_slot-1})
                         sleep(0.5)
                         inv_manager.addItemToPlayer("back", {})
                         in_use = true

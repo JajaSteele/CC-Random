@@ -24,14 +24,18 @@ local function split(s, delimiter)
     return result;
 end
 
-settings.define("sg.slowdial", {
-    description = "Forces the gate to use slow dial (for MW only)",
-    default = false,
-    type = "boolean"
-})
+local function clearAndReboot()
+    local program = shell.getRunningProgram()
+    if not fs.isReadOnly(program) then
+        fs.delete(program)
+    end
+    print("Program deleted. Rebooting")
+    os.sleep(0.5)
+    os.reboot()
+end
 
 local function engageChevron(number)
-    if interface.engageSymbol and not (interface.rotateClockwise and settings.get("sg.slowdial")) then
+    if interface.engageSymbol then
         interface.engageSymbol(number)
         sleep(0.25)
     elseif interface.rotateClockwise then
@@ -86,6 +90,7 @@ local function mainRemote()
                 engageChevron(v)
             end
             print(table.concat(address, "-"))
+            clearAndReboot()
         end
     end
 end
@@ -99,6 +104,7 @@ local function mainRemoteCommands()
             if (interface.isStargateConnected() and interface.isWormholeOpen()) or interface.getChevronsEngaged() > 0 then
                 print("Disconnected gate")
                 interface.disconnectStargate()
+                clearAndReboot()
             end
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, (os.getComputerLabel() or ("Gate "..os.getComputerID())), "jjs_sg_sendlabel")
@@ -120,7 +126,7 @@ end
 while true do
     local stat, err = pcall(function()
         print("Starting threads")
-        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing)
+        parallel.waitForAny(mainRemote, mainRemoteCommands, mainRemotePing)
     end)
     if not stat then
         if err == "Terminated" then

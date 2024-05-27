@@ -13,7 +13,8 @@ local function queueMessage(msg, prefix, brackets)
         type = "global",
         message = msg,
         prefix = prefix,
-        brackets = brackets
+        brackets = brackets,
+        sent = false
     }
 end
 
@@ -24,7 +25,8 @@ local function queueToast(msg, title, player, prefix, brackets)
         title = title,
         player = player,
         prefix = prefix,
-        brackets = brackets
+        brackets = brackets,
+        sent = false
     }
 end
 
@@ -34,7 +36,8 @@ local function queuePrivateMessage(msg, player, prefix, brackets)
         message = msg,
         player = player,
         prefix = prefix,
-        brackets = brackets
+        brackets = brackets,
+        sent = false
     }
 end
 
@@ -118,6 +121,8 @@ local function chatListener()
                 else
                     queueToast("\xA7cYou are currently not AFK\xA7f\nUse $afk to toggle it", "AFK Status", username, "!", "<>")
                 end
+            elseif msg == "reboot" then
+                os.reboot()
             end
         elseif not hidden then
             for k, name in pairs(player.getOnlinePlayers()) do
@@ -159,28 +164,31 @@ end
 
 local function chatManager()
     while true do
-        local msg_to_send = chat_queue[1]
-
-        if msg_to_send then
-            if msg_to_send.type == "private" then
-                repeat
+        for k, msg_to_send in ipairs(chat_queue) do
+            if msg_to_send.sent then
+                table.remove(chat_queue, k)
+            else
+                if msg_to_send.type == "private" then
                     local stat = chat.sendMessageToPlayer(msg_to_send.message, msg_to_send.player, msg_to_send.prefix, msg_to_send.brackets)
+                    if stat then
+                        chat_queue[k].sent = true
+                    end
                     sleep(0.5)
-                until stat
-                table.remove(chat_queue, 1)
-            elseif msg_to_send.type == "global" then
-                repeat
+                elseif msg_to_send.type == "global" then
                     local stat = chat.sendMessage(msg_to_send.message, msg_to_send.prefix, msg_to_send.brackets)
+                    if stat then
+                        chat_queue[k].sent = true
+                    end
                     sleep(0.5)
-                until stat
-                table.remove(chat_queue, 1)
-            elseif msg_to_send.type == "toast" then
-                repeat
+                elseif msg_to_send.type == "toast" then
                     local stat = chat.sendToastToPlayer(msg_to_send.message, msg_to_send.title, msg_to_send.player, msg_to_send.prefix, msg_to_send.brackets)
+                    if stat then
+                        chat_queue[k].sent = true
+                    end
                     sleep(0.5)
-                until stat
-                table.remove(chat_queue, 1)
+                end
             end
+            sleep()
         end
         sleep(0.25)
     end
@@ -265,6 +273,7 @@ local function autoAFK()
     end
 end
 
+queueToast("AFK Manager has started!", "AFK-Util", "JajaSteele", "!", "<>")
 while true do
     local stat, err = pcall(function()
         parallel.waitForAll(chatListener, chatManager, joinListener, autoAFK)

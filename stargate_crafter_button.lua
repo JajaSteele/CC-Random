@@ -16,36 +16,46 @@ local sides = {
 }
 
 local function getItemSlot(name, storage)
-    local item_list = storage.list()
+    if storage then
+        local item_list = storage.list()
 
-    if item_list then
-        for k,v in pairs(item_list) do
-            if v.name == name then
-                return k
+        if item_list then
+            for k,v in pairs(item_list) do
+                if v.name == name then
+                    return k
+                end
             end
         end
     end
 end
 
 local function getItemCount(name, storage)
-    local item_list = storage.list()
-    local count = 0
-    if item_list then
-        for k,v in pairs(item_list) do
-            if v.name == name then
-                count = count+v.count
+    if storage then
+        local item_list = storage.list()
+        local count = 0
+        if item_list then
+            for k,v in pairs(item_list) do
+                if v.name == name then
+                    count = count+v.count
+                end
             end
         end
-    end
 
-    return count
+        return count
+    else
+        return 0
+    end
 end
 
 
 local function getSlotCount(name, storage, slot)
-    local item = storage.getItemDetail(slot)
-    
-    return item.count
+    if storage then
+        local item = storage.getItemDetail(slot)
+        
+        return item.count
+    else
+        return 0
+    end
 end
 local function moveItem(name, from_storage, to_storage, to_slot, count)
     local moved_count = 0

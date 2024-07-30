@@ -23,7 +23,8 @@ end
 term.redirect(monitor)
 while true do
     local event = {os.pullEvent()}
-    if (not args[1] or event[1] == args[1]) and (not args[2] or event[3].sType ~= args[2]) then
+    --if type(event[5]) == "table" then print(event[5].sProtocol) end
+    if (not args[1] or event[1] == args[1]) and ((type(event[5]) ~= "table") or ((not args[2] or not event[5].sType or event[5].sType ~= args[2]) and (not args[3] or event[5].sProtocol == args[3]))) then
         print(textutils.serialize(event))
     end
 end

@@ -6,6 +6,8 @@ local modems = {peripheral.find("modem")}
 
 local modem
 
+local args = {...}
+
 for k,v in pairs(modems) do
     if v.isWireless() == true then
         modem = modems[k]
@@ -20,6 +22,8 @@ end
 
 term.redirect(monitor)
 while true do
-    local event = {rednet.receive()}
-    print(textutils.serialize(event))
+    local event = {os.pullEvent()}
+    if (not args[1] or event[1] == args[1]) and (not args[2] or event[3].sType ~= args[2]) then
+        print(textutils.serialize(event))
+    end
 end

@@ -15,7 +15,7 @@ local function get_tps(sample_ms)
 
     local delta = math.abs(new_time-old_time)
     
-    return clamp(((sample_ms)/delta)*20, 0, 20)
+    return clamp(((sample_ms)/delta)*20, 0, 20), delta/20
 end
 
 
@@ -52,7 +52,7 @@ local last_tps_weight = {}
 local send_average_time = os.epoch("utc")+30000
 
 while true do
-    local tps = get_tps(500)
+    local tps = get_tps(250)
     term.clear()
     term.setCursorPos(1,1)
 

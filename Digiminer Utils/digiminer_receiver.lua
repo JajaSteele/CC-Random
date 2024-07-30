@@ -65,7 +65,7 @@ local function keyThread()
         if char == "c" then
             local text = ""
             for k,v in pairs(last_pos) do
-                text = text.."\nID: "..k.." Label: "..v.label.." \n "..string.format('  [name:"%d (%s) Position", x:%d, y:%d, z:%d]', k, v.label, v.x, v.y, v.z)
+                text = text.."\nID: "..k.." Label: "..(v.label or "unknown").." \n "..string.format('  [name:"%d (%s) Position", x:%d, y:%d, z:%d]', k, v.label, v.x, v.y, v.z)
             end
             local cb = peripheral.find("chatBox")
             cb.sendMessageToPlayer(text, "JajaSteele")

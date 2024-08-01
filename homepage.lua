@@ -14,6 +14,8 @@ local selected_program = ""
 local run_threads = true
 local selected_color = colors.blue
 
+local homepage_file = shell.getRunningProgram()
+
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
@@ -62,7 +64,7 @@ local function updateList()
     file_list = fs.list("/")
     program_list = {}
     for k,v in pairs(file_list) do
-        if v ~= shell.getRunningProgram() and getFileType(fs.getName(v)) == "lua" then
+        if v ~= homepage_file and getFileType(fs.getName(v)) == "lua" then
             program_list[#program_list+1] = getFileName(fs.getName(v))
         end
     end
@@ -168,8 +170,6 @@ local function clickThread()
                     selected_program = ""
                     os.queueEvent("redraw_list")
                 end
-
-
             end
         end
     end
@@ -197,6 +197,9 @@ while true do
                     fill(2,2,(width-1)*(i1/14), 2, colors.lightBlue, colors.red, "/")
                     sleep(0.025)
                 end
+                sleep(0.25)
+                selected_program = ""
+                os.queueEvent("redraw_list")
             end)
             term.setTextColor(colors.red)
             term.setBackgroundColor(colors.lightBlue)

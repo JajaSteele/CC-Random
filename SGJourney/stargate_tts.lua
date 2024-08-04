@@ -46,7 +46,7 @@ local function playAudio(link)
             local buffer = decoder(chunk)
             
             for k,speaker in pairs(speakers) do
-                while not speaker.playAudio(buffer) do
+                while not speaker.playAudio(buffer, 3) do
                     os.pullEvent("speaker_audio_empty")
                 end
             end

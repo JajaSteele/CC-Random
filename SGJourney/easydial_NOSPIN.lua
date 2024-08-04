@@ -7,6 +7,20 @@ local modem
 
 local is_dialing = false
 
+local function debugLog(str)
+    local debug_data = ""
+    if fs.exists("debug.txt") then
+        local debug_file = io.open("debug.txt", "r")
+        debug_data = debug_file:read("*a")
+        debug_file:close()
+    end
+
+    debug_data = debug_data.."\n"..str
+    local debug_file2 = io.open("debug.txt", "w")
+    debug_file2:write(debug_data)
+    debug_file2:close()
+end
+
 for k,v in pairs(modems) do
     if v.isWireless() == true then
         modem = modems[k]
@@ -206,7 +220,7 @@ end
 
 local function clearGate()
     if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 then
-        sg.engageSymbol(0)
+        sg.disconnectStargate()
     end
 end
 
@@ -432,7 +446,9 @@ local function inputThread()
                         writeToDisplayLink(table.concat(display_address, "-"), "Unknown Address", true, true, false)
                     end
 
-                    if address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen() then
+                    sleep(1)
+
+                    if (address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen()) or sg.getChevronsEngaged() == 0 then
                         if monitor and config.monitor then
                             local mw, mh = monitor.getSize()
                             monitor.setTextColor(colors.green)
@@ -451,7 +467,7 @@ local function inputThread()
 
                         repeat
                             local event = os.pullEvent()
-                        until event == "stargate_disconnected" or event == "stargate_reset"
+                        until event == "stargate_disconnected" or event == "stargate_reset" or sg.getChevronsEngaged() == 0
 
                         if monitor and config.monitor then
                             monitor.clear()
@@ -507,7 +523,7 @@ local function autoInputThread()
     
     repeat
         sleep(0.25)
-    until sg.isStargateConnected()
+    until sg.isStargateConnected() or sg.getChevronsEngaged() == 0
 end
 
 local dial_book = {
@@ -830,6 +846,168 @@ local function gateClosingMonitor()
     end
 end
 
+local gate_target_symbol = 0
+local update_timer = 0
+local has_updated = false
+local awaiting_encode = false
+ 
+local absolute_buffer
+local function rawAbsoluteListener()
+    sleep(0.25)
+    while true do
+        local id, msg, protocol
+        if not absolute_buffer then
+            id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
+            rednet.send(id, "", "jjs_sg_rawcommand_confirm")
+        else
+            msg = absolute_buffer
+            absolute_buffer = nil
+        end
+
+        --debugLog("Received: "..msg)
+
+        if tonumber(msg) and tonumber(msg) < 39 then
+            local symbol = tonumber(msg)
+            if symbol == 0 then
+                if sg.isStargateConnected() then
+                    clearGate()
+                    fancyReboot()
+                else
+                    os.queueEvent("key", keys.enter, false)
+                end
+                --debugLog("Pressed Enter")
+            elseif symbol > 0 and symbol < 39 then
+                local symbol_string = tostring(symbol)
+                for i1=1, #symbol_string do
+                    os.queueEvent("char", tostring(symbol_string:sub(i1,i1)))
+                    os.sleep()
+                end
+                os.sleep()
+                os.queueEvent("key", keys.space, false)
+                --debugLog("Pressed Space")
+            end
+        end
+    end
+end
+
+local slow_engaging = {
+    ["sgjourney:pegasus_stargate"] = true,
+    ["sgjourney:universe_stargate"] = true
+}
+
+local function rawCommandListener()
+    while true do
+        local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
+        rednet.send(id, "", "jjs_sg_rawcommand_confirm")
+        if sg.rotateClockwise then
+            if msg == "left" then
+                local current_symbol = sg.getCurrentSymbol()
+                gate_target_symbol = (gate_target_symbol+1)%39
+                update_timer = 10
+                has_updated = false
+            elseif msg == "right" then
+                local current_symbol = sg.getCurrentSymbol()
+                gate_target_symbol = (gate_target_symbol-1)%39
+                update_timer = 10
+                has_updated = false
+            elseif msg == "click" then
+                if sg.getCurrentSymbol() == gate_target_symbol then
+                    sg.openChevron()
+                    sleep(0.25)
+                    sg.encodeChevron()
+                    sleep(0.25)
+                    sg.closeChevron()
+                else
+                    awaiting_encode = true
+                end
+            end
+        end
+        if tonumber(msg) then
+            local symbol = tonumber(msg)
+            if symbol == 0 and (sg.isStargateConnected()) then
+                clearGate()
+            else
+                is_dialing = true
+                absolute_buffer = msg
+                parallel.waitForAny(inputThread, dialThread, rawAbsoluteListener)
+            end
+        end
+    end
+end
+
+local function rawCommandSpinner()
+    while true do
+        if sg.getCurrentSymbol then
+            if not has_updated and sg.getCurrentSymbol() ~= gate_target_symbol and update_timer <= 0 then
+                has_updated = true
+                if (gate_target_symbol-sg.getCurrentSymbol()) % 39 < 19 then
+                    sg.rotateAntiClockwise(gate_target_symbol)
+                else
+                    sg.rotateClockwise(gate_target_symbol)
+                end
+            end
+            if update_timer > 0 then
+                update_timer = update_timer-1
+            end
+            if awaiting_encode and sg.getCurrentSymbol() == gate_target_symbol then
+                awaiting_encode = false
+                sleep(0.5)
+                sg.openChevron()
+                sleep(0.25)
+                sg.encodeChevron()
+                sleep(0.25)
+                sg.closeChevron()
+            end
+            sleep()
+        else
+            sleep(10)
+        end
+    end
+end
+
+local function checkAliveThread()
+    modem.open(os.getComputerID())
+    while true do
+        local event, side, channel, reply_channel, message, distance = os.pullEvent("modem_message")
+        if type(message) == "table" then
+            if message.protocol == "jjs_checkalive" and message.message == "ask_alive" then
+                modem.transmit(reply_channel, os.getComputerID(), {protocol="jjs_checkalive", message="confirm_alive"})
+            end
+        end
+    end
+end
+
+-- local function debugChar()
+--     while true do
+--         local event = {os.pullEvent()}
+--         if event[1] == "char" then
+--             local debug_data = ""
+--             if fs.exists("char_debug.txt") then
+--                 local debug_file = io.open("char_debug.txt", "r")
+--                 debug_data = debug_file:read("*a")
+--                 debug_file:close()
+--             end
+--         
+--             debug_data = debug_data.."\n".."Char: "..event[2]
+--             local debug_file2 = io.open("char_debug.txt", "w")
+--             debug_file2:write(debug_data)
+--             debug_file2:close()
+--         elseif event[1] == "key" then
+--             local debug_data = ""
+--             if fs.exists("char_debug.txt") then
+--                 local debug_file = io.open("char_debug.txt", "r")
+--                 debug_data = debug_file:read("*a")
+--                 debug_file:close()
+--             end
+--         
+--             debug_data = debug_data.."\n".."Key: "..keys.getName(event[2])
+--             local debug_file2 = io.open("char_debug.txt", "w")
+--             debug_file2:write(debug_data)
+--             debug_file2:close()
+--         end
+--     end
+-- end
+
 if sg.isStargateConnected() then
     if sg.isStargateDialingOut() then
         if sg.getConnectedAddress then
@@ -847,7 +1025,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread)
 end)
 
 if not stat then

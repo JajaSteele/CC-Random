@@ -382,24 +382,136 @@ local function clickManager()
     end
 end
 
+local sender_message_data
+sender_message_data = "msg"
+
 -- Rednet Sender Page
 local sender_title_bar = addFill(1,1, width, 1, colors.gray, colors.white, " ")
-local sender_title = addText(1,1, "Rednet Forge Sender", colors.white, colors.gray)
+local sender_title = addText(3,1, "Rednet Forger", colors.white, colors.gray)
 
-local sender_sender_input = addInputBox(2,3, "Sender:", "0", colors.white, colors.black, colors.yellow, colors.black, "%d", 4)
-local sender_receiver_input = addInputBox(getPos(sender_sender_input).input_x+5,3, "Receiver:", "0", colors.white, colors.black, colors.yellow, colors.black, "%d", 4)
+local sender_sender_input = addInputBox(2,3, "Sender:", "0", colors.white, colors.black, colors.magenta, colors.black, "%d", 4)
+local sender_receiver_input = addInputBox(getPos(sender_sender_input).input_x+5,3, "Receiver:", "0", colors.white, colors.black, colors.magenta, colors.black, "%d", 4)
 
-local sender_message_input = addInputBox(2,5, "Message:", "msg", colors.white, colors.black, colors.yellow, colors.black)
+local sender_message_button = addInputBox(2,5, "Message:", '"msg"', colors.white, colors.black, colors.yellow, colors.black)
 local sender_protocol_input = addInputBox(2,6, "Protocol:", "prc", colors.white, colors.black, colors.yellow, colors.black)
 
 local sender_confirm = addText(2,8, "Send Forged Message", colors.lime, colors.black)
 setClickFunc(sender_confirm, function()
     local sender = tonumber(getValue(sender_sender_input, "input"))
     local receiver = tonumber(getValue(sender_receiver_input, "input"))
-    local message = getValue(sender_message_input, "input")
+    local message = sender_message_data
     local protocol = getValue(sender_protocol_input, "input")
     sendForgedRednet(receiver, sender, message, protocol)
 end)
+
+-- Rednet Message Editor Page
+local me_title_bar = addFill(1,1, width, 1, colors.gray, colors.white, " ")
+local me_title = addText(3,1, "Rednet Message Editor", colors.white, colors.gray)
+
+local me_type_input = addInputBox(2,3, "Type:", "string", colors.white, colors.black, colors.yellow, colors.black, "%a")
+local me_type_next = {
+    boolean="string",
+    string="number",
+    number="boolean"
+}
+local me_type_prev = {
+    string="boolean",
+    boolean="number",
+    number="string"
+}
+
+local me_type_settings = {
+    string={
+        limit=nil,
+        filter=nil,
+        color=colors.yellow
+    },
+    boolean={
+        limit=nil,
+        filter="%a",
+        color=colors.lightBlue
+    },
+    number={
+        limit=nil,
+        filter="%d",
+        color=colors.magenta
+    }
+}
+local me_msg_input = addInputBox(2,5, "Message:", "msg", colors.white, colors.black, colors.yellow, colors.black, "%a")
+setClickFunc(me_type_input, function(id, button)
+    local new_type
+    if button == 1 then
+        new_type = me_type_next[getValue(id, "input")]
+        setValue(id, "input", new_type)
+    elseif button == 2 then
+        new_type = me_type_prev[getValue(id, "input")]
+        setValue(id, "input", new_type)
+    end
+
+    if new_type then
+        setValue(me_msg_input, "max", me_type_settings[new_type].limit)
+        setValue(me_msg_input, "char_filter", me_type_settings[new_type].filter)
+        setValue(me_msg_input, "input_fg", me_type_settings[new_type].color)
+    end
+end)
+
+local me_save_button = addText(2,7, "Save Message", colors.lime, colors.black)
+setClickFunc(me_save_button, function(id, button)
+    local msg_type = getValue(me_type_input, "input")
+    local msg = getValue(me_msg_input, "input")
+
+    if msg_type == "string" then
+        sender_message_data = msg
+        setValue(sender_message_button, "input", '"'..msg..'"')
+        setValue(sender_message_button, "input_fg", colors.yellow)
+    elseif msg_type == "number" then
+        sender_message_data = tonumber(msg) or 0
+        setValue(sender_message_button, "input", tostring(sender_message_data))
+        setValue(sender_message_button, "input_fg", colors.magenta)
+    elseif msg_type == "boolean" then
+        local d = msg:lower()
+        if d == "y" or d == "yes" or d == "true" or d == "1" then
+            sender_message_data = true
+        else
+            sender_message_data = false
+        end
+        setValue(sender_message_button, "input", textutils.serialize(sender_message_data))
+        setValue(sender_message_button, "input_fg", colors.lightBlue)
+    end
+end)
+local me_exit_button = addText(2,8, "Exit Editor", colors.red, colors.black)
+
+--Receiver Page
+local receiver_title_bar = addFill(1,1, width, 1, colors.gray, colors.white, " ")
+local receiver_title = addText(3,1, "Rednet Receiver", colors.white, colors.gray)
+
+local receiver_sender_input = addInputBox(2,3, "Sender:", "", colors.white, colors.black, colors.magenta, colors.black, "%d", 4)
+local receiver_receiver_input = addInputBox(getPos(sender_sender_input).input_x+5,3, "Receiver:", "0", colors.white, colors.black, colors.magenta, colors.black, "%d", 4)
+local receiver_protocol_input = addInputBox(2,5, "Protocol:", "", colors.white, colors.black, colors.yellow, colors.black)
+local receiver_timeout_input = addInputBox(2,6, "Timeout (s):", "", colors.white, colors.black, colors.magenta, colors.black, "%d", 2)
+
+local receiver_button = addText(2, 8, "Receive", colors.lime, colors.black)
+
+--Inspector Page
+local inspector_msg_data
+
+local inspector_title_bar = addFill(1,1, width, 1, colors.gray, colors.white, " ")
+local inspector_title = addText(3,1, "Rednet Inspector", colors.white, colors.gray)
+
+local inspector_sender_input = addInputBox(2,3, "Sender:", "0", colors.lightGray, colors.black, colors.magenta, colors.black, "%d", 4)
+local inspector_receiver_input = addInputBox(getPos(sender_sender_input).input_x+5,3, "Receiver:", "0", colors.lightGray, colors.black, colors.magenta, colors.black, "%d", 4)
+
+local inspector_protocol = addInputBox(2,5, "Protocol:", '?', colors.lightGray, colors.black, colors.yellow, colors.black)
+local inspector_message = addInputBox(2,6, "Message:", '"?"', colors.lightGray, colors.black, colors.yellow, colors.black)
+
+local inspector_table_export = addText(getPos(inspector_message).x2+1,6, "Export", colors.blue, colors.black)
+
+local inspector_exit_button = addText(2,8, "Exit Inspector", colors.red, colors.black)
+
+setClickFunc(inspector_sender_input, nil)
+setClickFunc(inspector_receiver_input, nil)
+setClickFunc(inspector_protocol, nil)
+setActive(inspector_table_export, false)
 
 local pages = {
     rednet_sender = {
@@ -409,30 +521,146 @@ local pages = {
         sender_input = sender_sender_input,
         receiver_input = sender_receiver_input,
 
-        sender_message_input = sender_message_input,
+        sender_message_button = sender_message_button,
         sender_protocol_input = sender_protocol_input,
 
         sender_confirm = sender_confirm,
+    },
+    msg_editor = {
+        me_title_bar = me_title_bar,
+        me_title = me_title,
+        me_type_input = me_type_input,
+        me_msg_input = me_msg_input,
+
+        me_save_button = me_save_button,
+        me_exit_button = me_exit_button
+    },
+    rednet_receiver = {
+        receiver_title_bar = receiver_title_bar,
+        receiver_title = receiver_title,
+
+        receiver_sender_input = receiver_sender_input,
+        receiver_receiver_input = receiver_receiver_input,
+        receiver_protocol_input = receiver_protocol_input,
+        receiver_timeout_input = receiver_timeout_input,
+        receiver_button = receiver_button,
+    },
+    rednet_inspector = {
+        inspector_title_bar = inspector_title_bar,
+        inspector_title = inspector_title,
+
+        inspector_sender_input = inspector_sender_input,
+        inspector_receiver_input = inspector_receiver_input,
+
+        inspector_protocol = inspector_protocol,
+        inspector_message = inspector_message,
+        inspector_table_export = inspector_table_export,
+
+        inspector_exit_button = inspector_exit_button,
     }
 }
-
 local current_page = "rednet_sender"
 
 local function changePage(page_name)
+    local active_page = {}
     for page,page_data in pairs(pages) do
         if page == page_name then
-            for k, element in pairs(page_data) do
-                setActive(element, true)
-            end
+            active_page = page_data
         else
             for k, element in pairs(page_data) do
                 setActive(element, false)
             end
         end
     end
+    if active_page then
+        for k, element in pairs(active_page) do
+            setActive(element, true)
+        end
+    end
     current_page = page_name
     os.queueEvent("ui_redraw")
 end
+
+setClickFunc(me_exit_button, function()
+    changePage("rednet_sender")
+end)
+setClickFunc(sender_message_button, function()
+    changePage("msg_editor")
+end)
+
+setClickFunc(sender_title, function()
+    changePage("rednet_receiver")
+end)
+setClickFunc(receiver_title, function()
+    changePage("rednet_sender")
+end)
+
+setClickFunc(inspector_exit_button, function()
+    changePage("rednet_receiver")
+end)
+
+setClickFunc(receiver_button, function(id, button)
+    local sender_filter = tonumber(getValue(receiver_sender_input, "input"))
+    local receiver_filter = tonumber(getValue(receiver_receiver_input, "input"))
+    local protocol_filter = getValue(receiver_protocol_input, "input")
+    local timeout_filter = tonumber(getValue(receiver_timeout_input, "input"))
+
+    if protocol_filter == "" then protocol_filter = nil end
+
+    setValue(receiver_button, "fg", colors.orange)
+    setValue(receiver_button, "text", "Awaiting Message..")
+    os.queueEvent("ui_redraw")
+
+    local sender, message, protocol = receiveForgedRednet(receiver_filter, protocol_filter, timeout_filter, sender_filter)
+
+    if sender then
+        setValue(receiver_button, "fg", colors.lime)
+        setValue(receiver_button, "text", "Receive")
+
+        setValue(inspector_sender_input, "input", tostring(sender))
+        setValue(inspector_receiver_input, "input", tostring(receiver_filter))
+        setValue(inspector_protocol, "input", protocol)
+
+        local msg_type = type(message)
+
+        if msg_type == "string" then
+            inspector_msg_data = message
+            setValue(inspector_message, "input", '"'..message..'"')
+            setValue(inspector_message, "input_fg", colors.yellow)
+            setActive(inspector_table_export, false)
+        elseif msg_type == "number" then
+            inspector_msg_data = tonumber(message) or 0
+            setValue(inspector_message, "input", tostring(inspector_msg_data))
+            setValue(inspector_message, "input_fg", colors.magenta)
+            setActive(inspector_table_export, false)
+        elseif msg_type == "boolean" then
+            if message then
+                inspector_msg_data = true
+            else
+                inspector_msg_data = false
+            end
+            setValue(inspector_message, "input", textutils.serialize(inspector_msg_data))
+            setValue(inspector_message, "input_fg", colors.lightBlue)
+            setActive(inspector_table_export, false)
+        elseif msg_type == "table" then
+                inspector_msg_data = message
+            setValue(inspector_message, "input", "<table>")
+            setValue(inspector_message, "input_fg", colors.orange)
+            setActive(inspector_table_export, true)
+            getPos(inspector_table_export).x = getPos(inspector_message).x2+1
+        end
+        
+        changePage("rednet_inspector")
+    else
+        setValue(receiver_button, "fg", colors.red)
+        setValue(receiver_button, "text", "No Response!")
+        os.queueEvent("ui_redraw")
+        sleep(1)
+        setValue(receiver_button, "fg", colors.lime)
+        setValue(receiver_button, "text", "Receive")
+        os.queueEvent("ui_redraw")
+    end
+end)
 
 changePage(current_page)
 

@@ -10,7 +10,7 @@ local function playAudio(link)
         if chunk == nil then break end
         local buffer = decoder(chunk)
 
-        while not speaker.playAudio(buffer) do
+        while not speaker.playAudio(buffer, 3) do
             os.pullEvent("speaker_audio_empty")
         end
     end

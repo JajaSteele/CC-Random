@@ -129,6 +129,8 @@ local exit = false
 
 loadConfig()
 
+config.sgw_socket = config.sgw_socket or nil
+config.sgw_enabled = config.sgw_enabled or false
 config.pocket_mode = config.pocket_mode or false
 config.master_id = config.master_id or nil
 config.nearest_range = config.nearest_range or 200
@@ -172,6 +174,80 @@ local scroll = 0
 local cmd_history = {}
 
 local w,h = term.getSize()
+
+local websocket_connection
+local websocket_success = false
+
+local cached_nearest_gate = {}
+
+local function getNearestGate()
+    if cached_nearest_gate.id then
+        local attempts = 0
+        repeat
+            modem.transmit(cached_nearest_gate.id, os.getComputerID(), {protocol="jjs_checkalive", message="ask_alive"})
+            modem.open(os.getComputerID())
+            local wait_timer = os.startTimer(0.075)
+            local data = {os.pullEvent()}
+            if data[1] == "modem_message" then
+                local event, side, channel, replyChannel, msg, distance = table.unpack(data)
+                if type(msg) == "table" and msg.protocol == "jjs_checkalive" and msg.message == "confirm_alive" then
+                    os.cancelTimer(wait_timer)
+                    if distance and distance < config.nearest_range then
+                        return cached_nearest_gate
+                    else
+                        break
+                    end
+                end
+            elseif data[1] == "timer" then
+                if data[2] == wait_timer then
+                    attempts = attempts+1
+                else
+                    os.cancelTimer(wait_timer)
+                end
+            end
+        until attempts > 4
+    end
+    modem.transmit(2707, 2707, {protocol="jjs_sg_dialer_ping", message="request_ping"})
+
+    local temp_gates = {}
+
+    local failed_attempts = 0
+    while true do
+        local timeout_timer = os.startTimer(0.075)
+        local event = {os.pullEvent()}
+
+        if event[1] == "modem_message" then
+            if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
+                failed_attempts = 0
+                os.cancelTimer(timeout_timer)
+                if event[6] and event[6] < config.nearest_range then  
+                    temp_gates[#temp_gates+1] = {
+                        id = event[5].id,
+                        distance = event[6] or math.huge,
+                        label = event[5].label
+                    }
+                end
+            end
+        elseif event[1] == "timer" then
+            if event[2] == timeout_timer then
+                failed_attempts = failed_attempts+1
+            else
+                os.cancelTimer(timeout_timer)
+            end
+        end
+
+        if failed_attempts > 4 then
+            break
+        end
+    end
+
+    table.sort(temp_gates, function(a,b) return (a.distance < b.distance) end)
+
+    if temp_gates[1] then
+        cached_nearest_gate = temp_gates[1]
+    end
+    return cached_nearest_gate
+end
 
 local function addressToString(address, separator, hasPrefixSuffix)
     local output = ""
@@ -417,10 +493,41 @@ commands = {
     },
     {
         main="pocket",
-        args={},
+        args={
+            {name="config", type="", outline="[]", desc="Shows the websocket config"},
+        },
         func=(function()
             config.pocket_mode = not config.pocket_mode
             writeConfig()
+        end),
+        short_description={
+            "Toggles SGW mode",
+        },
+        long_description={
+            "SGW mode allows to control the gate with a smartwatch (needs additional setup so its mostly for myself lol)",
+        }
+    },
+    {
+        main="sgw",
+        args={},
+        func=(function(...)
+            local config_mode = ...
+            config.sgw_enabled = not config.sgw_enabled
+            writeConfig()
+
+            if not config.sgw_socket or config_mode then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Websocket URL:")
+                term.setCursorPos(1, h-1)
+                term.write("> ")
+                config.sgw_socket = read(nil, nil, nil, config.sgw_socket)
+
+                writeConfig()
+            end
+
+            fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+            write(1, h-2, "SGW: "..tostring(config.sgw_enabled))
+            sleep(0.5)
         end),
         short_description={
             "Toggles pocket mode",
@@ -1294,5 +1401,121 @@ local function exitThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread)
+local function SGWThread()
+    while true do
+        if config.sgw_enabled and config.sgw_socket then
+            local websocket, err
+            local stat, err2 = pcall(function()
+                websocket, err = http.websocket(config.sgw_socket)
+            end)
+
+            if websocket then
+                websocket_connection = websocket
+                write(1, h, "SGW Connection Success", colors.black, colors.lime)
+                websocket_success = true
+                sleep(0.5)
+                fill(1, h, w, h, colors.black, colors.white, " ")
+                os.queueEvent("sgw_wake")
+            else
+                if not stat then
+                    write(1, h, "SGW: "..err2, colors.black, colors.red)
+                    websocket_success = false
+                    sleep(2)
+                    fill(1, h, w, h, colors.black, colors.white, " ")
+                else
+                    write(1, h, "SGW: "..err, colors.black, colors.red)
+                    websocket_success = false
+                    sleep(2)
+                    fill(1, h, w, h, colors.black, colors.white, " ")
+                end
+            end
+            while websocket_success and config.sgw_enabled do
+                sleep()
+            end
+        else
+            if websocket_success then
+                websocket_connection.close()
+                websocket_success = false
+                write(1, h, "SGW Connection Closed", colors.black, colors.orange)
+                sleep(0.5)
+                fill(1, h, w, h, colors.black, colors.white, " ")
+            end
+            sleep(2)
+        end
+    end
+end
+
+local sgw_command_queue = {}
+
+local function SGWListenerThread()
+    while true do
+        if websocket_success and config.sgw_enabled then
+            local msg 
+            local stat, err2 = pcall(function()
+                msg = websocket_connection.receive()
+            end)
+            if stat and msg then
+                local queue_msg = true
+                if msg == "fetch_addressbook" then
+                    websocket_connection.send("addressbook_transfer_start")
+                    for k,address in ipairs(address_book) do
+                        websocket_connection.send(textutils.serialize(address, {compact=true}))
+                    end
+                    websocket_connection.send("addressbook_transfer_end")
+                elseif msg:match("address_full_request") then
+                    queue_msg = false
+                    local split_address = split(msg, " ")
+                    for k,v in ipairs(split_address) do
+                        local symbol = tonumber(v)
+                        if symbol and symbol >= 0 and symbol < 39 then
+                            sgw_command_queue[#sgw_command_queue+1] = v
+                        end
+                    end
+                end
+                if queue_msg then
+                    sgw_command_queue[#sgw_command_queue+1] = msg
+                end
+            else
+                write(1, h, "SGW: "..(err2 or "No Message"), colors.black, colors.red)
+                websocket_success = false
+                sleep(2)
+                fill(1, h, w, h, colors.black, colors.white, " ")
+            end
+        else
+            os.pullEvent("sgw_wake")
+        end
+    end
+end
+
+local function SGWSenderThread()
+    while true do
+        if websocket_success and config.sgw_enabled then
+            local last_command = sgw_command_queue[1]
+            if last_command then
+                local nearest_gate = getNearestGate()
+                if nearest_gate and nearest_gate.id then
+                    write(1, h, "SGW: "..last_command, colors.black, colors.lightBlue)
+                    rednet.send(nearest_gate.id, last_command, "jjs_sg_rawcommand")
+                    local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.1)
+
+                    if id and msg then
+                        table.remove(sgw_command_queue, 1)
+                        sleep(0.5)
+                        fill(1, h, w, h, colors.black, colors.white, " ")
+                    end
+                else
+                    write(1, h, "SGW: "..last_command, colors.black, colors.red)
+                    table.remove(sgw_command_queue, 1)
+                    sleep(1)
+                    fill(1, h, w, h, colors.black, colors.white, " ")
+                end
+            end
+        else
+            os.pullEvent("sgw_wake")
+        end
+        sleep(0)
+    end
+end
+
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread, SGWThread, SGWListenerThread, SGWSenderThread)
 

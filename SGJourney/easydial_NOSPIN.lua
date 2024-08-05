@@ -859,6 +859,11 @@ local function rawAbsoluteListener()
         if not absolute_buffer then
             id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
             rednet.send(id, "", "jjs_sg_rawcommand_confirm")
+
+            if msg == "gate_disconnect" then
+                clearGate()
+                fancyReboot()
+            end
         else
             msg = absolute_buffer
             absolute_buffer = nil
@@ -931,6 +936,10 @@ local function rawCommandListener()
                 absolute_buffer = msg
                 parallel.waitForAny(inputThread, dialThread, rawAbsoluteListener)
             end
+        end
+        if msg == "gate_disconnect" then
+            clearGate()
+            fancyReboot()
         end
     end
 end

@@ -164,6 +164,9 @@ local function rawCommandListener()
                 print("SGW: Engaging "..symbol)
             end
         end
+        if msg == "gate_disconnect" then
+            interface.disconnectStargate()
+        end
     end
 end
 

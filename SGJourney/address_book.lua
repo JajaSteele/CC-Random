@@ -1468,12 +1468,12 @@ local function SGWListenerThread()
                     for k,v in ipairs(split_address) do
                         local symbol = tonumber(v)
                         if symbol and symbol >= 0 and symbol < 39 then
-                            sgw_command_queue[#sgw_command_queue+1] = v
+                            sgw_command_queue[#sgw_command_queue+1] = {attempts=0, cmd=v}
                         end
                     end
                 end
                 if queue_msg then
-                    sgw_command_queue[#sgw_command_queue+1] = msg
+                    sgw_command_queue[#sgw_command_queue+1] = {attempts=0, cmd=msg}
                 end
             else
                 write(1, h, "SGW: "..(err2 or "No Message"), colors.black, colors.red)
@@ -1494,17 +1494,29 @@ local function SGWSenderThread()
             if last_command then
                 local nearest_gate = getNearestGate()
                 if nearest_gate and nearest_gate.id then
-                    write(1, h, "SGW: "..last_command, colors.black, colors.lightBlue)
-                    rednet.send(nearest_gate.id, last_command, "jjs_sg_rawcommand")
+                    if last_command.attempts == 0 then
+                        fill(1, h, w, h, colors.black, colors.white, " ")
+                        write(1, h, "SGW: "..last_command.cmd, colors.black, colors.lightBlue)
+                    end
+                    rednet.send(nearest_gate.id, last_command.cmd, "jjs_sg_rawcommand")
                     local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.1)
 
                     if id and msg then
-                        table.remove(sgw_command_queue, 1)
-                        sleep(0.5)
                         fill(1, h, w, h, colors.black, colors.white, " ")
+                        table.remove(sgw_command_queue, 1)
+                    else
+                        write(1, h, "SGW ("..last_command.attempts.."): "..last_command.cmd, colors.black, colors.orange)
+                        last_command.attempts = last_command.attempts+1
+                        if last_command.attempts > 5 then
+                            fill(1, h, w, h, colors.red, colors.black, " ")
+                            write(1, h, "SGW Fail: "..last_command.cmd, colors.red, colors.black)
+                            sleep(1)
+                            fill(1, h, w, h, colors.black, colors.white, " ")
+                            table.remove(sgw_command_queue, 1)
+                        end
                     end
                 else
-                    write(1, h, "SGW: "..last_command, colors.black, colors.red)
+                    write(1, h, "SGW: "..last_command.cmd, colors.black, colors.red)
                     table.remove(sgw_command_queue, 1)
                     sleep(1)
                     fill(1, h, w, h, colors.black, colors.white, " ")

@@ -1,10 +1,10 @@
 while true do
-    local exist, data = turtle.inspect()
+    local exist, data = turtle.inspectUp()
 
     if exist and data.name == "sgjourney:classic_stargate" then
         print("Mining gate..")
-        turtle.dig()
+        turtle.digUp()
     end
     
-    sleep(1)
+    sleep(0.1)
 end

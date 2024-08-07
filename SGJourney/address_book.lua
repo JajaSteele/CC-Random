@@ -1409,6 +1409,10 @@ local function SGWThread()
                 websocket, err = http.websocket(config.sgw_socket)
             end)
 
+            if websocket_connection then
+                websocket_connection.close()
+            end
+
             if websocket then
                 websocket_connection = websocket
                 write(1, h, "SGW Connection Success", colors.black, colors.lime)
@@ -1471,12 +1475,14 @@ local function SGWListenerThread()
                             sgw_command_queue[#sgw_command_queue+1] = {attempts=0, cmd=v}
                         end
                     end
+                elseif msg == "confirm_alive" then
+                    queue_msg = false
                 end
                 if queue_msg then
                     sgw_command_queue[#sgw_command_queue+1] = {attempts=0, cmd=msg}
                 end
             else
-                write(1, h, "SGW: "..(err2 or "No Message"), colors.black, colors.red)
+                write(1, h, "SGW: "..(err2 or "Listener Error"), colors.black, colors.red)
                 websocket_success = false
                 sleep(2)
                 fill(1, h, w, h, colors.black, colors.white, " ")
@@ -1499,7 +1505,7 @@ local function SGWSenderThread()
                         write(1, h, "SGW: "..last_command.cmd, colors.black, colors.lightBlue)
                     end
                     rednet.send(nearest_gate.id, last_command.cmd, "jjs_sg_rawcommand")
-                    local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.1)
+                    local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.2)
 
                     if id and msg then
                         fill(1, h, w, h, colors.black, colors.white, " ")
@@ -1507,7 +1513,7 @@ local function SGWSenderThread()
                     else
                         write(1, h, "SGW ("..last_command.attempts.."): "..last_command.cmd, colors.black, colors.orange)
                         last_command.attempts = last_command.attempts+1
-                        if last_command.attempts > 5 then
+                        if last_command.attempts > 3 then
                             fill(1, h, w, h, colors.red, colors.black, " ")
                             write(1, h, "SGW Fail: "..last_command.cmd, colors.red, colors.black)
                             sleep(1)
@@ -1529,5 +1535,32 @@ local function SGWSenderThread()
     end
 end
 
-parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread, SGWThread, SGWListenerThread, SGWSenderThread)
+local function SGWHeartbeatThread()
+    while true do
+        if websocket_success and config.sgw_enabled and websocket_connection then
+            local stat, err = pcall(function()
+                websocket_connection.send("check_alive")
+                local msg = websocket_connection.receive(0.25)
+                if msg == "confirm_alive" then
+                    return
+                else
+                    error("No Response")
+                end
+            end)
+            if not stat then
+                write(1, h, "SGW: "..(err or "Heartbeat Error"), colors.black, colors.red)
+                sleep(2)
+                fill(1, h, w, h, colors.black, colors.white, " ")
+                websocket_success = false
+            else
+                sleep(5)
+            end
+        else
+            os.pullEvent("sgw_wake")
+        end
+        sleep()
+    end
+end
+
+parallel.waitForAny(consoleThread, listThread, scrollThread, keyThread, lookupThread, exitThread, clickThread, masterThread, reloadSlaveThread, SGWThread, SGWListenerThread, SGWSenderThread, SGWHeartbeatThread)
 

@@ -127,6 +127,8 @@ local update_timer = 0
 local has_updated = true
 local awaiting_encode = false
 
+local engage_queue = {}
+
 local function rawCommandListener()
     while true do
         local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
@@ -160,12 +162,16 @@ local function rawCommandListener()
                 interface.disconnectStargate()
                 print("SGW: Disconnecting Gate")
             elseif symbol >= 0 and symbol < 39 then
-                engageChevron(symbol)
-                print("SGW: Engaging "..symbol)
+                if engage_queue[#engage_queue] ~= symbol then
+                    engage_queue[#engage_queue+1] = symbol
+                    print("SGW: Queuing "..symbol)
+                end
             end
         end
         if msg == "gate_disconnect" then
+            engage_queue = {}
             interface.disconnectStargate()
+            print("SGW: Disconnecting Gate")
         end
     end
 end
@@ -197,6 +203,18 @@ local function rawCommandSpinner()
     end
 end
 
+local function engageQueueManager()
+    while true do
+        local last_engage = engage_queue[1]
+        if last_engage then
+            engageChevron(last_engage)
+            print("SGW: Engaging "..last_engage)
+            table.remove(engage_queue, 1)
+        end
+        sleep()
+    end
+end
+
 local function checkAliveThread()
     modem.open(os.getComputerID())
     while true do
@@ -212,7 +230,7 @@ end
 while true do
     local stat, err = pcall(function()
         print("Starting threads")
-        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing, checkAliveThread, rawCommandSpinner, rawCommandListener)
+        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing, checkAliveThread, rawCommandSpinner, rawCommandListener, engageQueueManager)
     end)
     if not stat then
         if err == "Terminated" then

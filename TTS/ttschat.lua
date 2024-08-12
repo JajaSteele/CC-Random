@@ -63,8 +63,9 @@ local function ttsThread()
             playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode(last_queue.msg).."&voice="..textutils.urlEncode(last_queue.voice))
             table.remove(tts_queue, 1)
             sleep(0.5)
+        else
+            sleep(0)
         end
-        sleep()
     end
 end
 

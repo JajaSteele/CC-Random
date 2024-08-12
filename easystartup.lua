@@ -16,7 +16,7 @@ local file = read(nil, nil, path_completion)
 print("Enter a delay: (in seconds)")
 local delay = read(nil, nil, nil, "1")
 
-print("Restart on erroring? (y/n)")
+print("Restart on erroring? (y/n) (ignores Terminated)")
 local pcall_mode = read(nil, nil, nil, "y")
 
 local startup_file = io.open("startup.lua", "w")
@@ -32,15 +32,24 @@ local startup_program_pcall = ([[
         local stat, err = pcall(function()
             print("Starting Program '&p' in ]]..delay..[[s")
             sleep(]]..delay..[[)
-            shell.execute("&p")
+            if not shell.execute("&p") then
+                error("Program Errored")
+            end
         end)
-        if not stat then print(err) end
+        if not stat then 
+            print(err) 
+            print("Restarting in ]]..(1)..[[s") 
+            sleep(]]..(1)..[[) 
+            if err == "Terminated" then 
+                print("Program Terminated") break 
+            end 
+        end
     end
 ]])
 
 
 if pcall_mode == "y" or pcall_mode == "yes" or pcall_mode == "true" then
-    startup_program_pcall:gsub("&p", file)
+    startup_program = startup_program_pcall:gsub("&p", file)
 else
     startup_program = startup_program:gsub("&p", file)
 end

@@ -1,5 +1,4 @@
 local monitor = peripheral.find("monitor")
-monitor.setTextScale(0.5)
 
 
 local modems = {peripheral.find("modem")}
@@ -20,7 +19,10 @@ if modem then
     modem.open(2707)
 end
 
-term.redirect(monitor)
+if monitor then
+    term.redirect(monitor)
+    monitor.setTextScale(0.5)
+end
 while true do
     local event = {os.pullEvent()}
     --if type(event[5]) == "table" then print(event[5].sProtocol) end

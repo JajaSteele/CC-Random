@@ -1,7 +1,5 @@
-local sg = peripheral.find("basic_interface")
+local interfaces = {peripheral.find("advanced_crystal_interface")}
 
-if sg.getCurrentSymbol() < 19 then
-    sg.rotateClockwise(0)
-else
-    sg.rotateAntiClockwise(0)
+for k,v in pairs(interfaces) do
+    v.disconnectStargate()
 end

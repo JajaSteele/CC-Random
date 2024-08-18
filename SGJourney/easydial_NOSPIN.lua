@@ -847,8 +847,11 @@ local function gateClosingMonitor()
 end
 
 local gate_target_symbol = 0
+if sg.rotateClockwise then
+    gate_target_symbol = sg.getCurrentSymbol()
+end
 local update_timer = 0
-local has_updated = false
+local has_updated = true
 local awaiting_encode = false
  
 local absolute_buffer

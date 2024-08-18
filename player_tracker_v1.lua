@@ -27,10 +27,12 @@ local stat, err = pcall(function()
         print("HP: "..data.health.."/"..data.maxHeatlh)
         print("Air: "..data.airSupply)
         print("")
-        print("-- RESPAWN --")
-        print("Pos: ")
-        print(data.respawnPosition.x.." "..data.respawnPosition.y.." "..data.respawnPosition.z)
-        print(data.respawnDimension)
+        if data.respawnPosition then
+            print("-- RESPAWN --")
+            print("Pos: ")
+            print(data.respawnPosition.x.." "..data.respawnPosition.y.." "..data.respawnPosition.z)
+            print(data.respawnDimension)
+        end
         display_window.setVisible(true)
         sleep(0.25)
     end

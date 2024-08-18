@@ -18,8 +18,8 @@ local function checkArmorThread()
 
             local max_energy = base_energy_level*(2^energy_units)
 
-            if energy < max_energy/2 then
-                print("Energy below 50% ("..energy.."/"..max_energy..")\nRecharging Item..")
+            if (energy/max_energy) < 0.05 then
+                print("Energy below 5% ("..energy.."/"..max_energy..")\nRecharging Item..")
                 inv.removeItemFromPlayer("bottom", {name = piece.name, fromSlot = piece.slot})
                 while true do
                     local charge_piece = inv.getItemsChest("bottom")[1]

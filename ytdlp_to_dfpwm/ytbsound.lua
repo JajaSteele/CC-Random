@@ -52,6 +52,9 @@ local is_playing = false
 local skip_mode = false
 local is_paused = false
 
+local change_volume = false
+local global_volume = 1.0
+
 local function playAudio(link)
     local count = 0
     local request = http.get(link,nil,true)
@@ -63,13 +66,19 @@ local function playAudio(link)
             while is_paused do
                 sleep(0.1)
             end
+            while change_volume do
+                sleep(0.1)
+                os.pullEvent("speaker_audio_empty")
+                sleep(0.5)
+                change_volume = false
+            end
             write(1,height, string.rep("-", (width*(count/size))-1).."\x07", colors.black, colors.lightBlue)
             local chunk = request.read(1*1024)
             if chunk == nil then break end
             count = count+#chunk
             local buffer = decoder(chunk)
 
-            while not speaker.playAudio(buffer) do
+            while not speaker.playAudio(buffer, global_volume) do
                 os.pullEvent("speaker_audio_empty")
             end
         end
@@ -256,6 +265,15 @@ local function inputThread()
             is_playing = false
             os.queueEvent("stopPlaying")
             write(1, height, "Cleared Playlist", colors.black, colors.red, true)
+        elseif input[1] == "volume" then
+            if input[2] and tonumber(input[2]) then
+                local new_volume = tonumber(input[2])
+                if new_volume >= 0 and new_volume <= 3 then
+                    global_volume = new_volume
+                    write(1, height, "Set volume to "..global_volume, colors.black, colors.red, true)
+                    change_volume = true
+                end
+            end
         elseif input[1] == "playlist" then
             write(1, height-2, "Playlist Link:", colors.black, colors.white)
             term.setCursorPos(1, height-1)

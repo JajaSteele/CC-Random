@@ -2,11 +2,6 @@ local interface = peripheral.find("basic_interface") or peripheral.find("crystal
 local monitor = peripheral.find("monitor")
 local last_address = {}
 
-monitor.setTextScale(0.5)
-local width, height = monitor.getSize()
-monitor.clear()
-monitor.setCursorPos(1,1)
-
 local button_list = {}
 
 local function findButton(num)
@@ -18,9 +13,6 @@ local function findButton(num)
 end
 
 local building_num = 1
-
-monitor.setPaletteColor(colors.black, 0x1f1b19)
-monitor.setPaletteColor(colors.white, 0x0e0c0b)
 
 local function loadSave()
     if fs.exists("last_address.txt") then
@@ -36,6 +28,28 @@ local function writeSave()
 end
 
 loadSave()
+
+if interface and interface.getConnectedAddress and interface.isStargateConnected() then
+    last_address = interface.getConnectedAddress()
+    writeSave()
+    print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))
+end
+
+if not monitor then
+    print("Awaiting Monitor..")
+    repeat
+        monitor = peripheral.find("monitor")
+        sleep(0.25)
+    until monitor
+    print("Monitor Found!")
+end
+
+monitor.setTextScale(0.5)
+local width, height = monitor.getSize()
+monitor.clear()
+monitor.setCursorPos(1,1)
+monitor.setPaletteColor(colors.black, 0x1f1b19)
+monitor.setPaletteColor(colors.white, 0x0e0c0b)
 
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = monitor.getBackgroundColor()
@@ -279,6 +293,16 @@ local function dialAutoThread()
     end
 end
 
+local function monitorDetachDetector()
+    while true do
+        os.pullEvent("peripheral_detach")
+        monitor = peripheral.find("monitor")
+        if not monitor then
+            error("All monitors detached!")
+        end
+    end
+end
+
 if interface.isStargateConnected() and interface.getConnectedAddress then
     last_address = interface.getConnectedAddress()
     writeSave()
@@ -287,4 +311,4 @@ end
 
 print("Last Address is: "..table.concat(last_address, " "))
 
-parallel.waitForAny(inputThread,resetThread, lastAddressThread, dialAutoThread, externalThread)
+parallel.waitForAny(inputThread,resetThread, lastAddressThread, dialAutoThread, externalThread, monitorDetachDetector)

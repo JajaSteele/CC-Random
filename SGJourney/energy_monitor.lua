@@ -10,6 +10,16 @@ for k,monitor in pairs(monitors) do
     windows[#windows+1] = window.create(monitor, 1, 1, width, height)
 end
 
+local function refreshMonitors()
+    monitors = {peripheral.find("monitor")}
+    windows = {}
+
+    for k,monitor in pairs(monitors) do
+        local width, height = monitor.getSize()
+        windows[#windows+1] = window.create(monitor, 1, 1, width, height)
+    end
+end
+
 local function prettyEnergy(energy)
     if energy > 1000000000000 then
         return string.format("%.2f", energy/1000000000000).." TFE"
@@ -208,8 +218,18 @@ local function touchThread()
     end
 end
 
+local function updateThread()
+    while true do
+        local event = os.pullEvent()
+        if event == "peripheral" or event == "peripheral_detach" then
+            refreshMonitors()
+            print("Refreshing Monitors")
+        end
+    end
+end
+
 local stat, err = pcall(function()
-    parallel.waitForAny(mainThread, touchThread)
+    parallel.waitForAny(mainThread, touchThread, updateThread)
 end)
 
 if not stat then

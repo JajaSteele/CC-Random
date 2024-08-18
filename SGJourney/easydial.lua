@@ -879,7 +879,10 @@ local function gateClosingMonitor()
     end
 end
 
-local gate_target_symbol = sg.getCurrentSymbol()
+local gate_target_symbol = 0
+if sg.rotateClockwise then
+    gate_target_symbol = sg.getCurrentSymbol()
+end
 local update_timer = 0
 local has_updated = true
 local awaiting_encode = false
@@ -979,7 +982,7 @@ end
 
 local function rawCommandSpinner()
     while true do
-        if not has_updated and update_timer <= 0 then
+        if not has_updated and sg.getCurrentSymbol() ~= gate_target_symbol and update_timer <= 0 then
             has_updated = true
             if (gate_target_symbol-sg.getCurrentSymbol()) % 39 < 19 then
                 sg.rotateAntiClockwise(gate_target_symbol)

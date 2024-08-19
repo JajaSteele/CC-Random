@@ -3,7 +3,10 @@ local decoder = dfpwm.make_decoder()
 local speaker = peripheral.find("speaker")
 local chat = peripheral.find("chatBox")
 
-local tts_queue = {}
+local tts_queue = {{
+    msg="TTS Chat is now enabled",
+    voice="Microsoft Zira Desktop"
+}}
 
 local modems = {peripheral.find("modem")}
 

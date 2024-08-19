@@ -60,8 +60,12 @@ if not stat then
     if err == "Terminated" then
         for k,inter in ipairs(group_a) do
             local address = group_b[k].getLocalAddress()
+            repeat
+                sleep()
+            until inter.isWormholeOpen()
             inter.disconnectStargate()
         end
+        print("Disconnected all gates: Program Terminated")
     else
         error(err)
     end

@@ -35,6 +35,23 @@ local slow_engaging = {
     ["sgjourney:universe_stargate"] = true
 }
 
+local last_address = {}
+
+local function loadSave()
+    if fs.exists("last_address.txt") then
+        local file = io.open("last_address.txt", "r")
+        last_address = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeSave()
+    local file = io.open("last_address.txt", "w")
+    file:write(textutils.serialise(last_address))
+    file:close()
+end
+
+loadSave()
+
 local function engageChevron(number)
     if interface.engageSymbol and not (interface.rotateClockwise and settings.get("sg.slowdial")) then
         interface.engageSymbol(number)
@@ -173,6 +190,15 @@ local function rawCommandListener()
             interface.disconnectStargate()
             print("SGW: Disconnecting Gate")
         end
+        if msg == "gate_dialback" then
+            if interface.isStargateConnected() or interface.getChevronsEngaged() > 0 then
+                interface.disconnectStargate()
+            end
+            for k,v in ipairs(last_address) do
+                engage_queue[#engage_queue+1] = v
+            end
+            engage_queue[#engage_queue+1] = 0
+        end
     end
 end
 
@@ -227,10 +253,25 @@ local function checkAliveThread()
     end
 end
 
+local function lastAddressSaverThread()
+    if interface.getConnectedAddress and interface.isStargateConnected() then
+        last_address = interface.getConnectedAddress()
+        writeSave()
+        print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))
+    end
+    while true do
+        local event = {os.pullEvent()}
+        if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+            last_address = event[2]
+            writeSave()
+        end
+    end
+end
+
 while true do
     local stat, err = pcall(function()
         print("Starting threads")
-        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing, checkAliveThread, rawCommandSpinner, rawCommandListener, engageQueueManager)
+        parallel.waitForAll(mainRemote, mainRemoteCommands, mainRemotePing, checkAliveThread, rawCommandSpinner, rawCommandListener, engageQueueManager, lastAddressSaverThread)
     end)
     if not stat then
         if err == "Terminated" then

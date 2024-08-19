@@ -44,6 +44,11 @@ local start_dialing = false
 local to_dial = {}
 
 local function lastAddressSaverThread()
+    if interface.getConnectedAddress and interface.isStargateConnected() then
+        last_address = interface.getConnectedAddress()
+        writeSave()
+        print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))
+    end
     while true do
         local event = {os.pullEvent()}
         if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then

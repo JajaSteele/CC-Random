@@ -81,6 +81,23 @@ local function write(x,y,text,bg,fg)
     term.setCursorPos(old_posx,old_posy)
 end
 
+local last_address = {}
+
+local function loadSave()
+    if fs.exists("last_address.txt") then
+        local file = io.open("last_address.txt", "r")
+        last_address = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeSave()
+    local file = io.open("last_address.txt", "w")
+    file:write(textutils.serialise(last_address))
+    file:close()
+end
+
+loadSave()
+
 local config = {}
 config.label = "Computer "..os.getComputerID()
 config.monitor = true
@@ -465,9 +482,11 @@ local function inputThread()
                         writeToDisplayLink(table.concat(display_address, "-"), "Unknown Address", true, true, false)
                     end
 
+                    local attempts = 0
                     repeat
-                        sleep()
-                    until sg.isStargateConnected() or sg.getChevronsEngaged() > 0
+                        sleep(0.1)
+                        attempts = attempts+1
+                    until sg.getChevronsEngaged() > 0 or attempts >= 20
 
                     if (address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen()) or sg.getChevronsEngaged() == 0 then
                         if monitor and config.monitor then
@@ -559,6 +578,24 @@ local function autoInputThread()
     until sg.isStargateConnected() or sg.getChevronsEngaged() == 0
 end
 
+local function autoDialbackThread()
+    sleep(1)
+    for k,v in ipairs(last_address) do
+        local symbol_string = tostring(v)
+        for i1=1, #symbol_string do
+            os.queueEvent("char", tostring(symbol_string:sub(i1,i1)))
+            os.sleep()
+        end
+        os.sleep()
+        os.queueEvent("key", keys.space, false)
+    end
+    os.queueEvent("key", keys.enter, false)
+    
+    repeat 
+        sleep(0.25)
+    until sg.isStargateConnected() or sg.getChevronsEngaged() == 0
+end
+
 local dial_book = {
     {name="Earth", address={31,21,11,1,16,14,18,12}},
     {name="Nether", address={27,23,4,34,12,28}},
@@ -576,6 +613,20 @@ local function split(s, delimiter)
         table.insert(result, match);
     end
     return result;
+end
+
+local function lastAddressSaverThread()
+    if sg.getConnectedAddress and sg.isStargateConnected() then
+        last_address = sg.getConnectedAddress()
+        writeSave()
+    end
+    while true do
+        local event = {os.pullEvent()}
+        if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+            last_address = event[2]
+            writeSave()
+        end
+    end
 end
 
 local function mainThread()
@@ -604,7 +655,7 @@ local function mainThread()
 
     if mode == 1 then
         clearGate()
-        parallel.waitForAny(inputThread, dialThread)
+        parallel.waitForAny(inputThread, dialThread, lastAddressSaverThread)
         is_dialing = true
     elseif mode == 2 then
         term.clear()
@@ -621,7 +672,7 @@ local function mainThread()
             is_dialing = true
             auto_address_call = dial_book[selected].address
             clearGate()
-            parallel.waitForAll(inputThread, dialThread, autoInputThread)
+            parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
         end
     elseif mode == 3 then
         term.clear()
@@ -641,7 +692,7 @@ local function mainThread()
         
         is_dialing = true
         clearGate()
-        parallel.waitForAll(inputThread, dialThread, autoInputThread)
+        parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
     elseif mode == 4 then
         term.clear()
         term.setCursorPos(1,1)
@@ -712,7 +763,7 @@ local function mainRemote()
             
             clearGate()
             is_dialing = true
-            parallel.waitForAll(inputThread, dialThread, autoInputThread)
+            parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, config.label, "jjs_sg_sendlabel")
         end
@@ -825,7 +876,7 @@ local function gateMonitor()
                 end
                 writeToDisplayLink("Incoming Wormhole", monitor_text, true, true, false)
             end
-        elseif event[1] == "stargate_outgoing_wormhole" then
+        elseif event[1] == "stargate_outgoing_wormhole" and not is_dialing then
             screensaver_text = "  Outgoing Wormhole  "
             screensaver_color = colors.green
             if event[2] then
@@ -936,6 +987,15 @@ local slow_engaging = {
     ["sgjourney:universe_stargate"] = true
 }
 
+local function disconnectListener()
+    local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
+    rednet.send(id, "", "jjs_sg_rawcommand_confirm")
+    if msg == "gate_disconnect" then
+        clearGate()
+        fancyReboot()
+    end
+end
+
 local function rawCommandListener()
     while true do
         local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
@@ -970,12 +1030,19 @@ local function rawCommandListener()
             else
                 is_dialing = true
                 absolute_buffer = msg
-                parallel.waitForAny(inputThread, dialThread, rawAbsoluteListener)
+                parallel.waitForAny(inputThread, dialThread, rawAbsoluteListener, lastAddressSaverThread)
             end
         end
         if msg == "gate_disconnect" then
             clearGate()
             fancyReboot()
+        end
+        if msg == "gate_dialback" then
+            if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 then
+                sg.disconnectStargate()
+            end
+            is_dialing = true
+            parallel.waitForAll(inputThread, dialThread, autoDialbackThread, disconnectListener, lastAddressSaverThread)
         end
     end
 end
@@ -1066,7 +1133,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread)
+    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread)
 end)
 
 if not stat then

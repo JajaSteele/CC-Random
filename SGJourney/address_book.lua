@@ -249,6 +249,48 @@ local function getNearestGate()
     return cached_nearest_gate
 end
 
+local function getNearestGate_NoCache()
+    modem.transmit(2707, 2707, {protocol="jjs_sg_dialer_ping", message="request_ping"})
+
+    local temp_gates = {}
+
+    local failed_attempts = 0
+    while true do
+        local timeout_timer = os.startTimer(0.075)
+        local event = {os.pullEvent()}
+
+        if event[1] == "modem_message" then
+            if type(event[5]) == "table" and event[5].protocol == "jjs_sg_dialer_ping" and event[5].message == "response_ping" then
+                failed_attempts = 0
+                os.cancelTimer(timeout_timer)
+                if event[6] and event[6] < config.nearest_range then  
+                    temp_gates[#temp_gates+1] = {
+                        id = event[5].id,
+                        distance = event[6] or math.huge,
+                        label = event[5].label
+                    }
+                end
+            end
+        elseif event[1] == "timer" then
+            if event[2] == timeout_timer then
+                failed_attempts = failed_attempts+1
+            else
+                os.cancelTimer(timeout_timer)
+            end
+        end
+
+        if failed_attempts > 4 then
+            break
+        end
+    end
+
+    table.sort(temp_gates, function(a,b) return (a.distance < b.distance) end)
+
+    if temp_gates[1] then
+        return temp_gates[1]
+    end
+end
+
 local function addressToString(address, separator, hasPrefixSuffix)
     local output = ""
     separator = separator or ""
@@ -1030,6 +1072,42 @@ commands = {
             "Sets the maximum range for Quickdial and Quickstop"
         }
     },
+    {
+        main="dialback",
+        args = {},
+        func = function()
+            local nearest_gate = getNearestGate_NoCache()
+            if nearest_gate then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Nearest gate: (# < "..config.nearest_range..")")
+                write(1, h-1, "> "..nearest_gate.label)
+                sleep(0.5)
+                
+                rednet.send(nearest_gate.id, "gate_dialback", "jjs_sg_rawcommand")
+                local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.5)
+                if id == nearest_gate.id and msg then
+                    fill(1, h-2, w, h-1, colors.black, colors.lime, " ")
+                    write(1, h-2, "Command Success", colors.black, colors.white)
+                    sleep(0.5)
+                else
+                    fill(1, h-2, w, h-1, colors.black, colors.red, " ")
+                    write(1, h-2, "Command Fail", colors.black, colors.red)
+                    sleep(0.5)
+                end
+            else
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-1, "> Couldn't find a gate!", colors.black, colors.red)
+                sleep(0.5)
+            end
+        end,
+        short_description = {
+            "Dials the last connected address on the nearest gate"
+        },
+        long_description={
+            "Dials the last connected address on the nearest gate",
+            "You can also press F6 to execute the command quickly"
+        }
+    }
 }
 
 local function getCommand(name)
@@ -1279,6 +1357,16 @@ local function keyThread()
                         end
 
                         local text_to_input = "help"
+                        for i1=1, #text_to_input do
+                            os.queueEvent("char", text_to_input:sub(i1,i1))
+                        end
+                        os.queueEvent("key", keys.enter, false)
+                    elseif key == keys.f6 then
+                        for i1=1, #input_text do
+                            os.queueEvent("key", keys.backspace, false)
+                        end
+
+                        local text_to_input = "dialback"
                         for i1=1, #text_to_input do
                             os.queueEvent("char", text_to_input:sub(i1,i1))
                         end

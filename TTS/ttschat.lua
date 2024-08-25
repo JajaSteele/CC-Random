@@ -38,7 +38,7 @@ if args[2] then
     end
 end
 
-local volume = 1
+local volume = 1.5
 
 if tonumber(args[1]) then
     volume = tonumber(args[1])
@@ -118,10 +118,28 @@ local function rednetThread()
     end
 end
 
+local function playerThread()
+    while true do
+        if peripheral.find("playerDetector") then
+            local event, username = os.pullEvent()
+
+            if event == "playerJoin" then
+                tts_queue[#tts_queue+1] = {msg=username.." Joined the game", voice="Microsoft Zira Desktop"}
+                print(username.." Joined the game")
+            elseif event == "playerLeave" then
+                tts_queue[#tts_queue+1] = {msg=username.." Left the game", voice="Microsoft Zira Desktop"}
+                print(username.." Left the game")
+            end
+        else
+            sleep(10)
+        end
+    end
+end
+
 while true do
     local stat, err = pcall(function()
         print("Starting Threads..")
-        parallel.waitForAny(chatThread, rednetThread, ttsThread)
+        parallel.waitForAny(chatThread, rednetThread, ttsThread, playerThread)
     end)
     if not stat then
         print(err)

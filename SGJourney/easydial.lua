@@ -1074,12 +1074,14 @@ local function rawCommandSpinner()
 end
 
 local function checkAliveThread()
+    if modem then
     modem.open(os.getComputerID())
     while true do
         local event, side, channel, reply_channel, message, distance = os.pullEvent("modem_message")
         if type(message) == "table" then
             if message.protocol == "jjs_checkalive" and message.message == "ask_alive" then
                 modem.transmit(reply_channel, os.getComputerID(), {protocol="jjs_checkalive", message="confirm_alive"})
+                end
             end
         end
     end

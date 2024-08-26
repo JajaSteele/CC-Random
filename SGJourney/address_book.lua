@@ -129,6 +129,7 @@ local exit = false
 
 loadConfig()
 
+config.sgw_key = config.sgw_key or nil
 config.sgw_socket = config.sgw_socket or nil
 config.sgw_enabled = config.sgw_enabled or false
 config.pocket_mode = config.pocket_mode or false
@@ -554,8 +555,6 @@ commands = {
         args={},
         func=(function(...)
             local config_mode = ...
-            config.sgw_enabled = not config.sgw_enabled
-            writeConfig()
 
             if not config.sgw_socket or config_mode then
                 fill(1, h-2, w, h-1, colors.black, colors.white, " ")
@@ -564,6 +563,23 @@ commands = {
                 term.write("> ")
                 config.sgw_socket = read(nil, nil, nil, config.sgw_socket)
 
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Key:")
+                term.setCursorPos(1, h-1)
+                term.write("> ")
+                config.sgw_key = read(nil, nil, nil, config.sgw_key)
+
+                if websocket_connection then
+                    websocket_connection.close()
+                end
+                websocket_connection = nil
+                websocket_success = false
+
+                writeConfig()
+            end
+
+            if not config_mode then
+                config.sgw_enabled = not config.sgw_enabled
                 writeConfig()
             end
 
@@ -1082,6 +1098,44 @@ commands = {
                 write(1, h-2, "Nearest gate: (# < "..config.nearest_range..")")
                 write(1, h-1, "> "..nearest_gate.label)
                 sleep(0.5)
+
+                rednet.send(nearest_gate.id, "gate_dialback", "jjs_sg_rawcommand")
+                local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.5)
+                if id == nearest_gate.id and msg then
+                    fill(1, h-2, w, h-1, colors.black, colors.lime, " ")
+                    write(1, h-2, "Command Success", colors.black, colors.white)
+                    sleep(0.5)
+                else
+                    fill(1, h-2, w, h-1, colors.black, colors.red, " ")
+                    write(1, h-2, "Command Fail", colors.black, colors.red)
+                    sleep(0.5)
+                end
+            else
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-1, "> Couldn't find a gate!", colors.black, colors.red)
+                sleep(0.5)
+            end
+        end,
+        short_description = {
+            "Dials the last connected address on the nearest gate"
+        },
+        long_description={
+            "Dials the last connected address on the nearest gate",
+            "You can also press F6 to execute the command quickly"
+        }
+    },
+    {
+        main="hello world",
+        args = {
+            {name="u smell", type="bool", outline="<>", desc="Range in blocks"}
+        },
+        func = function()
+            local nearest_gate = getNearestGate_NoCache()
+            if nearest_gate then
+                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
+                write(1, h-2, "Nearest gate: (# < "..config.nearest_range..")")
+                write(1, h-1, "> "..nearest_gate.label)
+                sleep(0.5)
                 
                 rednet.send(nearest_gate.id, "gate_dialback", "jjs_sg_rawcommand")
                 local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.5)
@@ -1494,7 +1548,12 @@ local function SGWThread()
         if config.sgw_enabled and config.sgw_socket then
             local websocket, err
             local stat, err2 = pcall(function()
-                websocket, err = http.websocket(config.sgw_socket)
+                local full_url = config.sgw_socket
+                if full_url and full_url:sub(#full_url, #full_url) ~= "/" then
+                    full_url = full_url.."/"
+                end
+                full_url = full_url.."?key="..textutils.urlEncode(config.sgw_key)
+                websocket, err = http.websocket(full_url)
             end)
 
             if websocket_connection then

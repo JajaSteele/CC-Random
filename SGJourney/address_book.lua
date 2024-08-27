@@ -1608,6 +1608,7 @@ local function SGWListenerThread()
             if stat and msg then
                 local queue_msg = true
                 if msg == "fetch_addressbook" then
+                    queue_msg = false
                     websocket_connection.send("addressbook_transfer_start")
                     for k,address in ipairs(address_book) do
                         websocket_connection.send(textutils.serialize(address, {compact=true}))
@@ -1652,7 +1653,7 @@ local function SGWSenderThread()
                         write(1, h, "SGW: "..last_command.cmd, colors.black, colors.lightBlue)
                     end
                     rednet.send(nearest_gate.id, last_command.cmd, "jjs_sg_rawcommand")
-                    local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.2)
+                    local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.15)
 
                     if id and msg then
                         fill(1, h, w, h, colors.black, colors.white, " ")
@@ -1663,9 +1664,9 @@ local function SGWSenderThread()
                         if last_command.attempts > 3 then
                             fill(1, h, w, h, colors.red, colors.black, " ")
                             write(1, h, "SGW Fail: "..last_command.cmd, colors.red, colors.black)
-                            sleep(1)
+                            sleep(0.5)
                             fill(1, h, w, h, colors.black, colors.white, " ")
-                            table.remove(sgw_command_queue, 1)
+                            sgw_command_queue = {}
                         end
                     end
                 else
@@ -1698,6 +1699,7 @@ local function SGWHeartbeatThread()
                 write(1, h, "SGW: "..(err or "Heartbeat Error"), colors.black, colors.red)
                 sleep(2)
                 fill(1, h, w, h, colors.black, colors.white, " ")
+                websocket_connection.close()
                 websocket_success = false
             else
                 sleep(5)

@@ -98,17 +98,24 @@ end
 local function rednetThread()
     while true do
         if rednet_mode then
-            local id, msg, prot = rednet.receive("chat_event_broadcast")
+            local id, msg, prot = rednet.receive()
 
-            if type(msg) == "table" and msg.username and msg.message then
-                local voice
+            if prot == "chat_event_broadcast" then
+                if type(msg) == "table" and msg.username and msg.message then
+                    local voice
 
-                if msg.username == "JajaSteele" then
-                    voice = "Microsoft David Desktop"
-                else
-                    voice = "Microsoft Zira Desktop"
+                    if msg.username == "JajaSteele" then
+                        voice = "Microsoft David Desktop"
+                    else
+                        voice = "Microsoft Zira Desktop"
+                    end
+
+                    tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
+                    print(voice.." : "..msg.message)
                 end
-
+            elseif prot == "chat_misc_broadcast" then
+                local voice = "Microsoft Zira Desktop"
+    
                 tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
                 print(voice.." : "..msg.message)
             end
@@ -131,7 +138,18 @@ local function playerThread()
                 print(username.." Left the game")
             end
         else
-            sleep(10)
+            if rednet_mode then
+                local id, msg, prot = rednet.receive("chat_player_broadcast")
+    
+                if type(msg) == "table" and msg.message then
+                    local voice = "Microsoft Zira Desktop"
+    
+                    tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
+                    print(voice.." : "..msg.message)
+                end
+            else
+                sleep(10)
+            end
         end
     end
 end

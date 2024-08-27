@@ -23,6 +23,11 @@ if monitor then
     term.redirect(monitor)
     monitor.setTextScale(0.5)
 end
+
+rednet.broadcast({sType = "lookup", sProtocol = "jjs_sg_remotedial"})
+modem.open(os.getComputerID())
+
+
 while true do
     local event = {os.pullEvent()}
     --if type(event[5]) == "table" then print(event[5].sProtocol) end

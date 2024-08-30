@@ -96,11 +96,14 @@ for k, data in pairs(merged_books) do
     end
 end
 
+local w,h = term.getSize()
+
 print("Grouped: "..grouped_count)
 
 while true do
-    print("\nEnter your search pattern:")
-    local search_match = read()
+    write(1,h-1, "Enter Search Request:")
+    term.setCursorPos(1, h)
+    local search_match = read():lower()
     local filtered_address = {}
 
     for address, names in pairs(grouped_address) do
@@ -116,12 +119,13 @@ while true do
 
     local scroll = 0
 
-    while true do
-        local line_count = 0
-        term.clear()
+    local line_count = 0
+    term.clear()
+    write(1,1, "Found: "..#filtered_address)
 
-        for k,v in ipairs(filtered_address) do
-            write(4, 1+line_count)
-        end
+    for k,v in ipairs(filtered_address) do
+        write(1, 1+line_count, v.matched_name)
+        write(1, 2+line_count, v.address)
+        line_count = line_count+2
     end
 end

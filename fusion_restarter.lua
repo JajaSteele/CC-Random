@@ -25,17 +25,17 @@ while true do
         print("Fusion is too low! Restarting!")
         output.pullItems(peripheral.getName(source), 1)
         sleep(3)
-        rs.setOutput("left", true)
+        rs.setOutput("front", true)
         repeat
             sleep(2)
             production_rate = mekanismEnergyHelper.joulesToFE(fusion.getProductionRate())
             print(prettyEnergy(production_rate).." > "..prettyEnergy(restart_threshold+1000000))
         until production_rate > restart_threshold+1000000
         print("Reached acceptable production rate.")
-        rs.setOutput("left", false)
+        rs.setOutput("front", false)
     end
     if production_rate > restart_threshold then
-        rs.setOutput("left", false)
+        rs.setOutput("front", false)
         print(prettyEnergy(production_rate).." > "..prettyEnergy(restart_threshold))
         sleep(5)
     end

@@ -14,9 +14,50 @@ if modem then
     modem.open(2707)
 end
 
+local function fill(x,y,x1,y1,bg,fg,char)
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
+    local old_posx,old_posy = term.getCursorPos()
+    if bg then
+        term.setBackgroundColor(bg)
+    end
+    if fg then
+        term.setTextColor(fg)
+    end
+    for i1=1, (x1-x)+1 do
+        for i2=1, (y1-y)+1 do
+            term.setCursorPos(x+i1-1,y+i2-1)
+            term.write(char or " ")
+        end
+    end
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
+end
+
+local function write(x,y,text,bg,fg)
+    local old_posx,old_posy = term.getCursorPos()
+    local old_bg = term.getBackgroundColor()
+    local old_fg = term.getTextColor()
+
+    if bg then
+        term.setBackgroundColor(bg)
+    end
+    if fg then
+        term.setTextColor(fg)
+    end
+
+    term.setCursorPos(x,y)
+    term.write(text)
+
+    term.setTextColor(old_fg)
+    term.setBackgroundColor(old_bg)
+    term.setCursorPos(old_posx,old_posy)
+end
+
 local gates = {}
 
-local hosts
+local hosts = {}
 for i1=1, 2 do
     hosts = {rednet.lookup("jjs_sg_remotedial")}
     if hosts[1] then
@@ -25,12 +66,20 @@ for i1=1, 2 do
     sleep(0.1)
 end
 
+local w, h = term.getSize()
+term.clear()
+term.setCursorPos(1,5)
+
+print("Host Count: "..#hosts)
+
 local problematic_gates = {}
 
-for k,v in ipairs(hosts) do
+for k,v in pairs(hosts) do
     rednet.send(v, "", "jjs_sg_getlabel")
+    fill(1,1, w, 2, colors.black)
+    write(1,1, "Fetching "..v.." ..")
     local id, name
-    for i1=1, 3 do
+    for i1=1, 2 do
         id, name = rednet.receive("jjs_sg_sendlabel", 1)
         if name then break end
         if i1 > 1 then
@@ -41,8 +90,13 @@ for k,v in ipairs(hosts) do
         problematic_gates[#problematic_gates+1] = v
     end
     gates[name or "unknown"] = id
+    write(1,2, name or "ERROR")
     sleep(0.1)
 end
+
+fill(1,1, w, 2, colors.black)
+write(1,1, "Testing ping distance")
+sleep(0.5)
 
 modem.transmit(2707, 2707, {protocol="jjs_sg_dialer_ping", message="request_ping"})
 local failed_attempts = 0
@@ -69,7 +123,7 @@ while true do
         end
     end
 
-    if failed_attempts > 4 then
+    if failed_attempts > 2 then
         break
     end
 end
@@ -79,11 +133,15 @@ for k,v in ipairs(problematic_gates) do
     local distance
     if temp_gates[v] then
         distance = temp_gates[v].distance
-    else
-        distance = "No Reply"
     end
-    print("ID: "..v.." D: "..distance)
+    print("ID: "..v.." D: "..(distance or "?"))
 end
+
+sleep(1)
+
+fill(1,1, w, 2, colors.black)
+write(1,1, "Starting lookup hack")
+sleep(0.5)
 
 local gate_distances = {}
 
@@ -94,6 +152,8 @@ local function isProblematic(id)
         end
     end
 end
+
+local slow_mode = false
 
 local function distanceThread()
     while true do
@@ -117,6 +177,12 @@ local function distanceThread()
                 break
             end
         end
+        if slow_mode then
+            for i1=1, 15 do
+                write(1, 1, "Slowmode Enabled: "..15-i1.."   ", colors.black, colors.yellow)
+                sleep(0.2)
+            end
+        end
         os.queueEvent("refresh_distance")
     end
 end
@@ -124,11 +190,17 @@ end
 local function drawThread()
     while true do
         os.pullEvent("refresh_distance")
+        local count = 2
         for k,v in pairs(gate_distances) do
             term.clear()
-            term.setCursorPos(1,1)
-            if v < 0 then v = "XX" else v = string.format("%.1f", v) end
-            print("ID: "..k.." DIST: "..v)
+            term.setCursorPos(1,count)
+            count = count+1
+            local color = colors.lime
+            if v < 0 then v = "XX" color = colors.red slow_mode = true else v = string.format("%.1f", v) slow_mode = false end
+            write(1, count, "ID: "..k.." DIST: "..v, colors.black, color)
+        end
+        if slow_mode then
+            write(1, 1, "Slowmode Enabled", colors.black, colors.yellow)
         end
     end
 end

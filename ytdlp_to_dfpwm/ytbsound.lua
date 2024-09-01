@@ -271,7 +271,9 @@ local function inputThread()
                 if new_volume >= 0 and new_volume <= 3 then
                     global_volume = new_volume
                     write(1, height, "Set volume to "..global_volume, colors.black, colors.red, true)
-                    change_volume = true
+                    if is_playing and not is_paused then
+                        change_volume = true
+                    end
                 end
             end
         elseif input[1] == "playlist" then

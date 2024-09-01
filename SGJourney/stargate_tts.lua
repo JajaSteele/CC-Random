@@ -85,24 +85,26 @@ local function checkFeedbackBlacklist(code)
 end
 
 local function addressLookup(lookup_value)
-    if not lookup_value then
-        return {name="Unknown Address"}
-    end
+    if modem then
+        if not lookup_value then
+            return {name="Unknown Address"}
+        end
 
-    local id_to_send = settings.get("sg_tts.addressbook_id")
-    if type(lookup_value) == "string" then
-        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_name")
-    elseif type(lookup_value) == "table" then
-        rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_address")
-    end
+        local id_to_send = settings.get("sg_tts.addressbook_id")
+        if type(lookup_value) == "string" then
+            rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_name")
+        elseif type(lookup_value) == "table" then
+            rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_address")
+        end
 
-    for i1=1, 5 do
-        local id, msg, protocol = rednet.receive(nil, 0.25)
-        if id == id_to_send then
-            if protocol == "jjs_sg_lookup_return" then
-                return msg
-            else
-                return {name="Unknown Address"}
+        for i1=1, 5 do
+            local id, msg, protocol = rednet.receive(nil, 0.25)
+            if id == id_to_send then
+                if protocol == "jjs_sg_lookup_return" then
+                    return msg
+                else
+                    return {name="Unknown Address"}
+                end
             end
         end
     end
@@ -113,7 +115,7 @@ local is_active = false
 local passed_entities = 0
 
 playTTS("Gate TTS is now online.")
-print("Gate TTS is now online, address book id: "..settings.get("sg_tts.addressbook_id"))
+print("Gate TTS is now online, address book id: "..(settings.get("sg_tts.addressbook_id") or "NO MODEM"))
 
 local function mainTTS()
     while true do
@@ -189,4 +191,13 @@ local function energyCounter()
     end
 end
 
-parallel.waitForAll(mainTTS, entityCounter, energyCounter)
+local function speaker_refresh()
+    while true do
+        local event = os.pullEvent()
+        if event == "peripheral" or event == "peripheral_detach" then
+            speakers = {peripheral.find("speaker")}
+        end
+    end
+end
+
+parallel.waitForAll(mainTTS, entityCounter, energyCounter, speaker_refresh)

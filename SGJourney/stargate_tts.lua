@@ -37,19 +37,28 @@ local decoder = dfpwm.make_decoder()
 local tts_address = "http://jajasteele.duckdns.org:2456/"
 local voice = "Microsoft Zira Desktop"
 
+local speaker_audio_threads = {}
+
 local function playAudio(link)
     local request = http.get(link,nil,true)
     if request then
         while true do
-            local chunk = request.read(16*1024)
+            local chunk = request.read(2*1024)
             if chunk == nil then break end
             local buffer = decoder(chunk)
-            
+
+            speaker_audio_threads = {}
             for k,speaker in pairs(speakers) do
-                while not speaker.playAudio(buffer, 3) do
-                    os.pullEvent("speaker_audio_empty")
+                speaker_audio_threads[#speaker_audio_threads+1] = function()
+                    local name = peripheral.getName(speaker)
+                    while not speaker.playAudio(buffer, 3) do
+                        repeat 
+                            local event, ev_name = os.pullEvent("speaker_audio_empty")
+                        until ev_name == name
+                    end
                 end
             end
+            parallel.waitForAll(table.unpack(speaker_audio_threads))
         end
         request.close()
     else

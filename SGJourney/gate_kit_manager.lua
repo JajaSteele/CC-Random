@@ -8,6 +8,8 @@ local computer_init = peripheral.wrap("back")
 
 local monitor = peripheral.find("monitor")
 
+local rsi = peripheral.find("redstoneIntegrator")
+
 if monitor then
     term.redirect(monitor)
 end
@@ -153,6 +155,8 @@ local function mainThread()
             local dhd = findItem(base_storage, "milky_way_dhd")
             local shulker = findItem(base_storage, "shulker_box")
 
+            local cookies = findItem(base_storage, "cookie")
+
             local energy_crystal = findItem(base_storage, "sgjourney:energy_crystal")
             local ctrl_crystal = findItem(base_storage, "sgjourney:large_control_crystal")
             
@@ -216,7 +220,14 @@ local function mainThread()
                 print("DHD: ", safemove.pushItems(base_storage, shulker_filler, dhd.slot, 1))
                 print("Control Crystal: ", safemove.pushItems(base_storage, shulker_filler, ctrl_crystal.slot, 1))
                 print("Energy Crystal: ", safemove.pushItems(base_storage, shulker_filler, energy_crystal.slot, 4))
+                if cookies then
+                    print("Cookies: ", safemove.pushItems(base_storage, shulker_filler, cookies.slot, 32))
+                end
                 is_filling = false
+
+                rsi.setOutput("front", true)
+                sleep(1)
+                rsi.setOutput("front", false)
 
                 print("Done! Package ready")
                 sleep(1)

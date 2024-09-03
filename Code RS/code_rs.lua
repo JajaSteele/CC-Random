@@ -6,6 +6,18 @@ else
 end
 
 local completion = require "cc.completion"
+local mode_list = {
+    "rs",
+    "program"
+}
+
+local function path_completion(text)
+    if fs.exists(text) and fs.isDir(text) then
+        return completion.choice(text, fs.list(text))
+    else
+        return completion.choice(text, fs.list(""))
+    end
+end
 
 local optimal_scale = 5
 local example_text = " 1 2 3 "
@@ -21,6 +33,7 @@ repeat
 until optimal_scale == 0.5
 
 monitor.setTextScale(optimal_scale)
+monitor.setPaletteColor(colors.black, 0x000000)
 
 if not fs.exists("/startup.lua") then
     local startup = io.open("/startup.lua", "w")
@@ -63,9 +76,6 @@ if not fs.exists(".code_config.txt") then
         print("Error! Code too long")
     end
 
-    print("Redstone Side?")
-    config.output_side = read(nil, nil, completion.side)
-
     print("Auto-Enter when reaching code length?")
     print("y/n")
     local res = read()
@@ -74,16 +84,32 @@ if not fs.exists(".code_config.txt") then
     else
         res = false
     end
-
+    config.auto_enter = res
     print("Auto-Enter set to: "..tostring(res))
 
-    config.auto_enter = res
+    print("Enter Mode: (rs, program)")
+    local new_mode = read(nil, nil, function(txt) return completion.choice(txt, mode_list) end)
+    config.mode = new_mode
+
+    if new_mode == "rs" then
+        print("Redstone Side?")
+        config.output_side = read(nil, nil, completion.side)
+    elseif new_mode == "program" then
+        print("Enter the desired file to start on success:")
+        local file = read(nil, nil, path_completion)
+        config.output_program = file
+    end
+
+    sleep(0.5)
+    term.clear()
 
     writeConfig()
 end
 
 loadConfig()
 
+config.mode = config.mode or "rs"
+config.output_program = config.output_program or nil
 config.code = config.code or nil
 config.auto_enter = config.auto_enter or false
 config.output_side = config.output_side or "back"
@@ -256,9 +282,14 @@ regButton(6,5, function()
         else
             top_status = "true"
             os.queueEvent("redraw_keypad")
-            redstone.setOutput(config.output_side, true)
-            os.sleep(0.5)
-            redstone.setOutput(config.output_side, false)
+            if config.mode == "rs" then
+                redstone.setOutput(config.output_side, true)
+                os.sleep(0.5)
+                redstone.setOutput(config.output_side, false)
+            elseif config.mode == "program" then
+                os.sleep(0.5)
+                shell.run(config.output_program)
+            end
         end
         top_status = "pin"
     else

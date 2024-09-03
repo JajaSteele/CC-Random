@@ -5,6 +5,8 @@ else
     error("No monitor found")
 end
 
+local completion = require "cc.completion"
+
 local optimal_scale = 5
 local example_text = " 1 2 3 "
 local min_height = 5
@@ -20,26 +22,71 @@ until optimal_scale == 0.5
 
 monitor.setTextScale(optimal_scale)
 
-local config = {}
+if not fs.exists("/startup.lua") then
+    local startup = io.open("/startup.lua", "w")
+    local location = shell.getRunningProgram()
 
-local function loadConfig()
-    if fs.exists("code_config.txt") then
-        local file = io.open("saved_config.txt", "r")
-        config = textutils.unserialise(file:read("*a"))
-        file:close()
-    else
-        print("Enter Code")
-    end
+    local startup_text = [[print("Starting CodeRS") shell.run("]]..location..[[")]]
+    startup:write(startup_text)
+    startup:close()
+
+    print("Created startup file")
+    sleep(0.5)
+    settings.set("shell.allow_disk_startup", false)
+    settings.save()
+    print("Disabled disk startup")
+    sleep(0.5)
 end
+
+local config = {}
 local function writeConfig()
-    local file = io.open("code_config.txt", "w")
+    local file = io.open(".code_config.txt", "w")
     file:write(textutils.serialise(config))
     file:close()
+end
+
+local function loadConfig()
+    if fs.exists(".code_config.txt") then
+        local file = io.open(".code_config.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+
+if not fs.exists(".code_config.txt") then
+    print("Enter Code:")
+    print("(7 characters max)")
+    local new_code = read()
+    if #new_code <= 7 then
+        config.code = new_code
+    else
+        print("Error! Code too long")
+    end
+
+    print("Redstone Side?")
+    config.output_side = read(nil, nil, completion.side)
+
+    print("Auto-Enter when reaching code length?")
+    print("y/n")
+    local res = read()
+    if res == "y" or res == "yes" or res == "true" then
+        res = true
+    else
+        res = false
+    end
+
+    print("Auto-Enter set to: "..tostring(res))
+
+    config.auto_enter = res
+
+    writeConfig()
 end
 
 loadConfig()
 
 config.code = config.code or nil
+config.auto_enter = config.auto_enter or false
+config.output_side = config.output_side or "back"
 
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = monitor.getBackgroundColor()
@@ -127,7 +174,6 @@ local max_length = 7
 local input_code = ""
 
 local function addChar(char)
-    print(char, #input_code.." < "..max_length)
     if #input_code < max_length then
         input_code = input_code .. char
     end
@@ -151,13 +197,32 @@ end
 
 local w,h = monitor.getSize()
 
+local top_status = "pin"
+
+local exit_mode = false
+local confirm_exit = false
+
 local function drawThread()
     while true do
         fill(1, 1, w, 1, colors.black, colors.white, " ")
-        if #input_code < 1 then
-            write(2,1, " PIN ", colors.black, colors.lightGray)
-        else
-            write(1,1, string.rep("*", #input_code), colors.black, colors.yellow)
+        if top_status == "pin" then
+            if #input_code < 1 then
+                write(2,1, " PIN ", colors.black, colors.lightGray)
+            else
+                write(1,1, string.rep("*", #input_code), colors.black, colors.yellow)
+            end
+        elseif top_status == "false" then
+            write(1,1, "DENIED", colors.black, colors.red)
+        elseif top_status == "true" then
+            write(1,1, "SUCCESS", colors.black, colors.green)
+        elseif top_status == "true_exit" then
+            write(1,1, "ALLOWED", colors.black, colors.purple)
+        elseif top_status == "exit" then
+            if #input_code < 1 then
+                write(2,1, "TRMNT", colors.black, colors.purple)
+            else
+                write(1,1, string.rep("*", #input_code), colors.black, colors.magenta)
+            end
         end
         write(2,2, "1 2 3", colors.black, colors.white)
         write(2,3, "4 5 6", colors.black, colors.white)
@@ -171,14 +236,45 @@ local function drawThread()
     end
 end
 
-local function checkCode()
-    
-end
-
 regButton(2,2, function() addChar("1") end) regButton(4,2, function() addChar("2") end) regButton(6,2, function() addChar("3") end)
 regButton(2,3, function() addChar("4") end) regButton(4,3, function() addChar("5") end) regButton(6,3, function() addChar("6") end)
 regButton(2,4, function() addChar("7") end) regButton(4,4, function() addChar("8") end) regButton(6,4, function() addChar("9") end)
-regButton(2,5, function() input_code = "" end) regButton(4,5, function() addChar("0") end) regButton(6,5, function()  end)
+regButton(4,5, function() addChar("0") end) 
+regButton(2,5, function() input_code = "" end)
+regButton(6,5, function() 
+    local input = input_code
+    input_code = ""
+    os.queueEvent("redraw_keypad")
+    if input == config.code then
+        if exit_mode then
+            top_status = "true_exit"
+            os.queueEvent("redraw_keypad")
+            exit_mode = false
+            confirm_exit = true
+            print("CODE CONFIRMED\nTermination is now allowed")
+            os.sleep(0.5)
+        else
+            top_status = "true"
+            os.queueEvent("redraw_keypad")
+            redstone.setOutput(config.output_side, true)
+            os.sleep(0.5)
+            redstone.setOutput(config.output_side, false)
+        end
+        top_status = "pin"
+    else
+        if confirm_exit then
+            print("Wrong code entered, termination blocking re-enabled!")
+            confirm_exit = false
+        end
+        top_status = "false"
+        exit_mode = false
+        os.queueEvent("redraw_keypad")
+        redstone.setOutput(config.output_side, false)
+        os.sleep(0.5)
+        top_status = "pin"
+    end
+    os.queueEvent("redraw_keypad")
+end)
 
 local function clickThread()
     while true do
@@ -187,8 +283,35 @@ local function clickThread()
         if button and button.func then
             button.func()
         end
+        if config.auto_enter and #input_code >= #(config.code) then
+            os.queueEvent("monitor_touch", "idk", 6, 5)
+        end
         os.queueEvent("redraw_keypad")
     end
 end
 
-parallel.waitForAll(drawThread, clickThread)
+while true do
+    local stat, err = pcall(function()
+        parallel.waitForAll(drawThread, clickThread)
+    end)
+    if not stat then
+        if err == "Terminated" then
+            if confirm_exit then
+                print("Program successfully terminated")
+                break
+            else
+                if exit_mode == true then
+                    print("No code entered")
+                    exit_mode = true
+                    top_status = "exit"
+                else
+                    print("Please enter code to allow terminate")
+                    exit_mode = true
+                    top_status = "exit"
+                end
+            end
+        else
+            print(err)
+        end
+    end
+end

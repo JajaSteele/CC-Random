@@ -36,9 +36,15 @@ local function playerThread()
             elseif event == "playerLeave" then
                 message = username.." left the game."
                 print(username.." Left the game")
+            elseif event == "playerClick" and username == "JajaSteele" then
+                message = username.." Clicked the detector. (This is a test message)"
+                print(username.." Clicked the game")
             end
-            rednet.broadcast({message=message}, "chat_player_broadcast")
-            print("Broadcasted:\n"..message)
+
+            if #message > 0 then
+                rednet.broadcast({message=message}, "chat_player_broadcast")
+                print("Broadcasted:\n"..message)
+            end
         else
             sleep(10)
         end

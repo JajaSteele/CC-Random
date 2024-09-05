@@ -29,7 +29,7 @@ local function addressThread()
             end)
         else
             interface = peripheral.find("advanced_crystal_interface")
-        end
+        end 
         sleep(0.5)
     end
 end

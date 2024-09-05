@@ -2,6 +2,8 @@ local chat_box = peripheral.find("chatBox")
 
 local modems = {peripheral.find("modem")}
 
+local player_detector = peripheral.find("playerDetector")
+
 local modem
 
 for k,v in pairs(modems) do
@@ -27,7 +29,7 @@ end
 
 local function playerThread()
     while true do
-        if peripheral.find("playerDetector") then
+        if player_detector then
             local event, username = os.pullEvent()
             local message = ""
             if event == "playerJoin" then

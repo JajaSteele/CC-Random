@@ -12,6 +12,14 @@ else
     config.side = read()
     print("Password?")
     config.pass = read()
+    print("Need to be hidden? (y/n)")
+    local res = read()
+    if res == "y" or res == "yes" or res == "true" then
+        res = true
+    else
+        res = false
+    end
+    config.needs_hidden = res
     print("Owner? (your username or \"NONE\")")
     config.owner = read()
     print("Response")
@@ -22,8 +30,8 @@ else
 end
 
 while true do
-    local event, username, message = os.pullEvent("chat")
-    if message == config.pass and (username == config.owner or config.owner == "NONE") then
+    local event, username, message, uuid, hidden = os.pullEvent("chat")
+    if message == config.pass and (username == config.owner or config.owner == "NONE") and (hidden or not config.needs_hidden) then
         cb.sendMessageToPlayer(config.answertrue, username, "RS-Chat")
         redstone.setOutput(config.side, true)
         os.sleep(0.5)

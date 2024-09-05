@@ -16,6 +16,7 @@ if request then
             local new_program_file = io.open(program_path, "w")
             if not new_program_file then
                 new_program_file = io.open("/museum_program.lua", "w")
+                program_path = "/museum_program.lua"
                 if not new_program_file then
                     print("Unable to write program file!")
                     return

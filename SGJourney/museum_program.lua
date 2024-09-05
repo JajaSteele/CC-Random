@@ -3,6 +3,26 @@ local target_stargate = {32,28,19,6,3,29,27,16}
 local program_path = shell.getRunningProgram()
 local program_link = "https://raw.githubusercontent.com/JajaSteele/CC-Random/main/SGJourney/museum_program.lua"
 
+local startup_program_pcall = ([[
+    while true do
+        local stat, err = pcall(function()
+            print("Starting Program '&p' in ]]..(0.5)..[[s")
+            sleep(]]..(0.5)..[[)
+            if not shell.execute("&p") then
+                error("Program Errored")
+            end
+        end)
+        if not stat then 
+            if err == "Terminated" then 
+                print("Program Terminated") break 
+            end 
+            print(err) 
+            print("Restarting in ]]..(1)..[[s") 
+            sleep(]]..(1)..[[) 
+        end
+    end
+]])
+
 local request = http.get(program_link)
 if request then
     local new_program = request.readAll()
@@ -24,6 +44,11 @@ if request then
             end
             new_program_file:write(new_program)
             print("Auto-Updated program!")
+            print("Refreshing startup program..")
+            local startup_file = io.open("/startup.lua", "w")
+            local startup_data = startup_program_pcall:gsub("&p", program_path)
+            startup_file:write(startup_data)
+            sleep(0.2)
             print("Rebooting..")
             sleep(2)
             os.reboot()
@@ -43,30 +68,6 @@ else
     print("Failed to request file, updating cancelled")
     sleep(0.5)
 end
-
-local startup_program_pcall = ([[
-    while true do
-        local stat, err = pcall(function()
-            print("Starting Program '&p' in ]]..(0.5)..[[s")
-            sleep(]]..(0.5)..[[)
-            if not shell.execute("&p") then
-                error("Program Errored")
-            end
-        end)
-        if not stat then 
-            if err == "Terminated" then 
-                print("Program Terminated") break 
-            end 
-            print(err) 
-            print("Restarting in ]]..(1)..[[s") 
-            sleep(]]..(1)..[[) 
-        end
-    end
-]])
-
-local startup_file = io.open("/startup.lua", "w")
-local startup_data = startup_program_pcall:gsub("&p", program_path)
-startup_file:write(startup_data)
 
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 

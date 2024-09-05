@@ -5,7 +5,7 @@ local program_link = "https://raw.githubusercontent.com/JajaSteele/CC-Random/mai
 
 local request = http.get(program_link)
 if request then
-    local new_program = request:read("*a")
+    local new_program = request.readAll()
     request:close()
     local current_program_file = io.open(program_path, "r")
     if current_program_file then

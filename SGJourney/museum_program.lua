@@ -107,9 +107,14 @@ end
 
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
+local stop_dial = false
+
 local function engageAddress(address)
     if interface.engageSymbol and not interface.rotateClockwise then
         for k,v in ipairs(address) do
+            if stop_dial then
+                break
+            end
             interface.engageSymbol(v)
             sleep(0.25)
         end
@@ -127,6 +132,9 @@ local function engageAddress(address)
 
 
         for k,v in ipairs(address) do
+            if stop_dial then
+                break
+            end
             repeat
                 sleep()
             until ((interface.getCurrentSymbol()/38)*(#address+1)) >= k
@@ -169,6 +177,9 @@ local function engageAddress(address)
         interface.closeChevron()
     elseif interface.rotateClockwise then
         for k,number in ipairs(address) do
+            if stop_dial then
+                break
+            end
             if interface.isChevronOpen(number) then
                 interface.closeChevron()
             end
@@ -285,6 +296,7 @@ local function cancelThread()
         end
         if signal == true then
             print("Cancelling Dial")
+            stop_dial = true
             interface.disconnectStargate()
             if interface.rotateClockwise then
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then
@@ -329,6 +341,7 @@ local function mainThread()
                 end
             else
                 print("Dialing Address")
+                stop_dial = false
                 parallel.waitForAny((function() 
                     engageAddress(target_stargate)
                 end), cancelThread)

@@ -239,6 +239,9 @@ if monitor then
     end
     gate_type = table.concat(gate_type_fancy, " ")
     local gate_variant = interface.getStargateVariant()
+    if gate_variant == "sgjourney:empty" then
+        gate_variant = "Default Variant"
+    end
 
     monitor.clear()
     monitor.setCursorPos(getCenter(gate_type, width), 2)

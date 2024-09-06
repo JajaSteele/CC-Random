@@ -1,4 +1,22 @@
 local target_stargate = {32,28,19,6,3,29,27,16}
+local monitor = peripheral.wrap("top")
+
+local function getCenter(text, width)
+    return math.ceil(width/2)-math.floor(#text/2)
+end
+
+local function displayOnMonitorTimed(text, color, time)
+    if monitor then
+        local width, height = monitor.getSize()
+    
+        monitor.clear()
+        monitor.setCursorPos(getCenter(text, width), 3)
+        monitor.setTextColor(color)
+        monitor.write(text)
+        sleep(time)
+    end
+end
+displayOnMonitorTimed("Program Starting", colors.green, 1)
 
 local program_path = shell.getRunningProgram()
 local program_link = "https://raw.githubusercontent.com/JajaSteele/CC-Random/main/SGJourney/museum_program.lua"
@@ -55,31 +73,36 @@ if args[1] ~= "l" then
                 new_program_file:write(new_program)
                 print("Auto-Updated program!")
                 print("Refreshing startup program..")
+                displayOnMonitorTimed("Update Success", colors.lime, 1)
                 local startup_file = io.open("/startup.lua", "w")
                 local startup_data = startup_program_pcall:gsub("&p", program_path)
                 startup_file:write(startup_data)
                 sleep(0.2)
                 print("Rebooting..")
-                sleep(2)
+                sleep(1)
                 os.reboot()
             else
                 print("online file equals local file, updating cancelled")
+                displayOnMonitorTimed("Update Cancel", colors.yellow, 1)
                 sleep(0.5)
             end
         else
             local new_program_file = io.open(program_path, "w")
             new_program_file:write(new_program)
             print("Auto-Downloaded program!")
+            displayOnMonitorTimed("Download Success", colors.lime, 1)
             print("Rebooting..")
-            sleep(2)
+            sleep(1)
             os.reboot()
         end
     else
         print("Failed to request file, updating cancelled")
+        displayOnMonitorTimed("Update Fail", colors.red, 1)
         sleep(0.5)
     end
 else
     print("Updated Disabled via arguments")
+    displayOnMonitorTimed("Update Disabled", colors.red, 1)
 end
 
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
@@ -202,11 +225,6 @@ local side_list = {
     "right"
 }
 
-local function getCenter(text, width)
-    return math.ceil(width/2)-math.floor(#text/2)
-end
-
-local monitor = peripheral.find("monitor")
 if monitor then
     local width, height = monitor.getSize()
     local gate_type = interface.getStargateType()

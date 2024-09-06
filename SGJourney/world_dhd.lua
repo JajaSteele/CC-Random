@@ -4,6 +4,8 @@ local last_address = {}
 
 local button_list = {}
 
+settings.load()
+
 local function findButton(num)
     for k,v in pairs(button_list) do
         if v.symbol == num then
@@ -29,6 +31,119 @@ end
 
 loadSave()
 
+settings.define("dhd.brb.main_off", {
+    description = "Main color for the dark big button",
+    default = 0x350808,
+    type = "number"
+})
+settings.define("dhd.brb.secondary_off", {
+    description = "Secondary color for the dark big button",
+    default = 0x400d0d,
+    type = "number"
+})
+
+settings.define("dhd.brb.main_on", {
+    description = "Main color for the bright big button",
+    default = 0xcd3a2d,
+    type = "number"
+})
+settings.define("dhd.brb.secondary_on", {
+    description = "Secondary color for the bright big button",
+    default = 0xe66828,
+    type = "number"
+})
+
+settings.define("dhd.panel.button_on", {
+    description = "Color for turned on buttons",
+    default = 0xf2b233,
+    type = "number"
+})
+settings.define("dhd.panel.button_off", {
+    description = "Color for turned off buttons",
+    default = 0x0e0c0b,
+    type = "number"
+})
+settings.define("dhd.panel.background", {
+    description = "Color for the background",
+    default = 0x1f1b19,
+    type = "number"
+})
+
+local args = {...}
+
+local default_palettes = {
+    milky_way = {
+        brb_main_off = 0x350808,
+        brb_secondary_off = 0x400d0d,
+        brb_main_on = 0xcd3a2d,
+        brb_secondary_on = 0xe66828,
+        button_on = 0xf2b233,
+        button_off = 0x0e0c0b,
+        background = 0x1f1b19,
+    },
+    pegasus = {
+        brb_main_off = 0x061132,
+        brb_secondary_off = 0x0d103f,
+        brb_main_on = 0x28c0e6,
+        brb_secondary_on = 0x28e6e3,
+        button_on = 0x33adff,
+        button_off = 0x060609,
+        background = 0x2b2b2c,
+    },
+    high_contrast = {
+        brb_main_off = 0x606060,
+        brb_secondary_off = 0x707070,
+        brb_main_on = 0xFFFFFF,
+        brb_secondary_on = 0xFFFFFF,
+        button_on = 0xFFFFFF,
+        button_off = 0x404040,
+        background = 0x060609,
+    }
+}
+
+local palette_list = {}
+for k,v in pairs(default_palettes) do
+    palette_list[#palette_list+1] = k
+end
+
+local curr_program = shell.getRunningProgram()
+if not shell.getCompletionInfo()[curr_program] then
+    local completion = require "cc.shell.completion"
+    local complete = completion.build({ completion.choice, palette_list })
+    shell.setCompletionFunction(curr_program, complete)
+    print("Shell Completion built!")
+    sleep(0.5)
+end
+
+if args[1] and default_palettes[args[1]] then
+    print("Setting palette to "..args[1])
+    local palette = default_palettes[args[1]]
+
+    settings.set("dhd.brb.main_off", palette.brb_main_off)
+    settings.set("dhd.brb.secondary_off", palette.brb_secondary_off)
+    
+    settings.set("dhd.brb.main_on", palette.brb_main_on)
+    settings.set("dhd.brb.secondary_on", palette.brb_secondary_on)
+
+    settings.set("dhd.panel.button_on", palette.button_on)
+    settings.set("dhd.panel.button_off", palette.button_off)
+    settings.set("dhd.panel.background", palette.background)
+
+    settings.save()
+    sleep(0)
+    settings.load()
+end
+
+local brb_main_off = (settings.get("dhd.brb.main_off"))
+local brb_secondary_off = (settings.get("dhd.brb.secondary_off"))
+
+local brb_main_on = (settings.get("dhd.brb.main_on"))
+local brb_secondary_on = (settings.get("dhd.brb.secondary_on"))
+
+local button_on = settings.get("dhd.panel.button_on")
+local button_off = settings.get("dhd.panel.button_off")
+local background = settings.get("dhd.panel.background")
+
 if interface and interface.getConnectedAddress and interface.isStargateConnected() then
     last_address = interface.getConnectedAddress()
     writeSave()
@@ -48,8 +163,9 @@ monitor.setTextScale(0.5)
 local width, height = monitor.getSize()
 monitor.clear()
 monitor.setCursorPos(1,1)
-monitor.setPaletteColor(colors.black, 0x1f1b19)
-monitor.setPaletteColor(colors.white, 0x0e0c0b)
+monitor.setPaletteColor(colors.black, background)
+monitor.setPaletteColor(colors.white, button_off)
+monitor.setPaletteColor(colors.orange, button_on)
 
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = monitor.getBackgroundColor()
@@ -108,19 +224,25 @@ for i1=1, height do
     end
 end
 
-local text = "#-#"
-monitor.setCursorPos(7, 2)
-monitor.write(text)
-button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=69, glow=false, text="#-#"}
-
 local text = "1-9"
-monitor.setCursorPos(7, height-1)
+monitor.setCursorPos(7, 1)
 monitor.write(text)
-button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=building_num, glow=true, text=text}
+button_list[#button_list+1] = {x=7, y=1, x2=9, y2=1, symbol=building_num, glow=true, text=text}
 building_num = building_num+1
 
-monitor.setPaletteColor(colors.gray, 0x400d0d)
-monitor.setPaletteColor(colors.red, 0x350808)
+local text = "2-0"
+monitor.setCursorPos(7, 2)
+monitor.write(text)
+button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=building_num, glow=true, text=text}
+building_num = building_num+1
+
+local text = "#-#"
+monitor.setCursorPos(7, height-1)
+monitor.write(text)
+button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
+
+monitor.setPaletteColor(colors.gray, brb_secondary_off)
+monitor.setPaletteColor(colors.red, brb_main_off)
 fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
 fill(7, 4, 7+2, height-3,colors.red, colors.gray, "\x7F")
 
@@ -158,8 +280,8 @@ local function inputThread()
                         monitor.write(v.text)
                         monitor.setTextColor(colors.white)
                     elseif v.symbol == 0 then
-                        monitor.setPaletteColor(colors.red, 0xcd3a2d)
-                        monitor.setPaletteColor(colors.gray, 0xe66828)
+                        monitor.setPaletteColor(colors.red, brb_main_on)
+                        monitor.setPaletteColor(colors.gray, brb_secondary_on)
                     end
                     if v.symbol == 69 then
                         os.queueEvent("dialAutoStart", last_address)
@@ -204,8 +326,8 @@ local function resetThread()
                 monitor.setTextColor(colors.white)
                 monitor.write(v.text)
                 if v.symbol == 0 then
-                    monitor.setPaletteColor(colors.gray, 0x400d0d)
-                    monitor.setPaletteColor(colors.red, 0x350808)
+                    monitor.setPaletteColor(colors.gray, brb_secondary_off)
+                    monitor.setPaletteColor(colors.red, brb_main_off)
                 end
             end
         end
@@ -226,13 +348,13 @@ local function externalThread()
                     monitor.write(button.text)
                     monitor.setTextColor(colors.white)
                 elseif button.symbol == 0 then
-                    monitor.setPaletteColor(colors.red, 0xcd3a2d)
-                    monitor.setPaletteColor(colors.gray, 0xe66828)
+                    monitor.setPaletteColor(colors.red, brb_main_on)
+                    monitor.setPaletteColor(colors.gray, brb_secondary_on)
                 end
             end
         elseif event[1] == "stargate_incoming_wormhole" or event[1] == "stargate_outgoing_wormhole" then
-            monitor.setPaletteColor(colors.red, 0xcd3a2d)
-            monitor.setPaletteColor(colors.gray, 0xe66828)
+            monitor.setPaletteColor(colors.red, brb_main_on)
+            monitor.setPaletteColor(colors.gray, brb_secondary_on)
         end
     end
 end

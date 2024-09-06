@@ -10,6 +10,27 @@ end
 
 local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
 
+local config = {}
+local function loadConfig()
+    if fs.exists("/.homepage_arg_config.txt") then
+        local file = io.open("/.homepage_arg_config.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open("/.homepage_arg_config.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+if not config.default_arg then
+    config.default_arg = {}
+    writeConfig()
+end
+
+loadConfig()
+
 local selected_program = ""
 local run_threads = true
 local selected_color = colors.blue

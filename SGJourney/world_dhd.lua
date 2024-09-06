@@ -79,7 +79,7 @@ local default_palettes = {
         brb_secondary_on = 0xe66828,
         button_on = 0xf2b233,
         button_off = 0x0e0c0b,
-        background = 0x1f1b19,
+        background = 0x2f2b29,
     },
     pegasus = {
         brb_main_off = 0x061132,

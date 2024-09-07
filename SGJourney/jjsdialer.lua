@@ -30,6 +30,52 @@ end
 
 writeConfig()
 
+local logs_data = {
+    gate = {
+        file="/.jd_logs/gate.log",
+        data = {}
+    }
+}
+
+local logging = {
+    gate = {
+        fn = {
+            write = function(level_letter, text)
+                local data = logs_data.gate.data
+                data[#data+1] = os.date("[%m/%d-%H:%M:%S]")..level_letter.."> "..text.."$end"
+                if #data > 300 then
+                    table.remove(data, 1)
+                end
+
+                local file = io.open(logs_data.gate.file, "a")
+                if file then
+                    for k, line in ipairs(data) do
+                        file:write(line.."\n")
+                    end
+                    file:close()
+                end
+            end,
+            load = function()
+                local file = io.open(logs_data.gate.file, "r")
+                local data = logs_data.gate.data
+                data = {}
+                if file then
+                    for entry in file:read("*a"):gmatch("(.+)$end") do
+                        data[#data+1] = entry
+                    end
+                    file:close()
+                end
+            end
+        }
+    }
+}
+
+logging.gate.fn.load()
+
+print(textutils.serialize(logs_data.gate.data))
+
+sleep(10)
+
 local modems = {peripheral.find("modem")}
 
 local modem
@@ -224,12 +270,14 @@ local function commandCompletion(text, parent)
     local last_arg = args[#args]
     local full_arg = false
     local args_left = 0
+    local correct_args = 0
     for pos=1, #args+1 do
         arg = args[pos]
         if arg then
             if current_step.type == "parent" and current_step.children[arg] then
                 current_step = current_step.children[arg]
                 last_complete_arg = pos
+                correct_args = correct_args+1
             elseif current_step.type == "command" and current_step.args then
                 if not arg_pos then arg_pos = pos end
                 local curr_arg_pos = (pos)-((arg_pos) or 0)
@@ -293,7 +341,7 @@ local function commandCompletion(text, parent)
     else
         arg_info = (current_arg and current_arg.name and "<"..current_arg.name.."("..(current_arg.display_type or "?")..")>" or "No Argument")
     end
-    return completion.choice((last_arg or ""), (#text > 0 and return_value or {})), arg_info, (args_left > 0 and args_left or nil)
+    return completion.choice((last_arg or ""), (#text > 0 and (correct_args > 0 or (#args == 1 and not full_arg)) and return_value or {})), arg_info, (args_left > 0 and args_left or nil)
 end
 
 local command_history = {}
@@ -386,6 +434,114 @@ local function gateDialingThread()
     end
 end
 
+local main_w, main_h = main_window.getSize()
+
+local main_window_mode = "none"
+
+local logging_mode = "none"
+local logging_start_line = 3
+local logging_stop_line = main_h-1
+
+local main_scrolling = 0
+
+local function mainDrawThread()
+    while true do
+        os.pullEvent("jjsdialer_internal_redraw_main")
+        if main_window_mode == "none" then
+            main_window.clear()
+        elseif main_window_mode == "logging" then
+            main_window.setVisible(false)
+            write(main_window, 1, 1, "Logging Display: "..logging_mode)
+
+            local data =  {}
+            if logs_data[logging_mode] then
+                data = logs_data[logging_mode].data
+            end
+            main_window.setCursorPos(1, logging_start_line)
+            for num=1, #data do
+                local entry = data[#data-(logging_stop_line-logging_start_line)+num]
+                if entry then
+                    local level_letter = entry:match("](%w)>")
+                    if level_letter == "I" then
+                        main_window.setTextColor("colors.lightGray")
+                    elseif level_letter == "W" then
+                        main_window.setTextColor("colors.yellow")
+                    elseif level_letter == "E" then
+                        main_window.setTextColor("colors.red")
+                    end
+
+                    for char in entry:gmatch(".") do
+                        if char == "\n" then
+                            local curr_x, curr_y = main_window.getCursorPos()
+                            main_window.setCursorPos(6, curr_y+1)
+                        elseif char == "$" then
+                            break
+                        else
+                            main_window.write(char)
+                        end
+                    end
+                    local curr_x, curr_y = main_window.getCursorPos()
+                    main_window.setCursorPos(1, curr_y+1)
+                end
+            end
+            main_window.setVisible(true)
+        end
+    end
+end
+
+local function mainClickThread()
+    while true do
+        local event, button, x, y = os.pullEvent("mouse_click")
+        local stat, err = pcall(main_clickfunc, button, x, y)
+    end
+end
+
+local function setMainMode(text)
+    main_window_mode = text
+    os.queueEvent("jjsdialer_internal_redraw_main")
+end
+
+local function gateLogging()
+    local record_outgoing = false
+    local outgoing_travellers = {}
+    local record_incoming = false
+    local incoming_travellers = {}
+    while true do
+        local event = {os.pullEvent()}
+        if event[1] then
+            if event[1] == "stargate_disconnected" then
+                if record_incoming then
+                    record_incoming = false
+                    logging.gate.fn.write("I", "Stargate Disconnected".."\nTravellers:"..(#incoming_travellers))
+                elseif record_outgoing then
+                    record_outgoing = false
+                    logging.gate.fn.write("I", "Stargate Disconnected".."\nTravellers:"..(#outgoing_travellers))
+                end
+            elseif event[1] == "stargate_incoming_wormhole" then
+                logging.gate.fn.write("W", "Incoming Wormhole"..(event[2] and "\n"..table.concat(event[2], " ") or ""))
+                record_incoming = true
+                incoming_travellers = {}
+            elseif event[1] == "stargate_outgoing_wormhole" then
+                logging.gate.fn.write("I", "Outgoing Wormhole"..(event[2] and "\n"..table.concat(event[2], " ") or ""))
+                record_outgoing = true
+                outgoing_travellers = {}
+            elseif event[1] == "stargate_deconstructing_entity" then
+                if record_outgoing then
+                    outgoing_travellers[#outgoing_travellers+1] = {name=event[3]}
+                end
+                if event[5] then
+                    logging.gate.fn.write("W", "Traveller Disintegrated\nType: "..event[2].." Name: "..event[3] )
+                end
+            elseif event[1] == "stargate_reconstructing_entity" then
+                if record_incoming then
+                    incoming_travellers[#incoming_travellers+1] = {name=event[3]}
+                end
+            end
+            os.queueEvent("jjsdialer_internal_redraw_main")
+        end
+    end
+end
+
 local sg = registerParent(cmd_main, "sg")
 local sg_dial = registerParent(sg, "dial")
 local sg_dial_manual = registerCommand(sg_dial, "manual", {
@@ -442,4 +598,16 @@ local sg_stop = registerCommand(sg, "stop", {}, function()
     end
 end)
 
-parallel.waitForAny(commandInputThread, gateDialingThread)
+local logs = registerParent(cmd_main, "logs")
+local logs_gate = registerCommand(logs, "gate", {}, function()
+    logging_mode = "gate"
+    setMainMode("logging")
+end)
+
+local stat, err = pcall(function()
+    parallel.waitForAny(commandInputThread, gateDialingThread, mainClickThread, mainDrawThread, gateLogging)
+end)
+
+term.redirect(term.native())
+
+if not stat then err(err) end

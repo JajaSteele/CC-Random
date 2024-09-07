@@ -24,12 +24,14 @@ local function writeConfig()
     file:close()
 end
 
+loadConfig()
+
 if not config.default_arg then
-    config.default_arg = {}
+    config.default_arg = {
+        ["example.lua"] = {"example", "args"}
+    }
     writeConfig()
 end
-
-loadConfig()
 
 local selected_program = ""
 local run_threads = true
@@ -160,7 +162,15 @@ local function clickThread()
 
                 sleep()
 
-                local stat = shell.run(file)
+                local stat
+                local args = config.default_arg[file]
+                if args and type(args) == "table" then
+                    stat = shell.run(file, table.unpack(args))
+                else
+                    config.default_arg[file] = {}
+                    writeConfig()
+                    stat = shell.run(file)
+                end
 
                 run_threads = true
 

@@ -7,6 +7,14 @@ local input_window = window.create(term.current(), 1, height-2, width, 3, true)
 
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
+
 local config = {}
 
 local function loadConfig()
@@ -41,40 +49,35 @@ local logging = {
     gate = {
         fn = {
             write = function(level_letter, text)
-                local data = logs_data.gate.data
-                data[#data+1] = os.date("[%m/%d-%H:%M:%S]")..level_letter.."> "..text.."$end"
-                if #data > 300 then
-                    table.remove(data, 1)
+                local lines = {}
+                for k,v in ipairs(split(text, "\n")) do
+                    lines[#lines+1] = v
                 end
 
-                local file = io.open(logs_data.gate.file, "a")
+                logs_data.gate.data[#logs_data.gate.data+1] = {date=os.date("[%m/%d-%H:%M:%S]"), level_letter=level_letter, lines=lines}
+                if #logs_data.gate.data > 300 then
+                    table.remove(logs_data.gate.data, 1)
+                end
+
+                local file = io.open(logs_data.gate.file, "w")
                 if file then
-                    for k, line in ipairs(data) do
-                        file:write(line.."\n")
-                    end
+                    file:write(textutils.serialise(logs_data.gate.data))
                     file:close()
                 end
             end,
             load = function()
                 local file = io.open(logs_data.gate.file, "r")
-                local data = logs_data.gate.data
-                data = {}
                 if file then
-                    for entry in file:read("*a"):gmatch("(.+)$end") do
-                        data[#data+1] = entry
-                    end
+                    logs_data.gate.data = textutils.unserialise(file:read("*a"))
                     file:close()
                 end
+                logs_data.gate.data = logs_data.gate.data or {}
             end
         }
     }
 }
 
 logging.gate.fn.load()
-
-print(textutils.serialize(logs_data.gate.data))
-
-sleep(10)
 
 local modems = {peripheral.find("modem")}
 
@@ -164,14 +167,6 @@ local function write(win, x,y,text,bg,fg)
     win.setTextColor(old_fg)
     win.setBackgroundColor(old_bg)
     win.setCursorPos(old_posx,old_posy)
-end
-
-local function split(s, delimiter)
-    local result = {};
-    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
-        table.insert(result, match);
-    end
-    return result;
 end
 
 local function parseCommand(text)
@@ -337,9 +332,9 @@ local function commandCompletion(text, parent)
     local arg_info
     
     if current_arg and current_arg.optional then
-        arg_info = (current_arg and current_arg.name and "["..current_arg.name.."("..(current_arg.display_type or "?")..", Optional)]" or "No Argument")
+        arg_info = (current_arg and current_arg.name and "["..current_arg.name.."("..(current_arg.display_type or "?")..", Optional)]" or "")
     else
-        arg_info = (current_arg and current_arg.name and "<"..current_arg.name.."("..(current_arg.display_type or "?")..")>" or "No Argument")
+        arg_info = (current_arg and current_arg.name and "<"..current_arg.name.."("..(current_arg.display_type or "?")..")>" or "")
     end
     return completion.choice((last_arg or ""), (#text > 0 and (correct_args > 0 or (#args == 1 and not full_arg)) and return_value or {})), arg_info, (args_left > 0 and args_left or nil)
 end
@@ -348,10 +343,11 @@ local command_history = {}
 
 local function commandInputThread()
     while true do
-        term.redirect(input_window)
-        fill(input_window, 1, 2, width, 2)
-        write(input_window, 1, 2, ">", colors.black, colors.blue)
-        term.setCursorPos(3, 2)
+        fill(input_window, 1, 1, width, 2)
+        write(input_window, 1, 1, "Command Input:", colors.black, colors.white)
+        write(input_window, 1, 2, " >", colors.black, colors.yellow)
+        input_window.setCursorPos(4, 2)
+        input_window.setCursorBlink(true)
         local input = read(nil, command_history, (function(text)
                 local completion, arg_detail, arg_left = commandCompletion(text, cmd_main) 
                 input_window.setVisible(false)
@@ -444,44 +440,49 @@ local logging_stop_line = main_h-1
 
 local main_scrolling = 0
 
+
+term.setPaletteColor(colors.gray, 0x303030)
+
 local function mainDrawThread()
     while true do
         os.pullEvent("jjsdialer_internal_redraw_main")
+        main_window.setCursorBlink(false)
         if main_window_mode == "none" then
             main_window.clear()
         elseif main_window_mode == "logging" then
             main_window.setVisible(false)
-            write(main_window, 1, 1, "Logging Display: "..logging_mode)
-
-            local data =  {}
-            if logs_data[logging_mode] then
-                data = logs_data[logging_mode].data
-            end
-            main_window.setCursorPos(1, logging_start_line)
-            for num=1, #data do
-                local entry = data[#data-(logging_stop_line-logging_start_line)+num]
+            write(main_window, 1,1, "Logging: "..logging_mode)
+            local data = logs_data.gate.data
+            local line_count = 0
+            for num=#data, 1, -1 do
+                local entry = data[num]
                 if entry then
-                    local level_letter = entry:match("](%w)>")
-                    if level_letter == "I" then
-                        main_window.setTextColor("colors.lightGray")
-                    elseif level_letter == "W" then
-                        main_window.setTextColor("colors.yellow")
-                    elseif level_letter == "E" then
-                        main_window.setTextColor("colors.red")
+                    local write_start = ((logging_stop_line)-line_count)-(#entry.lines)
+                    local bg = colors.black
+                    if num%2 == 0 then
+                        bg = colors.gray
                     end
 
-                    for char in entry:gmatch(".") do
-                        if char == "\n" then
-                            local curr_x, curr_y = main_window.getCursorPos()
-                            main_window.setCursorPos(6, curr_y+1)
-                        elseif char == "$" then
-                            break
-                        else
-                            main_window.write(char)
+                    if write_start < logging_start_line then
+                        break
+                    end
+
+                    local fg = colors.white
+                    if entry.level_letter == "W" then
+                        fg = colors.orange
+                    elseif entry.level_letter == "E" then
+                        fg = colors.red
+                    end
+
+                    local new_lines = 0
+                    fill(main_window, 1, write_start, main_w, write_start+#entry.lines, bg, fg, " ")
+                    for line_num, line in ipairs(entry.lines) do
+                        if line ~= "" and line ~= "\n" then
+                            write(main_window, 2, write_start+line_num, line, bg, fg)
+                            new_lines = new_lines+1
                         end
                     end
-                    local curr_x, curr_y = main_window.getCursorPos()
-                    main_window.setCursorPos(1, curr_y+1)
+                    line_count = line_count+new_lines
                 end
             end
             main_window.setVisible(true)
@@ -557,15 +558,17 @@ local sg_dial_manual = registerCommand(sg_dial, "manual", {
         end
 
         address_table[#address_table+1] = 0
+        
+        if interface.isStargateConnected() or interface.getChevronsEngaged() > 0 then
+            interace.disconnectStargate()
+        end
 
         os.queueEvent("jjsdialer_internal_dial", ((fastdial and fastdial == "true") or config.default_fastdial), address_table)
     end
 end)
 
-local sg_dial_defaults = registerParent(sg_dial, "defaults")
-
 for destination, addresses in pairs(basic_addresses) do
-    local new_dest = registerParent(sg_dial_defaults, destination)
+    local new_dest = registerParent(sg_dial, destination)
     for location, address in pairs(addresses) do
         local new_cmd = registerCommand(new_dest, location, {
             {name="fastdial", type="boolean", optional = true}
@@ -610,4 +613,4 @@ end)
 
 term.redirect(term.native())
 
-if not stat then err(err) end
+if not stat then error(err) end

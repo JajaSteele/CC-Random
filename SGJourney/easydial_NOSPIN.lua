@@ -867,7 +867,7 @@ local function gateMonitor()
             end
         end
         if monitor and config.monitor then
-            monitor.setCursorPos(old_x, old_y)
+            monitor.setCursorPos(old_x or 0, old_y or 0)
         end
     end
 end

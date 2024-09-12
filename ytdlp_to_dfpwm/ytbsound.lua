@@ -67,7 +67,6 @@ local function playAudio(link)
                 sleep(0.1)
             end
             while change_volume do
-                sleep(0.1)
                 os.pullEvent("speaker_audio_empty")
                 sleep(0.5)
                 change_volume = false

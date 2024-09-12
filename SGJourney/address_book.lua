@@ -1123,44 +1123,6 @@ commands = {
             "Dials the last connected address on the nearest gate",
             "You can also press F6 to execute the command quickly"
         }
-    },
-    {
-        main="hello world",
-        args = {
-            {name="u smell", type="bool", outline="<>", desc="Range in blocks"}
-        },
-        func = function()
-            local nearest_gate = getNearestGate_NoCache()
-            if nearest_gate then
-                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                write(1, h-2, "Nearest gate: (# < "..config.nearest_range..")")
-                write(1, h-1, "> "..nearest_gate.label)
-                sleep(0.5)
-                
-                rednet.send(nearest_gate.id, "gate_dialback", "jjs_sg_rawcommand")
-                local id, msg, prot = rednet.receive("jjs_sg_rawcommand_confirm", 0.5)
-                if id == nearest_gate.id and msg then
-                    fill(1, h-2, w, h-1, colors.black, colors.lime, " ")
-                    write(1, h-2, "Command Success", colors.black, colors.white)
-                    sleep(0.5)
-                else
-                    fill(1, h-2, w, h-1, colors.black, colors.red, " ")
-                    write(1, h-2, "Command Fail", colors.black, colors.red)
-                    sleep(0.5)
-                end
-            else
-                fill(1, h-2, w, h-1, colors.black, colors.white, " ")
-                write(1, h-1, "> Couldn't find a gate!", colors.black, colors.red)
-                sleep(0.5)
-            end
-        end,
-        short_description = {
-            "Dials the last connected address on the nearest gate"
-        },
-        long_description={
-            "Dials the last connected address on the nearest gate",
-            "You can also press F6 to execute the command quickly"
-        }
     }
 }
 

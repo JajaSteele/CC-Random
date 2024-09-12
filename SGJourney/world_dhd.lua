@@ -206,64 +206,101 @@ local function write(x,y,text,bg,fg)
     monitor.setCursorPos(old_posx,old_posy)
 end
 
-for i1=1, height do
-    local text = string.format("%02d", building_num)
-    monitor.setCursorPos(1,i1)
-    monitor.write(text)
-    button_list[#button_list+1] = {x=1, y=i1, x2=2, y2=i1, symbol=building_num, glow=true, text=text}
-    building_num = building_num+1
-end
+if height == 24 then
+    print("Detected monitor size is 24 characters tall! Starting in Cursed Mode (1-47)")
+    for i1=1, height do
+        if building_num < 48 then
+            local text = string.format("%02d", building_num)
+            monitor.setCursorPos(1,i1)
+            monitor.write(text)
+            button_list[#button_list+1] = {x=1, y=i1, x2=2, y2=i1, symbol=building_num, glow=true, text=text}
+            building_num = building_num+1
+        end
+    end
+    
+    monitor.setPaletteColor(colors.gray, brb_secondary_off)
+    monitor.setPaletteColor(colors.red, brb_main_off)
+    fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
+    fill(7, 4, 7+2, height-3,colors.red, colors.gray, "\x7F")
+    
+    button_list[#button_list+1] = {x=6, y=4, x2=6+4, y2=height-3, symbol=0, glow=false, text=""}
 
-for i1=1, height do
-    local text = string.format("%02d", building_num)
-    monitor.setCursorPos(4,i1)
-    if i1 ~= 5 and i1 ~= 6 then
+    for i1=1, height do
+        if building_num < 49 then
+            if building_num == 48 then
+                local text = string.format("%02d", 69)
+                monitor.setCursorPos(width-1,i1)
+                monitor.write(text)
+                button_list[#button_list+1] = {x=width-1, y=i1, x2=width, y2=i1, symbol=69, glow=true, text="69"}
+            else
+                local text = string.format("%02d", building_num)
+                monitor.setCursorPos(width-1,i1)
+                monitor.write(text)
+                button_list[#button_list+1] = {x=width-1, y=i1, x2=width, y2=i1, symbol=building_num, glow=true, text=text}
+                building_num = building_num+1
+            end
+        end
+    end
+else
+    for i1=1, height do
+        local text = string.format("%02d", building_num)
+        monitor.setCursorPos(1,i1)
         monitor.write(text)
-        button_list[#button_list+1] = {x=4, y=i1, x2=5, y2=i1, symbol=building_num, glow=true, text=text}
+        button_list[#button_list+1] = {x=1, y=i1, x2=2, y2=i1, symbol=building_num, glow=true, text=text}
         building_num = building_num+1
     end
-end
 
-local text = "1-9"
-monitor.setCursorPos(7, 1)
-monitor.write(text)
-button_list[#button_list+1] = {x=7, y=1, x2=9, y2=1, symbol=building_num, glow=true, text=text}
-building_num = building_num+1
+    for i1=1, height do
+        local text = string.format("%02d", building_num)
+        monitor.setCursorPos(4,i1)
+        if i1 ~= 5 and i1 ~= 6 then
+            monitor.write(text)
+            button_list[#button_list+1] = {x=4, y=i1, x2=5, y2=i1, symbol=building_num, glow=true, text=text}
+            building_num = building_num+1
+        end
+    end
 
-local text = "2-0"
-monitor.setCursorPos(7, 2)
-monitor.write(text)
-button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=building_num, glow=true, text=text}
-building_num = building_num+1
+    local text = "1-9"
+    monitor.setCursorPos(7, 1)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=1, x2=9, y2=1, symbol=building_num, glow=true, text=text}
+    building_num = building_num+1
 
-local text = "#-#"
-monitor.setCursorPos(7, height-1)
-monitor.write(text)
-button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
+    local text = "2-0"
+    monitor.setCursorPos(7, 2)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=building_num, glow=true, text=text}
+    building_num = building_num+1
 
-monitor.setPaletteColor(colors.gray, brb_secondary_off)
-monitor.setPaletteColor(colors.red, brb_main_off)
-fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
-fill(7, 4, 7+2, height-3,colors.red, colors.gray, "\x7F")
+    local text = "#-#"
+    monitor.setCursorPos(7, height-1)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
 
-button_list[#button_list+1] = {x=6, y=4, x2=6+4, y2=height-3, symbol=0, glow=false, text=""}
+    monitor.setPaletteColor(colors.gray, brb_secondary_off)
+    monitor.setPaletteColor(colors.red, brb_main_off)
+    fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
+    fill(7, 4, 7+2, height-3,colors.red, colors.gray, "\x7F")
 
-for i1=1, height do
-    local text = string.format("%02d", building_num)
-    monitor.setCursorPos(width-4,i1)
-    if i1 ~= 5 and i1 ~= 6 then
+    button_list[#button_list+1] = {x=6, y=4, x2=6+4, y2=height-3, symbol=0, glow=false, text=""}
+
+    for i1=1, height do
+        local text = string.format("%02d", building_num)
+        monitor.setCursorPos(width-4,i1)
+        if i1 ~= 5 and i1 ~= 6 then
+            monitor.write(text)
+            button_list[#button_list+1] = {x=width-4, y=i1, x2=width-3, y2=i1, symbol=building_num, glow=true, text=text}
+            building_num = building_num+1
+        end
+    end
+
+    for i1=1, height do
+        local text = string.format("%02d", building_num)
+        monitor.setCursorPos(width-1,i1)
         monitor.write(text)
-        button_list[#button_list+1] = {x=width-4, y=i1, x2=width-3, y2=i1, symbol=building_num, glow=true, text=text}
+        button_list[#button_list+1] = {x=width-1, y=i1, x2=width, y2=i1, symbol=building_num, glow=true, text=text}
         building_num = building_num+1
     end
-end
-
-for i1=1, height do
-    local text = string.format("%02d", building_num)
-    monitor.setCursorPos(width-1,i1)
-    monitor.write(text)
-    button_list[#button_list+1] = {x=width-1, y=i1, x2=width, y2=i1, symbol=building_num, glow=true, text=text}
-    building_num = building_num+1
 end
 
 local function inputThread()

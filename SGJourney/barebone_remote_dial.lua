@@ -1,5 +1,6 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
+-- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
 local script_io = io.open(curr_script, "r")
 local local_version_line = script_io:read()
@@ -34,6 +35,9 @@ if update_request then
             local_io:close()
             print("Updated local script!")
             sleep(0.5)
+            print("REBOOTING")
+            sleep(0.5)
+            os.reboot()
         else
             print("Full update request failed")
         end
@@ -41,6 +45,7 @@ if update_request then
 else
     print("Update request failed")
 end
+-- END OF AUTO UPDATE
 
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 

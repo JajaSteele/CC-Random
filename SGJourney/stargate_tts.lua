@@ -35,7 +35,7 @@ end
 local dfpwm = require("cc.audio.dfpwm")
 local decoder = dfpwm.make_decoder()
 local tts_address = "http://jajasteele.duckdns.org:2456/"
-local voice = "Microsoft Zira Desktop"
+local voice = "Microsoft Michelle Online"
 
 local speaker_audio_threads = {}
 

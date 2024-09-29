@@ -3,9 +3,12 @@ local decoder = dfpwm.make_decoder()
 local speaker = peripheral.find("speaker")
 local chat = peripheral.find("chatBox")
 
+local default_voice = "Microsoft Michelle Online"
+local jaja_voice = "Microsoft Andrew Online"
+
 local tts_queue = {{
     msg="TTS Chat is now enabled",
-    voice="Microsoft Zira Desktop"
+    voice=default_voice
 }}
 
 local modems = {peripheral.find("modem")}
@@ -80,9 +83,9 @@ local function chatThread()
             local voice
 
             if username == "JajaSteele" then
-                voice = "Microsoft David Desktop"
+                voice = jaja_voice
             else
-                voice = "Microsoft Zira Desktop"
+                voice = default_voice
             end
 
             if username then
@@ -105,16 +108,16 @@ local function rednetThread()
                     local voice
 
                     if msg.username == "JajaSteele" then
-                        voice = "Microsoft David Desktop"
+                        voice = jaja_voice
                     else
-                        voice = "Microsoft Zira Desktop"
+                        voice = default_voice
                     end
 
                     tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
                     print(voice.." : "..msg.message)
                 end
             elseif prot == "chat_misc_broadcast" then
-                local voice = "Microsoft Zira Desktop"
+                local voice = default_voice
     
                 tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
                 print(voice.." : "..msg.message)
@@ -131,10 +134,10 @@ local function playerThread()
             local event, username = os.pullEvent()
 
             if event == "playerJoin" then
-                tts_queue[#tts_queue+1] = {msg=username.." Joined the game", voice="Microsoft Zira Desktop"}
+                tts_queue[#tts_queue+1] = {msg=username.." Joined the game", voice=default_voice}
                 print(username.." Joined the game")
             elseif event == "playerLeave" then
-                tts_queue[#tts_queue+1] = {msg=username.." Left the game", voice="Microsoft Zira Desktop"}
+                tts_queue[#tts_queue+1] = {msg=username.." Left the game", voice=default_voice}
                 print(username.." Left the game")
             end
         else
@@ -142,7 +145,7 @@ local function playerThread()
                 local id, msg, prot = rednet.receive("chat_player_broadcast")
     
                 if type(msg) == "table" and msg.message then
-                    local voice = "Microsoft Zira Desktop"
+                    local voice = default_voice
     
                     tts_queue[#tts_queue+1] = {msg=msg.message, voice=voice}
                     print(voice.." : "..msg.message)

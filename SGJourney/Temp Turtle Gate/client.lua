@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -160,12 +160,13 @@ else
     turtle.select(interface_slot)
     turtle.place()
 end
+sleep(0.2)
+local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
+interface.closeIris()
 
 local modem = findEquip("wireless_modem")
 rednet.open(peripheral.getName(modem))
 modem.open(2707)
-
-local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
 local function engageChevron(number)
     if interface.engageSymbol then
@@ -386,10 +387,8 @@ local function checkAliveThread()
     end
 end
 
-if interface.closeIris() then
-    repeat
-        sleep()
-    until interface.closeIris()
+while not interface.closeIris() do
+    sleep()
 end
 
 print("Gate Dialer ready!")

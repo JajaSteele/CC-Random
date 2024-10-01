@@ -292,4 +292,19 @@ local function craftingManager()
     end
 end
 
+local function startup()
+    local owner = inv.getOwner()
+    local linked = picker.getLinkedPlayer()
+
+    if owner then
+        queuePrivateMessage("\xA7aScript Started!\n\xA77"..chat_align.."Inv Linked: \xA7b"..(owner or "UNKNOWN").."\n"..chat_align.."\xA77Picker Linked: \xA7b"..(linked or "UNKNOWN"), owner, chat_name)
+    elseif linked then
+        queuePrivateMessage("\xA7aScript Started!\n\xA77"..chat_align.."Inv Linked: \xA7b"..(owner or "UNKNOWN").."\n"..chat_align.."\xA77Picker Linked: \xA7b"..(linked or "UNKNOWN"), linked, chat_name)
+    end
+
+    print("Script Started!")
+end
+
+startup()
+
 parallel.waitForAll(pickListener, pickLink, chatManager, craftingManager)

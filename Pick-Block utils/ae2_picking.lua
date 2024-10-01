@@ -6,7 +6,7 @@ local picker = peripheral.find("picker")
 
 local chat_queue = {}
 
-local chat_name = "AE2 Pick-Block"
+local chat_name = "PB"
 local prefix_length = #chat_name+2
 local chat_align = string.rep(" ", prefix_length)
 
@@ -184,14 +184,31 @@ local function pickListener()
                             else
                                 print("Crafting one "..block_name)
                                 queueCraft(block_name, 1)
-                                queuePrivateMessage("\xA7eQueuing craft: \n"..chat_align.."\xA7f[\xA7b"..block_id.."\xA7f]", owner, "AE2 Pick-Block")
+                                queuePrivateMessage("\xA7eQueuing craft: \n"..chat_align.."\xA7f[\xA7b"..block_id.."\xA7f]", owner, chat_name)
+                                if curr_item.name then
+                                    for k,v in pairs(inv.getItems()) do
+                                        if v.fingerprint == curr_item.fingerprint then
+                                            curr_slot = v.slot
+                                            break
+                                        end
+                                    end
+                                    local free_slot = inv.getFreeSlot()
+                                    inv.removeItemFromPlayer("front", {name=curr_item.name, fromSlot=curr_slot})
+                                    if free_slot > 0 then
+                                        print("Moved current item to another slot")
+                                        inv.addItemToPlayer("front", {name=curr_item.name, toSlot=free_slot})
+                                    else
+                                        me.importItem({}, "front")
+                                        print("Moved current item to ME")
+                                    end
+                                end
                             end
                         else
                             awaiting_craft = block_name
-                            queueToast("\xA7eUse pick-block once again to craft\n\xA76Or more than once to increase the amount\n\xA7o(+64 per additional click)", "AE2 Pick-Block", owner, "@")
+                            queuePrivateMessage("\xA7eUse pick-block once again to craft:\n"..chat_align.."\xA7f[\xA7b"..block_id.."\xA7f]\n"..chat_align.."\xA76Or more than once to increase the amount\n"..chat_align.."\xA7o(+64 per additional click)", owner, chat_name)
                         end
                     else
-                        queueToast("\xA7cCouldn't find item in ME!\n\xA7e"..block_id, "AE2 Pick-Block", owner, "@")
+                        queuePrivateMessage("\xA7cCouldn't find item in ME:\n"..chat_align.."\xA7f[\xA7b"..block_id.."\xA7f]\n", owner, chat_name)
                     end
                 end
             end
@@ -206,12 +223,12 @@ local function pickLink()
         if owner then
             if username == owner then
                 print("Successfully linked to "..owner)
-                queueToast("\xA7aSuccessfully linked to \xA7e"..owner, "AE2 Pick-Block",  owner, "@")
+                queueToast("\xA7aSuccessfully linked to \xA7e"..owner, chat_name,  owner, "@")
             else
-                queueToast("\xA7cWarning! Linked to \xA7e"..username, "AE2 Pick-Block",  owner, "@")
+                queueToast("\xA7cWarning! Linked to \xA7e"..username, chat_name,  owner, "@")
             end
         else
-            queueToast("\xA76Linked to \xA7e"..username.."\xA76\nbut inventory manager is not linked!", "AE2 Pick-Block",  username, "@")
+            queueToast("\xA76Linked to \xA7e"..username.."\xA76\nbut inventory manager is not linked!", chat_name,  username, "@")
         end
     end
 end
@@ -228,25 +245,25 @@ local function craftingManager()
             if not craft.started and not me.isItemCrafting({name=name}) and craft.timer <=0 then
                 if me.isItemCraftable({name=name}) then
                     print("Starting craft for item:\n"..name.."\nCount: "..craft.count)
-                    queuePrivateMessage("\xA7eStarting craft: \n"..chat_align.."\xA7f[\xA7b"..short_name.." x"..craft.count.."\xA7f]", owner, "AE2 Pick-Block")
+                    queuePrivateMessage("\xA7eStarting craft: \n"..chat_align.."\xA7f[\xA7b"..short_name.." x"..craft.count.."\xA7f]", owner, chat_name)
                     me.craftItem({name=name, count=craft.count})
                     craft.started = true
                     sleep(0.25)
-                    if not me.isItemCrafting({name=name}) then
+                    if not me.isItemCrafting({name=name}) and not me.getItem({name=name}).amount then
                         to_remove[#to_remove+1] = name
                         print("Cannot craft item:\n"..name)
-                        queuePrivateMessage("\xA7cUnable to start crafting of \xA7e'"..name.."'", owner, "AE2 Pick-Block")
+                        queuePrivateMessage("\xA7cUnable to start crafting of \xA7e'"..name.."'", owner, chat_name)
                     end
                 else
                     to_remove[#to_remove+1] = name
                     print("Cannot craft item:\n"..name)
-                    queuePrivateMessage("\xA7cUnable to start crafting of \xA7e'"..name.."'", owner, "AE2 Pick-Block")
+                    queuePrivateMessage("\xA7cUnable to start crafting of \xA7e'"..name.."'", owner, chat_name)
                 end
             elseif craft.started and not me.isItemCrafting({name=name}) and craft.timer <=0 then
                 local item = me.getItem({name=name})
                 if item.name then
                     print("Crafting of item finished:\n"..item.name.."\nCount: "..item.amount)
-                    queueToast("\xA7aFinished crafting!\n\xA7f[\xA7b"..short_name.." x"..item.amount.."\xA7f]", "AE2 Pick-Block",  owner, "@")
+                    queueToast("\xA7aFinished crafting!\n\xA7f[\xA7b"..short_name.." x"..item.amount.."\xA7f]", chat_name,  owner, "@")
                 end
                 craft.finished = true
             end

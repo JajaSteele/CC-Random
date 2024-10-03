@@ -147,6 +147,15 @@ local default_palettes = {
         button_on = 0xFFFFFF,
         button_off = 0x404040,
         background = 0x060609,
+    },
+    nether = {
+        brb_main_off = 0x5d280e,
+        brb_secondary_off = 0x7e3815,
+        brb_main_on = 0xe4943f,
+        brb_secondary_on = 0xf2b26e,
+        button_on = 0xff2414,
+        button_off = 0x521814,
+        background = 0x100000,
     }
 }
 

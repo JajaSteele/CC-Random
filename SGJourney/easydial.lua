@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -156,9 +156,6 @@ end
 loadSave()
 
 local config = {}
-config.label = "Computer "..os.getComputerID()
-config.monitor = true
-config.address_book_id = nil
 local function loadConfig()
     if fs.exists("saved_config_easydial.txt") then
         local file = io.open("saved_config_easydial.txt", "r")
@@ -173,6 +170,11 @@ local function writeConfig()
 end
 
 loadConfig()
+
+if config.label == nil then config.label = "Dialer "..os.getComputerID() end
+if config.monitor == nil then config.monitor = true end
+if config.address_book_id == nil then config.address_book_id = nil end
+if config.iris_control == nil then config.iris_control = true end
 
 local function split(s, delimiter)
     local result = {};
@@ -716,6 +718,7 @@ local function mainThread()
         print("7. Set Addressbook ID ("..tostring(config.address_book_id)..")")
         print("8. Dial-Back")
         print("9. Toggle Iris")
+        print("10. Toggle Iris Control ("..tostring(config.iris_control)..")")
 
         write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -816,6 +819,13 @@ local function mainThread()
             else
                 sg.closeIris()
             end
+        elseif mode == 10 then
+            term.clear()
+            term.setCursorPos(1,1)
+            config.iris_control = (not config.iris_control)
+            print("Set to: "..tostring(config.iris_control))
+            sleep(1)
+            writeConfig()
         end
     end
 end
@@ -1163,17 +1173,19 @@ end
 local function irisControlThread()
     while true do
         local data = {os.pullEvent()}
-        if data[1] == "transceiver_transmission_received" then
-            local event, freq, code, correct = table.unpack(data)
-            if correct and (sg.isWormholeOpen() or not sg.isStargateConnected()) then
+        if config.iris_control then
+            if data[1] == "transceiver_transmission_received" then
+                local event, freq, code, correct = table.unpack(data)
+                if correct and (sg.isWormholeOpen() or not sg.isStargateConnected()) then
+                    sg.openIris()
+                end
+            elseif data[1] == "stargate_incoming_wormhole" then
+                sg.closeIris()
+            elseif data[1] == "stargate_outgoing_wormhole" then
+                sg.openIris()
+            elseif data[1] == "stargate_disconnected" then
                 sg.openIris()
             end
-        elseif data[1] == "stargate_incoming_wormhole" then
-            sg.closeIris()
-        elseif data[1] == "stargate_outgoing_wormhole" then
-            sg.openIris()
-        elseif data[1] == "stargate_disconnected" then
-            sg.openIris()
         end
     end
 end

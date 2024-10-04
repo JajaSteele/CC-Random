@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -691,116 +691,132 @@ local function lastAddressSaverThread()
     end
 end
 
-local function mainThread()
-    local w, h = term.getSize()
-
-    term.clear()
-    term.setCursorPos(1,1)
-    print("Select Mode:")
-    print("1. Manual Dial")
-    print("2. Dial Book")
-    print("3. Clipboard")
-    print("4. Exit")
-    print("5. Set Label")
-    print("6. Set Energy Target")
-    print("7. Toggle Monitor ("..tostring(config.monitor)..")")
-    print("8. Set Addressbook ID ("..tostring(config.address_book_id)..")")
-
-    write(3, h, "Label: "..config.label, colors.black, colors.yellow)
-
-    term.setCursorPos(1,h)
-    local mode = tonumber(wait_for_key("%d"))
-
-    if is_dialing then
-        return
-    end
-
-    if mode == 1 then
+local function disconnectListener()
+    local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
+    rednet.send(id, "", "jjs_sg_rawcommand_confirm")
+    if msg == "gate_disconnect" then
         clearGate()
-        parallel.waitForAny(inputThread, dialThread, lastAddressSaverThread)
-        is_dialing = true
-    elseif mode == 2 then
+        fancyReboot()
+    end
+end
+
+local function mainThread()
+    while true do
+        local w, h = term.getSize()
+
         term.clear()
         term.setCursorPos(1,1)
-        print("Select Destination:")
-        for k,v in ipairs(dial_book) do
-            print(k..". "..v.name)
-        end
-        
-        term.setCursorPos(1,h)
-        local selected = tonumber(wait_for_key("%d"))
+        print("Select Mode:")
+        print("1. Manual Dial")
+        print("2. Dial Book")
+        print("3. Clipboard")
+        print("4. Set Label")
+        print("5. Set Energy Target")
+        print("6. Toggle Monitor ("..tostring(config.monitor)..")")
+        print("7. Set Addressbook ID ("..tostring(config.address_book_id)..")")
+        print("8. Dial-Back")
+        print("9. Toggle Iris")
 
-        if dial_book[selected] then
+        write(3, h, "Label: "..config.label, colors.black, colors.yellow)
+
+        term.setCursorPos(14,1)
+        local mode = tonumber(read())
+
+        if is_dialing then
+            return
+        end
+
+        if mode == 1 then
+            clearGate()
+            parallel.waitForAny(inputThread, dialThread, lastAddressSaverThread)
             is_dialing = true
-            auto_address_call = dial_book[selected].address
+        elseif mode == 2 then
+            term.clear()
+            term.setCursorPos(1,1)
+            print("Select Destination:")
+            for k,v in ipairs(dial_book) do
+                print(k..". "..v.name)
+            end
+            
+            term.setCursorPos(1,h)
+            local selected = tonumber(wait_for_key("%d"))
+
+            if dial_book[selected] then
+                is_dialing = true
+                auto_address_call = dial_book[selected].address
+                clearGate()
+                parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
+            end
+        elseif mode == 3 then
+            term.clear()
+            term.setCursorPos(1,1)
+            print("Waiting for Clipboard (Press CTRL+V)")
+            local name, clipboard = os.pullEvent("paste")
+
+            local temp_address = split(clipboard, "-")
+            auto_address_call = {}
+
+            for k,v in ipairs(temp_address) do
+                if tonumber(v) then
+                    auto_address_call[#auto_address_call+1] = tonumber(v)
+                    print(tonumber(v))
+                end
+            end
+            
+            is_dialing = true
             clearGate()
             parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
-        end
-    elseif mode == 3 then
-        term.clear()
-        term.setCursorPos(1,1)
-        print("Waiting for Clipboard (Press CTRL+V)")
-        local name, clipboard = os.pullEvent("paste")
-
-        local temp_address = split(clipboard, "-")
-        auto_address_call = {}
-
-        for k,v in ipairs(temp_address) do
-            if tonumber(v) then
-                auto_address_call[#auto_address_call+1] = tonumber(v)
-                print(tonumber(v))
+        elseif mode == 4 then
+            term.clear()
+            term.setCursorPos(1,1)
+            print("New Label:")
+            local new_label = read(nil, nil, nil, config.label)
+            config.label = new_label
+            writeConfig()
+            fancyReboot()
+            return
+        elseif mode == 5 then
+            term.clear()
+            term.setCursorPos(1,1)
+            print("New Energy Target:")
+            local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
+            sg.setEnergyTarget(new_target or sg.getEnergyTarget())
+        elseif mode == 6 then
+            term.clear()
+            term.setCursorPos(1,1)
+            config.monitor = (not config.monitor)
+            print("Set to: "..tostring(config.monitor))
+            sleep(1)
+            writeConfig()
+            fancyReboot()
+            return
+        elseif mode == 7 then
+            term.clear()
+            term.setCursorPos(1,1)
+            local list_of_books = {rednet.lookup("jjs_sg_addressbook")}
+            
+            for k,v in pairs(list_of_books) do
+                list_of_books[k] = tostring(v)
+            end
+            print("Address Book ID:")
+            local new_address_book = read(nil, nil, function(text) return completion.choice(text, list_of_books) end, tostring(config.address_book_id))
+            if tonumber(new_address_book) then
+                config.address_book_id = tonumber(new_address_book)
+                writeConfig()
+            end
+        elseif mode == 8 then
+            if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 then
+                sg.disconnectStargate()
+            end
+            is_dialing = true
+            parallel.waitForAll(inputThread, dialThread, autoDialbackThread, disconnectListener, lastAddressSaverThread)
+        elseif mode == 9 then
+            if sg.getIrisProgressPercentage() > 50 then
+                sg.openIris()
+            else
+                sg.closeIris()
             end
         end
-        
-        is_dialing = true
-        clearGate()
-        parallel.waitForAll(inputThread, dialThread, autoInputThread, lastAddressSaverThread)
-    elseif mode == 4 then
-        term.clear()
-        term.setCursorPos(1,1)
-        return
-    elseif mode == 5 then
-        term.clear()
-        term.setCursorPos(1,1)
-        print("New Label:")
-        local new_label = read(nil, nil, nil, config.label)
-        config.label = new_label
-        writeConfig()
-        fancyReboot()
-        return
-    elseif mode == 6 then
-        term.clear()
-        term.setCursorPos(1,1)
-        print("New Energy Target:")
-        local new_target = tonumber(read(nil, nil, nil, tostring(sg.getEnergyTarget())))
-        sg.setEnergyTarget(new_target or sg.getEnergyTarget())
-        fancyReboot()
-        return
-    elseif mode == 7 then
-        term.clear()
-        term.setCursorPos(1,1)
-        config.monitor = (not config.monitor)
-        print("Set to: "..tostring(config.monitor))
-        sleep(1)
-        writeConfig()
-        fancyReboot()
-        return
-    elseif mode == 8 then
-        term.clear()
-        term.setCursorPos(1,1)
-        local list_of_books = {rednet.lookup("jjs_sg_addressbook")}
-        
-        for k,v in pairs(list_of_books) do
-            list_of_books[k] = tostring(v)
-        end
-        print("Address Book ID:")
-        local new_address_book = read(nil, nil, function(text) return completion.choice(text, list_of_books) end, config.address_book_id)
-        if tonumber(new_address_book) then
-            config.address_book_id = tonumber(new_address_book)
-            writeConfig()
-        end
-        fancyReboot()
-        return
     end
 end
 
@@ -857,8 +873,8 @@ local function mainRemoteDistance()
 end
 local function mainFailsafe()
     while true do
-        local event, code = os.pullEvent()
-        if event == "stargate_reset" and code < 0 then
+        local event, code, msg = os.pullEvent()
+        if event == "stargate_reset" and code < 0 and msg ~= "interrupted_by_incoming_connection" then
             fancyReboot()
             return
         end
@@ -1049,15 +1065,6 @@ local slow_engaging = {
     ["sgjourney:universe_stargate"] = true
 }
 
-local function disconnectListener()
-    local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
-    rednet.send(id, "", "jjs_sg_rawcommand_confirm")
-    if msg == "gate_disconnect" then
-        clearGate()
-        fancyReboot()
-    end
-end
-
 local function rawCommandListener()
     while true do
         local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
@@ -1153,6 +1160,24 @@ local function checkAliveThread()
     end
 end
 
+local function irisControlThread()
+    while true do
+        local data = {os.pullEvent()}
+        if data[1] == "transceiver_transmission_received" then
+            local event, freq, code, correct = table.unpack(data)
+            if correct and (sg.isWormholeOpen() or not sg.isStargateConnected()) then
+                sg.openIris()
+            end
+        elseif data[1] == "stargate_incoming_wormhole" then
+            sg.closeIris()
+        elseif data[1] == "stargate_outgoing_wormhole" then
+            sg.openIris()
+        elseif data[1] == "stargate_disconnected" then
+            sg.openIris()
+        end
+    end
+end
+
 -- local function debugChar()
 --     while true do
 --         local event = {os.pullEvent()}
@@ -1201,7 +1226,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread)
+    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread)
 end)
 
 if not stat then

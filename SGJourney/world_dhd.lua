@@ -156,6 +156,15 @@ local default_palettes = {
         button_on = 0xff2414,
         button_off = 0x521814,
         background = 0x100000,
+    },
+    sculk = {
+        brb_main_off = 0x0f252c,
+        brb_secondary_off = 0x0d303b,
+        brb_main_on = 0x13c191,
+        brb_secondary_on = 0x19e1b2,
+        button_on = 0x19e1b2,
+        button_off = 0x173a45,
+        background = 0x030c0f,
     }
 }
 

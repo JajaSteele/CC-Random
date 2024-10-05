@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -308,6 +308,11 @@ if height == 24 then
             end
         end
     end
+
+    local text = "@-@"
+    monitor.setCursorPos(7, height-1)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=70, glow=false, text="@-@"}
 else
     for i1=1, height do
         local text = string.format("%02d", building_num)
@@ -344,6 +349,11 @@ else
     monitor.write(text)
     button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
 
+    local text = "@-@"
+    monitor.setCursorPos(7, height)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=height, x2=9, y2=height, symbol=70, glow=false, text="@-@"}
+
     monitor.setPaletteColor(colors.gray, brb_secondary_off)
     monitor.setPaletteColor(colors.red, brb_main_off)
     fill(6, 5, 6+4, height-4,colors.red, colors.gray, "\x7F")
@@ -370,6 +380,8 @@ else
     end
 end
 
+local iris_state = "idle"
+
 local function inputThread()
     while true do
         local event = {os.pullEvent()}
@@ -393,6 +405,21 @@ local function inputThread()
                         monitor.setTextColor(colors.blue)
                         monitor.write(v.text)
                         monitor.setTextColor(colors.white)
+                        break
+                    end
+                    if v.symbol == 70 then
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.orange)
+                        if interface.getIrisProgressPercentage() > 50 then
+                            interface.openIris()
+                            monitor.write("<->")
+                            iris_state = "opening"
+                        else
+                            interface.closeIris()
+                            monitor.write(">-<")
+                            iris_state = "closing"
+                        end
+                        os.queueEvent("irisAwait", v.x, v.y, v.text)
                         break
                     end
                     if interface.engageSymbol then
@@ -432,6 +459,21 @@ local function resetThread()
                 if v.symbol == 0 then
                     monitor.setPaletteColor(colors.gray, brb_secondary_off)
                     monitor.setPaletteColor(colors.red, brb_main_off)
+                end
+                if v.symbol == 70 then
+                    if iris_state == "idle" then
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.white)
+                        monitor.write(v.text)
+                    elseif iris_state == "opening" then
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.orange)
+                        monitor.write("<->")
+                    elseif iris_state == "closing" then
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.orange)
+                        monitor.write(">-<")
+                    end
                 end
             end
         end
@@ -529,6 +571,20 @@ local function monitorDetachDetector()
     end
 end
 
+local function irisDetectThread()
+    while true do
+        local event, x, y, txt = os.pullEvent("irisAwait")
+        repeat
+            sleep(0.1)
+            local iris = interface.getIrisProgressPercentage()
+        until iris == 100 or iris == 0
+        monitor.setTextColor(colors.white)
+        monitor.setCursorPos(x, y)
+        monitor.write(txt)
+        iris_state = "idle"
+    end
+end
+
 if interface.isStargateConnected() and interface.getConnectedAddress then
     last_address = interface.getConnectedAddress()
     writeSave()
@@ -537,4 +593,4 @@ end
 
 print("Last Address is: "..table.concat(last_address, " "))
 
-parallel.waitForAny(inputThread,resetThread, lastAddressThread, dialAutoThread, externalThread, monitorDetachDetector)
+parallel.waitForAny(inputThread,resetThread, lastAddressThread, dialAutoThread, externalThread, monitorDetachDetector, irisDetectThread)

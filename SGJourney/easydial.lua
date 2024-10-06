@@ -174,7 +174,7 @@ loadConfig()
 if config.label == nil then config.label = "Dialer "..os.getComputerID() end
 if config.monitor == nil then config.monitor = true end
 if config.address_book_id == nil then config.address_book_id = nil end
-if config.iris_control == nil then config.iris_control = true end
+if config.iris_control == nil then config.iris_control = false end
 
 local function split(s, delimiter)
     local result = {};

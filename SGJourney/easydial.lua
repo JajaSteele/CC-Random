@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -99,13 +99,13 @@ local function writeToDisplayLink(line1, line2, center1, center2, instant_update
             local dl_height, dl_width = dl.getSize()
             dl.clear()
             if center1 then
-                dl.setCursorPos(math.ceil(dl_width/2)-math.ceil(#(line1 or "")/2), 1)
+                dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line1 or "")/2), 1)
             else
                 dl.setCursorPos(1,1)
             end
             dl.write(line1 or "")
             if center1 then
-                dl.setCursorPos(math.ceil(dl_width/2)-math.ceil(#(line2 or "")/2), 2)
+                dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line2 or "")/2), 2)
             else
                 dl.setCursorPos(1,2)
             end
@@ -246,7 +246,7 @@ local function fancyReboot()
         local monitor_text = "Rebooting.."
         writeToDisplayLink("Rebooting..", "-=-=-=-=-=-", true, true, true)
         monitor.clear()
-        monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
+        monitor.setCursorPos(math.ceil(width/2)-math.floor(#monitor_text/2), 3)
         monitor.clearLine()
         monitor.setTextColor(colors.red)
         monitor.write(monitor_text)
@@ -484,7 +484,7 @@ local function inputThread()
 
                                     if address_name then
                                         local old_pos_x, old_pos_y = monitor.getCursorPos()
-                                        monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#(address_name.name)/2), mh)
+                                        monitor.setCursorPos(math.ceil(mw/2)-math.floor(#(address_name.name)/2), mh)
                                         monitor.setTextColor(colors.orange)
                                         monitor.clearLine()
                                         monitor.write(address_name.name)
@@ -500,7 +500,7 @@ local function inputThread()
                                 monitor.clearLine()
                                 monitor.write("[["..string.rep(" ", mw-4).."]]")
                                 local text = "!STAND BACK!"
-                                monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#text/2), 3)
+                                monitor.setCursorPos(math.ceil(mw/2)-math.floor(#text/2), 3)
                                 monitor.setTextColor(colors.red)
                                 monitor.clearLine()
                                 monitor.write(text)
@@ -515,7 +515,7 @@ local function inputThread()
                                     local address_name = addressLookupCached(address_to_lookup) or {name="Unknown Address"}
 
                                     local old_pos_x, old_pos_y = monitor.getCursorPos()
-                                    monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#(address_name.name)/2), mh)
+                                    monitor.setCursorPos(math.ceil(mw/2)-math.floor(#(address_name.name)/2), mh)
                                     monitor.setTextColor(colors.yellow)
                                     monitor.clearLine()
                                     monitor.write(address_name.name)
@@ -555,7 +555,7 @@ local function inputThread()
                             monitor.setCursorPos(1,3)
                             monitor.write("[["..string.rep(" ", mw-4).."]]")
                             local text = "!READY!"
-                            monitor.setCursorPos(math.ceil(mw/2)-math.ceil(#text/2), 3)
+                            monitor.setCursorPos(math.ceil(mw/2)-math.floor(#text/2), 3)
                             monitor.setTextColor(colors.lime)
                             monitor.write(text)
                         end
@@ -903,7 +903,7 @@ local function screenSaverMonitor()
         if not sg.isStargateConnected() then
             local mon_text = config.label
 
-            monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
+            monitor.setCursorPos(math.ceil(width/2)-math.floor(#mon_text/2), 3)
             monitor.clearLine()
             monitor.setTextColor(colors.lightGray)
             monitor.write(mon_text)
@@ -957,7 +957,7 @@ local function gateMonitor()
                     monitor_text = table.concat(event[2], "-")
                 end
                 if monitor and config.monitor then
-                    monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
+                    monitor.setCursorPos(math.ceil(width/2)-math.floor(#monitor_text/2), 3)
                     monitor.clearLine()
                     monitor.setTextColor(colors.yellow)
                     monitor.write(monitor_text)
@@ -975,7 +975,7 @@ local function gateMonitor()
                     monitor_text = table.concat(event[2], "-")
                 end
                 if monitor and config.monitor then
-                monitor.setCursorPos(math.ceil(width/2)-math.ceil(#monitor_text/2), 3)
+                monitor.setCursorPos(math.ceil(width/2)-math.floor(#monitor_text/2), 3)
                 monitor.clearLine()
                 monitor.setTextColor(colors.yellow)
                 monitor.write(monitor_text)
@@ -1007,7 +1007,7 @@ local function gateClosingMonitor()
             monitor.clearLine()
             local mon_text = config.label
 
-            monitor.setCursorPos(math.ceil(width/2)-math.ceil(#mon_text/2), 3)
+            monitor.setCursorPos(math.ceil(width/2)-math.floor(#mon_text/2), 3)
             monitor.clearLine()
             monitor.setTextColor(colors.lightGray)
             monitor.write(mon_text)

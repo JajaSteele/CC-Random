@@ -4,6 +4,8 @@ if not fs.exists("/png.lua") or not fs.exists("/deflatelua.lua") then
     shell.run("wget https://raw.githubusercontent.com/Didericis/png-lua/refs/heads/master/deflatelua.lua /deflatelua.lua")
 end
 
+local completion = require "cc.completion"
+
 local function rgbToHex(r,g,b)
     local rgb = {r,g,b}
 	local hexadecimal = '0X'
@@ -47,28 +49,104 @@ file.close()
 print("Received "..#data.." b")
 
 print("Enter thickness in pixels (0-16)")
-local thickness = tonumber(read())
+local thickness = tonumber(read()) or 1
 
 print("Brightness (0-100)")
-local brightness = tonumber(read())/100
+local brightness = (tonumber(read()) or 100)/100
+
+print("Height Border Size (1-8 for full)")
+local y_border = tonumber(read()) or 8
+print("Width Border Size (1-8 for full)")
+local x_border = tonumber(read()) or 8
+
+print("Orientation")
+local sides = {
+    "north",
+    "south",
+    "east",
+    "west",
+    "up",
+    "down"
+}
+local rotation = read(nil, nil, function(text) return completion.choice(text, sides) end, nil)
+if rotation == "" then rotation = "north" end
 
 local image = png("/"..file_name, nil, true, false)
 
 local cubes = {}
 for y, row in pairs(image.pixels) do
     for x, pixel in pairs(row) do
-        local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
-        print(x, y)
-        cubes[#cubes+1] = {
-            x1=17-(x+1),
-            x2=17-x,
-            y1=17-(y+1),
-            y2=17-y,
-            z1=16-thickness,
-            z2=16,
-            tint=tonumber(pixel_hex),
-            opacity=pixel.A/255
-        }
+        if (x > 16-x_border or x <= x_border) or (y > 16-y_border or y <= y_border) then
+            local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
+            print(x, y)
+            if rotation == "south" then
+                cubes[#cubes+1] = {
+                    x1=17-(x+1),
+                    x2=17-x,
+                    y1=17-(y+1),
+                    y2=17-y,
+                    z1=16-thickness,
+                    z2=16,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            elseif rotation == "north" then
+                cubes[#cubes+1] = {
+                    x1=17-(x+1),
+                    x2=17-x,
+                    y1=17-(y+1),
+                    y2=17-y,
+                    z1=0,
+                    z2=0+thickness,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            elseif rotation == "east" then
+                cubes[#cubes+1] = {
+                    x1=16-thickness,
+                    x2=16,
+                    y1=17-(y+1),
+                    y2=17-y,
+                    z1=17-(x+1),
+                    z2=17-x,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            elseif rotation == "west" then
+                cubes[#cubes+1] = {
+                    x1=0,
+                    x2=0+thickness,
+                    y1=17-(y+1),
+                    y2=17-y,
+                    z1=17-(x+1),
+                    z2=17-x,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            elseif rotation == "down" then
+                cubes[#cubes+1] = {
+                    x1=17-(y+1),
+                    x2=17-y,
+                    y1=0,
+                    y2=0+thickness,
+                    z1=17-(x+1),
+                    z2=17-x,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            elseif rotation == "up" then
+                cubes[#cubes+1] = {
+                    x1=17-(y+1),
+                    x2=17-y,
+                    y1=16-thickness,
+                    y2=16,
+                    z1=17-(x+1),
+                    z2=17-x,
+                    tint=tonumber(pixel_hex),
+                    opacity=pixel.A/255
+                }
+            end
+        end
     end
     print(string.format((y/image.height)*100, "%.1f%%"))
     sleep()

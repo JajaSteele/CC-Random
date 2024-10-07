@@ -49,12 +49,15 @@ print("Received "..#data.." b")
 print("Enter thickness in pixels (0-16)")
 local thickness = tonumber(read())
 
+print("Brightness (0-100)")
+local brightness = tonumber(read())/100
+
 local image = png("/"..file_name, nil, true, false)
 
 local cubes = {}
 for y, row in pairs(image.pixels) do
     for x, pixel in pairs(row) do
-        local pixel_hex = rgbToHex(pixel.R, pixel.G, pixel.B)
+        local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
         print(x, y)
         cubes[#cubes+1] = {
             x1=17-(x+1),

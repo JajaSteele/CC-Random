@@ -56,12 +56,14 @@ local modem
 
 local is_dialing = false
 
+settings.load()
 
 settings.define("sg.slowdial", {
     description = "Forces the gate to use slow dial (for MW only)",
     default = false,
     type = "boolean"
 })
+settings.save()
 
 
 local function debugLog(str)

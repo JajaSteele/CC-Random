@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -114,7 +114,7 @@ settings.define("dhd.panel.button_off", {
 })
 settings.define("dhd.panel.background", {
     description = "Color for the background",
-    default = 0x1f1b19,
+    default = 0x2f2b29,
     type = "number"
 })
 
@@ -309,10 +309,12 @@ if height == 24 then
         end
     end
 
-    local text = "@-@"
-    monitor.setCursorPos(7, height-1)
-    monitor.write(text)
-    button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=70, glow=false, text="@-@"}
+    if interface.getIrisProgressPercentage then
+        local text = "@-@"
+        monitor.setCursorPos(7, height-1)
+        monitor.write(text)
+        button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=70, glow=false, text="@-@"}
+    end
 else
     for i1=1, height do
         local text = string.format("%02d", building_num)
@@ -349,10 +351,12 @@ else
     monitor.write(text)
     button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
 
-    local text = "@-@"
-    monitor.setCursorPos(7, height)
-    monitor.write(text)
-    button_list[#button_list+1] = {x=7, y=height, x2=9, y2=height, symbol=70, glow=false, text="@-@"}
+    if interface.getIrisProgressPercentage then
+        local text = "@-@"
+        monitor.setCursorPos(7, height)
+        monitor.write(text)
+        button_list[#button_list+1] = {x=7, y=height, x2=9, y2=height, symbol=70, glow=false, text="@-@"}
+    end
 
     monitor.setPaletteColor(colors.gray, brb_secondary_off)
     monitor.setPaletteColor(colors.red, brb_main_off)
@@ -410,16 +414,18 @@ local function inputThread()
                     if v.symbol == 70 then
                         monitor.setCursorPos(v.x, v.y)
                         monitor.setTextColor(colors.orange)
-                        if interface.getIrisProgressPercentage() > 50 then
-                            interface.openIris()
-                            monitor.write("<->")
-                            iris_state = "opening"
-                        else
-                            interface.closeIris()
-                            monitor.write(">-<")
-                            iris_state = "closing"
+                        if interface.getIrisProgressPercentage then
+                            if interface.getIrisProgressPercentage() > 50 then
+                                interface.openIris()
+                                monitor.write("<->")
+                                iris_state = "opening"
+                            else
+                                interface.closeIris()
+                                monitor.write(">-<")
+                                iris_state = "closing"
+                            end
+                            os.queueEvent("irisAwait", v.x, v.y, v.text)
                         end
-                        os.queueEvent("irisAwait", v.x, v.y, v.text)
                         break
                     end
                     if interface.engageSymbol then

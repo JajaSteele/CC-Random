@@ -1,7 +1,8 @@
 local d = peripheral.find("statue_workbench")
-if not fs.exists("/png.lua") or not fs.exists("/deflatelua.lua") then
-    shell.run("wget https://raw.githubusercontent.com/Didericis/png-lua/refs/heads/master/png.lua /png.lua")
-    shell.run("wget https://raw.githubusercontent.com/Didericis/png-lua/refs/heads/master/deflatelua.lua /deflatelua.lua")
+if not fs.exists("/png.lua") or not fs.exists("/deflate.lua") or not fs.exists("/stream.lua") then
+    shell.run("wget https://raw.githubusercontent.com/9551-Dev/pngLua/refs/heads/master/png.lua /png.lua")
+    shell.run("wget https://raw.githubusercontent.com/9551-Dev/pngLua/refs/heads/master/deflate.lua /deflate.lua")
+    shell.run("wget https://raw.githubusercontent.com/9551-Dev/pngLua/refs/heads/master/stream.lua /stream.lua")
 end
 
 local completion = require "cc.completion"
@@ -71,12 +72,17 @@ local sides = {
 local rotation = read(nil, nil, function(text) return completion.choice(text, sides) end, nil)
 if rotation == "" then rotation = "north" end
 
-local image = png("/"..file_name, nil, true, false)
+local image = png("/"..file_name, nil)
 
 local cubes = {}
-for y, row in pairs(image.pixels) do
-    for x, pixel in pairs(row) do
+for y=1, 16 do
+    for x=1, 16 do
         if (x > 16-x_border or x <= x_border) or (y > 16-y_border or y <= y_border) then
+            local pixel = image:get_pixel(x,y)
+            pixel.R = pixel.r*255
+            pixel.G = pixel.g*255
+            pixel.B = pixel.b*255
+            pixel.A = pixel.a*255
             local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
             print(x, y)
             if rotation == "south" then

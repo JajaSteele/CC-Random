@@ -2,7 +2,23 @@ local monitor = peripheral.find("monitor")
 if monitor then
     
 else
-    error("No monitor found")
+    print("Waiting for monitor..")
+    while true do
+        local stat, err, success = pcall(function()
+            repeat
+                os.pullEvent("peripheral")
+                monitor = peripheral.find("monitor")
+            until monitor
+            print("Monitor connected!")
+            error("monitor_connected")
+        end)
+        if not stat then print(err) end
+        if (err or ""):match("monitor_connected") then
+            break
+        else
+            print("Termination not allowed.")
+        end
+    end
 end
 
 local completion = require "cc.completion"
@@ -321,9 +337,19 @@ local function clickThread()
     end
 end
 
+local function monitorDisconnectThread()
+    while true do
+        os.pullEvent("peripheral_detach")
+        if not peripheral.find("monitor") then
+            print("Monitor Detached! Rebooting..")
+            os.reboot()
+        end
+    end
+end
+
 while true do
     local stat, err = pcall(function()
-        parallel.waitForAll(drawThread, clickThread)
+        parallel.waitForAll(drawThread, clickThread, monitorDisconnectThread)
     end)
     if not stat then
         if err == "Terminated" then

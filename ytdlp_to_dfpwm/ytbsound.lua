@@ -71,6 +71,7 @@ local function playAudio(link)
                 sleep(0.5)
                 change_volume = false
             end
+            fill(1, height, width, height, colors.black, colors.lightBlue, " ")
             write(1,height, string.rep("-", (width*(count/size))-1).."\x07", colors.black, colors.lightBlue)
             local chunk = request.read(1*1024)
             if chunk == nil then break end

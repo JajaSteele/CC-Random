@@ -79,78 +79,80 @@ for y=1, 16 do
     for x=1, 16 do
         if (x > 16-x_border or x <= x_border) or (y > 16-y_border or y <= y_border) then
             local pixel = image:get_pixel(x,y)
-            pixel.R = pixel.r*255
-            pixel.G = pixel.g*255
-            pixel.B = pixel.b*255
-            pixel.A = pixel.a*255
-            local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
-            print(x, y)
-            if rotation == "south" then
-                cubes[#cubes+1] = {
-                    x1=17-(x+1),
-                    x2=17-x,
-                    y1=17-(y+1),
-                    y2=17-y,
-                    z1=16-thickness,
-                    z2=16,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
-            elseif rotation == "north" then
-                cubes[#cubes+1] = {
-                    x1=17-(x+1),
-                    x2=17-x,
-                    y1=17-(y+1),
-                    y2=17-y,
-                    z1=0,
-                    z2=0+thickness,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
-            elseif rotation == "east" then
-                cubes[#cubes+1] = {
-                    x1=16-thickness,
-                    x2=16,
-                    y1=17-(y+1),
-                    y2=17-y,
-                    z1=17-(x+1),
-                    z2=17-x,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
-            elseif rotation == "west" then
-                cubes[#cubes+1] = {
-                    x1=0,
-                    x2=0+thickness,
-                    y1=17-(y+1),
-                    y2=17-y,
-                    z1=17-(x+1),
-                    z2=17-x,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
-            elseif rotation == "down" then
-                cubes[#cubes+1] = {
-                    x1=17-(y+1),
-                    x2=17-y,
-                    y1=0,
-                    y2=0+thickness,
-                    z1=17-(x+1),
-                    z2=17-x,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
-            elseif rotation == "up" then
-                cubes[#cubes+1] = {
-                    x1=17-(y+1),
-                    x2=17-y,
-                    y1=16-thickness,
-                    y2=16,
-                    z1=17-(x+1),
-                    z2=17-x,
-                    tint=tonumber(pixel_hex),
-                    opacity=pixel.A/255
-                }
+            if pixel then
+                pixel.R = pixel.r*255
+                pixel.G = pixel.g*255
+                pixel.B = pixel.b*255
+                pixel.A = pixel.a*255
+                local pixel_hex = rgbToHex(pixel.R*brightness, pixel.G*brightness, pixel.B*brightness)
+                print(x, y)
+                if rotation == "south" then
+                    cubes[#cubes+1] = {
+                        x1=17-(x+1),
+                        x2=17-x,
+                        y1=17-(y+1),
+                        y2=17-y,
+                        z1=16-thickness,
+                        z2=16,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                elseif rotation == "north" then
+                    cubes[#cubes+1] = {
+                        x1=17-(x+1),
+                        x2=17-x,
+                        y1=17-(y+1),
+                        y2=17-y,
+                        z1=0,
+                        z2=0+thickness,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                elseif rotation == "east" then
+                    cubes[#cubes+1] = {
+                        x1=16-thickness,
+                        x2=16,
+                        y1=17-(y+1),
+                        y2=17-y,
+                        z1=17-(x+1),
+                        z2=17-x,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                elseif rotation == "west" then
+                    cubes[#cubes+1] = {
+                        x1=0,
+                        x2=0+thickness,
+                        y1=17-(y+1),
+                        y2=17-y,
+                        z1=17-(x+1),
+                        z2=17-x,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                elseif rotation == "down" then
+                    cubes[#cubes+1] = {
+                        x1=17-(y+1),
+                        x2=17-y,
+                        y1=0,
+                        y2=0+thickness,
+                        z1=17-(x+1),
+                        z2=17-x,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                elseif rotation == "up" then
+                    cubes[#cubes+1] = {
+                        x1=17-(y+1),
+                        x2=17-y,
+                        y1=16-thickness,
+                        y2=16,
+                        z1=17-(x+1),
+                        z2=17-x,
+                        tint=tonumber(pixel_hex),
+                        opacity=pixel.A/255
+                    }
+                end
             end
         end
     end

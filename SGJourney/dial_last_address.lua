@@ -15,7 +15,7 @@ local local_version = getVersionNumbers(local_version_line)
 
 print("Local Version: "..string.format("%d.%d", table.unpack(local_version)))
 
-local update_source = "https://raw.githubusercontent.com/JajaSteele/CC-Random/main/SGJourney/dial_last_address.l    ua"
+local update_source = "https://raw.githubusercontent.com/JajaSteele/CC-Random/main/SGJourney/dial_last_address.lua"
 local update_request = http.get(update_source)
 if update_request then
     local script_version_line = update_request.readLine()

@@ -1,4 +1,4 @@
-local script_version = "1.3"
+local script_version = "1.4"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -177,6 +177,7 @@ if config.label == nil then config.label = "Dialer "..os.getComputerID() end
 if config.monitor == nil then config.monitor = true end
 if config.address_book_id == nil then config.address_book_id = nil end
 if config.iris_control == nil then config.iris_control = false end
+if config.iris_anti_kawoosh == nil then config.iris_anti_kawoosh = false end
 
 local function split(s, delimiter)
     local result = {};
@@ -721,6 +722,7 @@ local function mainThread()
         print("8. Dial-Back")
         print("9. Toggle Iris")
         print("10. Toggle Iris Control ("..tostring(config.iris_control)..")")
+        print("11. Kawoosh-Protection Iris ("..tostring(config.iris_anti_kawoosh)..")")
 
         write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -826,6 +828,13 @@ local function mainThread()
             term.setCursorPos(1,1)
             config.iris_control = (not config.iris_control)
             print("Set to: "..tostring(config.iris_control))
+            sleep(1)
+            writeConfig()
+        elseif mode == 11 then
+            term.clear()
+            term.setCursorPos(1,1)
+            config.iris_anti_kawoosh = (not config.iris_anti_kawoosh)
+            print("Set to: "..tostring(config.iris_anti_kawoosh))
             sleep(1)
             writeConfig()
         end
@@ -1192,6 +1201,25 @@ local function irisControlThread()
     end
 end
 
+local function irisAntiKawooshThread()
+    while true do
+        local data = {os.pullEvent()}
+        if config.iris_anti_kawoosh then
+            if data[1] == "stargate_incoming_wormhole" or data[1] == "stargate_outgoing_wormhole" then
+                sg.closeIris()
+                if not config.iris_control or data[1] == "stargate_outgoing_wormhole"  then
+                    repeat
+                        sleep(0.25)
+                    until sg.isWormholeOpen() or not sg.isStargateConnected()
+                    sg.openIris()
+                end
+            elseif data[1] == "stargate_disconnected" then
+                sg.openIris()
+            end
+        end
+    end
+end
+
 -- local function debugChar()
 --     while true do
 --         local event = {os.pullEvent()}
@@ -1240,7 +1268,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread)
+    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread)
 end)
 
 if not stat then

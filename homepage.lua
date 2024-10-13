@@ -79,8 +79,8 @@ local function write(x,y,text,bg,fg)
 end
 
 local rom_programs = {
-    "lua",
-    "equip"
+    {program="lua"},
+    {program="equip", check=function() return pocket end}
 }
 local program_list = {}
 local function updateList()
@@ -92,7 +92,9 @@ local function updateList()
         end
     end
     for k,v in pairs(rom_programs) do
-        program_list[#program_list+1] = v
+        if not v.check or v.check() then
+            program_list[#program_list+1] = v.program
+        end
     end
     table.sort(program_list)
 end

@@ -79,18 +79,19 @@ local function chatThread()
     while true do
         if not rednet_mode then
             local event, username, msg, hidden = os.pullEvent("chat")
+            if not hidden then
+                local voice
 
-            local voice
+                if username == "JajaSteele" then
+                    voice = jaja_voice
+                else
+                    voice = default_voice
+                end
 
-            if username == "JajaSteele" then
-                voice = jaja_voice
-            else
-                voice = default_voice
-            end
-
-            if username then
-                tts_queue[#tts_queue+1] = {msg=msg, voice=voice}
-                print(voice.." : "..msg)
+                if username then
+                    tts_queue[#tts_queue+1] = {msg=msg, voice=voice}
+                    print(voice.." : "..msg)
+                end
             end
         else
             sleep(10)

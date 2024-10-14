@@ -1,4 +1,4 @@
-local script_version = "1.5"
+local script_version = "1.6"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -95,28 +95,32 @@ end
 
 local dl = peripheral.find("Create_DisplayLink")
 
-local dp_line1 = ""
-local dp_line2 = ""
+local dp_line1 = {txt="", center=false}
+local dp_line2 = {txt="", center=false}
 
 local function writeToDisplayLink(line1, line2, center1, center2, instant_update)
     local stat, err = pcall(function()
         if dl then
+            dp_line1 = {
+                txt = line1 or "",
+                center = center1 or false
+            }
+            dp_line2 = {
+                txt = line2 or "",
+                center = center2 or false
+            }
             local dl_height, dl_width = dl.getSize()
             dl.clear()
             if center1 then
                 dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line1 or "")/2), 1)
-                dp_line1 = string.rep(" ", math.ceil(dl_width/2)-math.floor(#(line1 or "")/2)-1)..(line1 or "")
             else
                 dl.setCursorPos(1,1)
-                dp_line1 = line1 or ""
             end
             dl.write(line1 or "")
-            if center1 then
+            if center2 then
                 dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line2 or "")/2), 2)
-                dp_line2 = string.rep(" ", math.ceil(dl_width/2)-math.floor(#(line2 or "")/2)-1)..(line2 or "")
             else
                 dl.setCursorPos(1,2)
-                dp_line2 = line2 or ""
             end
             dl.write(line2 or "")
             if instant_update then
@@ -332,12 +336,24 @@ end
 local function displayLinkUpdater()
     while true do
         if dl then
-            dl.clear()
-            dl.setCursorPos(1,1)
-            dl.write(dp_line1)
-            dl.setCursorPos(1,2)
-            dl.write(dp_line2)
-            dl.update()
+            local stat, err = pcall(function()
+                local dl_height, dl_width = dl.getSize()
+                dl.clear()
+                if dp_line1.center then
+                    dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(dp_line1.txt or "")/2), 1)
+                else
+                    dl.setCursorPos(1,1)
+                end
+                dl.write(dp_line1.txt)
+
+                if dp_line2.center then
+                    dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(dp_line2.txt or "")/2), 2)
+                else
+                    dl.setCursorPos(1,2)
+                end
+                dl.write(dp_line2.txt)
+                dl.update()
+            end)
         end
         sleep(1)
     end

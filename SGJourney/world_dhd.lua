@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -516,8 +516,14 @@ local function lastAddressThread()
         local event = {os.pullEvent()}
         if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
             last_address = event[2]
+            if event[1] == "stargate_incoming_wormhole" then
+                repeat
+                    sleep(0.5)
+                until interface.getOpenTime() > 2 or not interface.isStargateConnected()
+                last_address = interface.getConnectedAddress()
+            end
             writeSave()
-            print("Set last address to: "..table.concat(event[2], " "))
+            print("Set last address to: "..table.concat(last_address, " "))
         end
     end
 end

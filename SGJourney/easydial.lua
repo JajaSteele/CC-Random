@@ -1,4 +1,4 @@
-local script_version = "1.4"
+local script_version = "1.5"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -95,6 +95,9 @@ end
 
 local dl = peripheral.find("Create_DisplayLink")
 
+local dp_line1 = ""
+local dp_line2 = ""
+
 local function writeToDisplayLink(line1, line2, center1, center2, instant_update)
     local stat, err = pcall(function()
         if dl then
@@ -102,14 +105,18 @@ local function writeToDisplayLink(line1, line2, center1, center2, instant_update
             dl.clear()
             if center1 then
                 dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line1 or "")/2), 1)
+                dp_line1 = string.rep(" ", math.ceil(dl_width/2)-math.floor(#(line1 or "")/2)-1)..(line1 or "")
             else
                 dl.setCursorPos(1,1)
+                dp_line1 = line1 or ""
             end
             dl.write(line1 or "")
             if center1 then
                 dl.setCursorPos(math.ceil(dl_width/2)-math.floor(#(line2 or "")/2), 2)
+                dp_line2 = string.rep(" ", math.ceil(dl_width/2)-math.floor(#(line2 or "")/2)-1)..(line2 or "")
             else
                 dl.setCursorPos(1,2)
+                dp_line2 = line2 or ""
             end
             dl.write(line2 or "")
             if instant_update then
@@ -117,7 +124,6 @@ local function writeToDisplayLink(line1, line2, center1, center2, instant_update
             end
         end
     end)
-    if not stat then print(err) end
 end
 
 local function write(x,y,text,bg,fg)
@@ -326,6 +332,11 @@ end
 local function displayLinkUpdater()
     while true do
         if dl then
+            dl.clear()
+            dl.setCursorPos(1,1)
+            dl.write(dp_line1)
+            dl.setCursorPos(1,2)
+            dl.write(dp_line2)
             dl.update()
         end
         sleep(1)

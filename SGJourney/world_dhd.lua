@@ -165,6 +165,15 @@ local default_palettes = {
         button_on = 0x19e1b2,
         button_off = 0x173a45,
         background = 0x030c0f,
+    },
+    ivory = {
+        brb_main_off = 0x441e08,
+        brb_secondary_off = 0x56260b,
+        brb_main_on = 0xdd7f13,
+        brb_secondary_on = 0xe4910c,
+        button_on = 0xa04f08,
+        button_off = 0x321d11,
+        background = 0xc2ad89,
     }
 }
 

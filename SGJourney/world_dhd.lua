@@ -1,4 +1,4 @@
-local script_version = "1.3"
+local script_version = "1.4"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -167,13 +167,13 @@ local default_palettes = {
         background = 0x030c0f,
     },
     ivory = {
-        brb_main_off = 0x441e08,
-        brb_secondary_off = 0x56260b,
+        brb_main_off = 0x441908,
+        brb_secondary_off = 0x561b0b,
         brb_main_on = 0xdd7f13,
-        brb_secondary_on = 0xe4910c,
-        button_on = 0xa04f08,
+        brb_secondary_on = 0xe4a70c,
+        button_on = 0xe67e00,
         button_off = 0x321d11,
-        background = 0xc2ad89,
+        background = 0xded1b0,
     }
 }
 
@@ -318,6 +318,11 @@ if height == 24 then
         end
     end
 
+    local text = "X-X"
+    monitor.setCursorPos(7, 2)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=71, glow=true, text="X-X"}
+
     if interface.getIrisProgressPercentage then
         local text = "@-@"
         monitor.setCursorPos(7, height-1)
@@ -354,6 +359,11 @@ else
     monitor.write(text)
     button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=building_num, glow=true, text=text}
     building_num = building_num+1
+
+    local text = "x-x"
+    monitor.setCursorPos(7, height-2)
+    monitor.write(text)
+    button_list[#button_list+1] = {x=7, y=height-2, x2=9, y2=height-2, symbol=71, glow=true, text="x-x"}
 
     local text = "#-#"
     monitor.setCursorPos(7, height-1)
@@ -435,6 +445,16 @@ local function inputThread()
                             end
                             os.queueEvent("irisAwait", v.x, v.y, v.text)
                         end
+                        break
+                    end
+                    if v.symbol == 71 then
+                        monitor.setCursorPos(v.x, v.y)
+                        monitor.setTextColor(colors.orange)
+                        monitor.write(v.text)
+                        sleep(0.25)
+                        interface.disconnectStargate()
+                        sleep(0.25)
+                        monitor.setTextColor(colors.white)
                         break
                     end
                     if interface.engageSymbol then

@@ -1,4 +1,4 @@
-local script_version = "1.4"
+local script_version = "1.5"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -54,6 +54,14 @@ local last_address = {}
 local button_list = {}
 
 settings.load()
+
+local function split(s, delimiter)
+    local result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
 
 local function findButton(num)
     for k,v in pairs(button_list) do
@@ -544,15 +552,27 @@ local function lastAddressThread()
     while true do
         local event = {os.pullEvent()}
         if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+            local old_last_address = table.concat(last_address, " ")
             last_address = event[2]
             if event[1] == "stargate_incoming_wormhole" then
                 repeat
                     sleep(0.5)
-                until interface.getOpenTime() > 2 or not interface.isStargateConnected()
+                until interface.getOpenTime() > 6 or not interface.isStargateConnected()
                 last_address = interface.getConnectedAddress()
             end
-            writeSave()
-            print("Set last address to: "..table.concat(last_address, " "))
+            if interface.isStargateConnected() and interface.getChevronsEngaged() >= 6 and #last_address >= 6 then
+                writeSave()
+                print("Set last address to: "..table.concat(last_address, " "))
+            else
+                local old_address = split(old_last_address, " ")
+                last_address = {}
+                for k,v in ipairs(old_address) do
+                    if tonumber(v) then
+                        last_address[#last_address+1] = tonumber(v)
+                    end
+                end
+                print("Reverted last address to: "..table.concat(last_address, " "))
+            end
         end
     end
 end

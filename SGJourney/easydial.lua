@@ -1,4 +1,4 @@
-local script_version = "1.6"
+local script_version = "1.7"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -717,8 +717,25 @@ local function lastAddressSaverThread()
     while true do
         local event = {os.pullEvent()}
         if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+            local old_last_address = table.concat(last_address, " ")
             last_address = event[2]
-            writeSave()
+            if event[1] == "stargate_incoming_wormhole" then
+                repeat
+                    sleep(0.5)
+                until sg.getOpenTime() > 6 or not sg.isStargateConnected()
+                last_address = sg.getConnectedAddress()
+            end
+            if sg.isStargateConnected() and sg.getChevronsEngaged() >= 6 and #last_address >= 6 then
+                writeSave()
+            else
+                local old_address = split(old_last_address, " ")
+                last_address = {}
+                for k,v in ipairs(old_address) do
+                    if tonumber(v) then
+                        last_address[#last_address+1] = tonumber(v)
+                    end
+                end
+            end
         end
     end
 end

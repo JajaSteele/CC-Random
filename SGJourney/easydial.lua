@@ -1,4 +1,4 @@
-local script_version = "1.9"
+local script_version = "1.10"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -717,6 +717,11 @@ end
 
 local function lastAddressSaverThread()
     if sg.getConnectedAddress and sg.isStargateConnected() then
+        if #sg.getConnectedAddress() < 6 then
+            repeat
+                sleep(0.5)
+            until sg.getOpenTime() > 6 or not sg.isStargateConnected()
+        end
         last_address = sg.getConnectedAddress()
         writeSave()
     end

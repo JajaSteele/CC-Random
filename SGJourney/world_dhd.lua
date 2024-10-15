@@ -1,4 +1,4 @@
-local script_version = "1.5"
+local script_version = "1.6"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -229,6 +229,11 @@ local button_off = settings.get("dhd.panel.button_off")
 local background = settings.get("dhd.panel.background")
 
 if interface and interface.getConnectedAddress and interface.isStargateConnected() then
+    if #interface.getConnectedAddress() < 6 then
+        repeat
+            sleep(0.5)
+        until interface.getOpenTime() > 6 or not interface.isStargateConnected()
+    end
     last_address = interface.getConnectedAddress()
     writeSave()
     print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))

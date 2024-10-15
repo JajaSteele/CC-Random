@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -49,27 +49,73 @@ end
 
 local interface = peripheral.find("advanced_crystal_interface")
 
+local threads = {}
+local pos = 1
+
 while true do
     local event, address = os.pullEvent("stargate_incoming_wormhole")
+    print("Incoming Wormhole!")
 
     if address then
-        print("Incoming Wormhole!")
+        pcall(function()
+            interface.closeIris()
+        end)
+        print("Awaiting connection")
         repeat
             sleep()
-        until interface.isWormholeOpen()
-        address = interface.getConnectedAddress()
+        until interface.getOpenTime() >= 5 or not interface.isStargateConnected()
+        if #interface.getConnectedAddress() > 6 then
+            address = interface.getConnectedAddress()
+        end
 
-        sleep(0.1)
-        print("Closing..")
+        print("Awaiting kawoosh")
+        repeat
+            sleep()
+        until interface.isWormholeOpen() or not interface.isStargateConnected()
+
+        print("Closing gate")
         interface.disconnectStargate()
-        sleep(0.1)
 
         print("Dialing back: "..table.concat(address, "-"))
 
+        threads = {}
+        pos = 1
+
+        print("Preparing address table")
+        local address_table = {}
         for k,v in ipairs(address) do
-            interface.engageSymbol(v)
+            address_table[#address_table+1] = {
+                previous=address_table[#address_table] or nil,
+                symbol=v
+            }
+        end
+        address_table[#address_table+1] = {
+            previous=address_table[#address_table] or nil,
+            symbol=0
+        }
+
+        print("Preparing threads")
+        for k, v in pairs(address_table) do
+            threads[#threads+1] = function()
+                local symbol = v
+                local symbol_pos = k
+                repeat
+                until pos == symbol_pos
+                pos = pos+1
+                interface.engageSymbol(symbol.symbol)
+                print("Engaging symbol "..symbol.symbol)
+            end
         end
 
-        interface.engageSymbol(0)
+        print("Launching "..#threads.." threads")
+        parallel.waitForAll(table.unpack(threads))
+
+        print("Awaiting kawoosh")
+        repeat
+            sleep()
+        until interface.isWormholeOpen() or not interface.isStargateConnected()
+        pcall(function()
+            interface.openIris()
+        end)
     end
 end

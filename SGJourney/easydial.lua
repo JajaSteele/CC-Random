@@ -1,4 +1,4 @@
-local script_version = "1.10"
+local script_version = "1.11"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -996,6 +996,7 @@ local function screenSaverMonitor()
             pcall(function()
                 if monitor then
                     local old_x, old_y = monitor.getCursorPos()
+                    width, height = monitor.getSize()
                     
                     monitor.setCursorPos(1-(#screensaver_text) + scroll, 2)
                     monitor.clearLine()
@@ -1064,10 +1065,10 @@ local function gateMonitor()
                     else
                         status_text = table.concat(event[2], "-")
                     end
+                    status_color = colors.yellow
                     if monitor and config.monitor then
                         monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
                         monitor.clearLine()
-                        status_color = colors.yellow
                         monitor.setTextColor(status_color)
                         monitor.write(status_text)
                     end
@@ -1085,10 +1086,10 @@ local function gateMonitor()
                     else
                         status_text = table.concat(event[2], "-")
                     end
+                    status_color = colors.yellow
                     if monitor and config.monitor then
                         monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
                         monitor.clearLine()
-                        status_color = colors.yellow
                         monitor.setTextColor(status_color)
                         monitor.write(status_text)
                     end
@@ -1112,27 +1113,26 @@ local function gateClosingMonitor()
         local old_x, old_y
             local event = {os.pullEvent("stargate_disconnected")}
 
-        if monitor and config.monitor then
-            old_x, old_y = monitor.getCursorPos()
-            width, height = monitor.getSize()
-            width = width or 1
-            height = height or 1
-            status_text = ""
-            screensaver_text = "  Stargate Idle  "
-            screensaver_color = colors.gray
-            monitor.setCursorPos(1, 3)
-            monitor.clearLine()
-            status_text = config.label or "No Label"
-
-            monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
-            monitor.clearLine()
             status_color = colors.lightGray
-            monitor.setTextColor(status_color)
-            monitor.write(status_text)
-            monitor.setCursorPos(old_x, old_y)
-        end
+            status_text = config.label or "No Label"
+            if monitor and config.monitor then
+                old_x, old_y = monitor.getCursorPos()
+                width, height = monitor.getSize()
+                width = width or 1
+                height = height or 1
+                screensaver_text = "  Stargate Idle  "
+                screensaver_color = colors.gray
+                monitor.setCursorPos(1, 3)
+                monitor.clearLine()
 
-        writeToDisplayLink("Stargate Idle", config.label, true, true, false)
+                monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
+                monitor.clearLine()
+                monitor.setTextColor(status_color)
+                monitor.write(status_text)
+                monitor.setCursorPos(old_x, old_y)
+            end
+
+            writeToDisplayLink("Stargate Idle", config.label, true, true, false)
     end
 end
 

@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -13,7 +13,7 @@ end
 
 local local_version = getVersionNumbers(local_version_line)
 
-print("Local Version: "..string.format("%d.%d", table.unpack(local_version)))
+print("Local Version: "..string.format("%d.%d", table.unpack(local_version))    )
 
 local update_source = "https://raw.githubusercontent.com/JajaSteele/CC-Random/main/SGJourney/dial_last_address.lua"
 local update_request = http.get(update_source)
@@ -124,8 +124,9 @@ local function rsThread()
         for k,v in pairs(rs.getSides()) do
             if rs.getInput(v) then
                 print("Received redstone signal")
-                if interface.isStargateConnected() then
+                if interface.isStargateConnected() or interface.getChevronsEngaged() > 0 then
                     interface.disconnectStargate()
+                    start_dialing = false
                     print("Disconnected the stargate")
                     break
                 else
@@ -167,6 +168,7 @@ local function dialThread()
             end
 
             for k,v in ipairs(to_dial) do
+                if not start_dialing then break end
                 if interface.engageSymbol then
                     if config.mode == 2 then
                         repeat
@@ -193,9 +195,10 @@ local function dialThread()
                     sleep(0.125)
                     interface.closeChevron()
                 end
+                if not start_dialing then break end
             end
 
-            if interface.engageSymbol and config.mode == 2 then
+            if interface.engageSymbol and config.mode == 2 and start_dialing then
                 repeat
                     local symbol = interface.getCurrentSymbol()
                     sleep()
@@ -226,9 +229,9 @@ local function dialThread()
                 interface.openChevron()
                 sleep(0.75)
                 interface.closeChevron()
-            elseif interface.engageSymbol and config.mode == 1 then
+            elseif interface.engageSymbol and config.mode == 1 and start_dialing then
                 interface.engageSymbol(0)
-            else
+            elseif start_dialing then
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then
                     interface.rotateAntiClockwise(0)
                 else

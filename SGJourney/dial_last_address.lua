@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -94,6 +94,11 @@ local to_dial = {}
 
 local function lastAddressSaverThread()
     if interface.getConnectedAddress and interface.isStargateConnected() then
+        if #interface.getConnectedAddress() < 6 then
+            repeat
+                sleep(0.5)
+            until interface.getOpenTime() > 6 or not interface.isStargateConnected()
+        end
         last_address = interface.getConnectedAddress()
         writeSave()
         print("Set last address to: "..table.concat(interface.getConnectedAddress(), " "))

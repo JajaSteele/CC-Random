@@ -1,4 +1,4 @@
-local script_version = "1.7"
+local script_version = "1.8"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -100,15 +100,15 @@ local dp_line2 = {txt="", center=false}
 
 local function writeToDisplayLink(line1, line2, center1, center2, instant_update)
     local stat, err = pcall(function()
+        dp_line1 = {
+            txt = line1 or "",
+            center = center1 or false
+        }
+        dp_line2 = {
+            txt = line2 or "",
+            center = center2 or false
+        }
         if dl then
-            dp_line1 = {
-                txt = line1 or "",
-                center = center1 or false
-            }
-            dp_line2 = {
-                txt = line2 or "",
-                center = center2 or false
-            }
             local dl_height, dl_width = dl.getSize()
             dl.clear()
             if center1 then
@@ -213,7 +213,7 @@ if monitor and config.monitor then
     monitor.setPaletteColor(colors.white, 0xFFFFFF)
     monitor.setPaletteColor(colors.black, 0x000000)
 end
-writeToDisplayLink()
+writeToDisplayLink("Starting up!", "Starting up!", true, true)
 
 local address_cache = {}
 local function addressLookupCached(lookup_value)
@@ -354,6 +354,10 @@ local function displayLinkUpdater()
                 dl.write(dp_line2.txt)
                 dl.update()
             end)
+            if not stat then print(err) end
+        else
+            dl = peripheral.find("Create_DisplayLink")
+            sleep(4)
         end
         sleep(1)
     end
@@ -949,6 +953,9 @@ end
 local screensaver_text = "  Stargate Idle  "
 local screensaver_color = colors.gray
 
+local status_color = colors.lightGray
+local status_text = ""
+
 local function screenSaverMonitor()
     writeToDisplayLink("Stargate Idle", config.label, true, true, false)
     if monitor and config.monitor then
@@ -956,12 +963,13 @@ local function screenSaverMonitor()
         local scroll = 0
         monitor.setPaletteColor(colors.gray, 0x222222)
         if not sg.isStargateConnected() then
-            local mon_text = config.label
+            status_text = config.label or "No Label"
 
-            monitor.setCursorPos(math.ceil(width/2)-math.floor(#mon_text/2), 3)
+            monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
             monitor.clearLine()
-            monitor.setTextColor(colors.lightGray)
-            monitor.write(mon_text)
+            status_color = colors.lightGray
+            monitor.setTextColor(status_color)
+            monitor.write(status_text)
         end
         while true do
             if is_dialing then
@@ -990,8 +998,29 @@ local function screenSaverMonitor()
     end
 end
 
+local function monitorConnectThread()
+    while true do
+        local event, side = os.pullEvent("peripheral")
+        if peripheral.getType(side) == "monitor" then
+            monitor = peripheral.wrap(side)
+            if monitor then
+                monitor.setTextScale(1)
+                monitor.setBackgroundColor(colors.black)
+                monitor.clear()
+                monitor.setPaletteColor(colors.white, 0xFFFFFF)
+                monitor.setPaletteColor(colors.black, 0x000000)
+                local width, height = monitor.getSize()
+                monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
+                monitor.clearLine()
+                monitor.setTextColor(status_color)
+                monitor.write(status_text)
+            end
+        end
+    end
+end
+
 local function gateMonitor()
-        while true do
+    while true do
         local width, height
         local old_x, old_y
         if monitor and config.monitor then
@@ -1000,24 +1029,26 @@ local function gateMonitor()
         end
         local event = {os.pullEvent()}
 
-            local monitor_text = ""
         if event[1] == "stargate_incoming_wormhole" then
             screensaver_text = "  Incoming Wormhole  "
             screensaver_color = colors.orange
             if event[2] then
                 local address_incoming = addressLookupCached(event[2])
                 if address_incoming then
-                    monitor_text = address_incoming.name
+                    status_text = address_incoming.name or table.concat(event[2], "-")
                 else
-                    monitor_text = table.concat(event[2], "-")
+                    status_text = table.concat(event[2], "-")
                 end
                 if monitor and config.monitor then
-                    monitor.setCursorPos(math.ceil(width/2)-math.floor(#monitor_text/2), 3)
+                    monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
                     monitor.clearLine()
-                    monitor.setTextColor(colors.yellow)
-                    monitor.write(monitor_text)
+                    status_color = colors.yellow
+                    monitor.setTextColor(status_color)
+                    monitor.write(status_text)
                 end
-                writeToDisplayLink("Incoming Wormhole", monitor_text, true, true, false)
+                writeToDisplayLink("Incoming Wormhole", status_text, true, true, false)
+            else
+                writeToDisplayLink("Incoming Wormhole", "Unknown Origin", true, true, false)
             end
         elseif event[1] == "stargate_outgoing_wormhole" and not is_dialing then
             screensaver_text = "  Outgoing Wormhole  "
@@ -1025,19 +1056,22 @@ local function gateMonitor()
             if event[2] then
                 local address_outgoing = addressLookupCached(event[2])
                 if address_outgoing then
-                    monitor_text = address_outgoing.name
+                    status_text = address_outgoing.name or table.concat(event[2], "-")
                 else
-                    monitor_text = table.concat(event[2], "-")
+                    status_text = table.concat(event[2], "-")
                 end
                 if monitor and config.monitor then
-                monitor.setCursorPos(math.ceil(width/2)-math.floor(#monitor_text/2), 3)
-                monitor.clearLine()
-                monitor.setTextColor(colors.yellow)
-                monitor.write(monitor_text)
-            end
-                if not is_dialing then
-                    writeToDisplayLink("Outgoing Wormhole", monitor_text, true, true, false)
+                    monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
+                    monitor.clearLine()
+                    status_color = colors.yellow
+                    monitor.setTextColor(status_color)
+                    monitor.write(status_text)
                 end
+                if not is_dialing then
+                    writeToDisplayLink("Outgoing Wormhole", status_text, true, true, false)
+                end
+            else
+                writeToDisplayLink("Outgoing Wormhole", "Unknown Destination", true, true, false)
             end
         end
         if monitor and config.monitor then
@@ -1055,17 +1089,18 @@ local function gateClosingMonitor()
         if monitor and config.monitor then
             old_x, old_y = monitor.getCursorPos()
             width, height = monitor.getSize()
-            local monitor_text = ""
+            status_text = ""
             screensaver_text = "  Stargate Idle  "
             screensaver_color = colors.gray
             monitor.setCursorPos(1, 3)
             monitor.clearLine()
-            local mon_text = config.label
+            status_text = config.label or "No Label"
 
-            monitor.setCursorPos(math.ceil(width/2)-math.floor(#mon_text/2), 3)
+            monitor.setCursorPos(math.ceil(width/2)-math.floor(#status_text/2), 3)
             monitor.clearLine()
-            monitor.setTextColor(colors.lightGray)
-            monitor.write(mon_text)
+            status_color = colors.lightGray
+            monitor.setTextColor(status_color)
+            monitor.write(status_text)
             monitor.setCursorPos(old_x, old_y)
         end
 
@@ -1312,7 +1347,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread)
+    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread)
 end)
 
 if not stat then

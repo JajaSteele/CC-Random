@@ -1,0 +1,1 @@
+local detector = peripheral.find("playerDetector")

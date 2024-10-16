@@ -1,4 +1,4 @@
-local script_version = "1.11"
+local script_version = "1.12"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -356,7 +356,6 @@ local function displayLinkUpdater()
                 dl.write(dp_line2.txt)
                 dl.update()
             end)
-            if not stat then print(err) end
         else
             dl = peripheral.find("Create_DisplayLink")
             sleep(4)

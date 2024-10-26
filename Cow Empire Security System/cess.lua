@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -283,8 +283,6 @@ local function messageDetector()
         local event, username, message, uuid, hidden = os.pullEvent("chat")
         if message == "cess_reboot" and username == config.owner or "" and hidden then
             chat_queue = {}
-            log("Rebooting..")
-            sleep(1)
             os.reboot()
         end
     end

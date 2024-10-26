@@ -40,6 +40,9 @@ else
     print("Charge Side?")
     config.charge = read(nil, nil, completion.side)
 
+    print("Generation Side?")
+    config.gen = read(nil, nil, completion.side)
+
     print("Wait until wormhole is open? (y/n)")
     local temp = read(nil, nil, nil)
     if temp == "y" or temp == "yes" or temp == "true" then
@@ -62,7 +65,7 @@ print("Charge = "..config.charge)
 print("Await Wormhole = "..tostring(config.await_wormhole))
 print("")
 
-if interface.isStargateConnected() then
+if interface.isStargateConnected and interface.isStargateConnected() then
     if interface.isStargateDialingOut() then
         if config.await_wormhole then
             repeat
@@ -126,12 +129,12 @@ end
 
 local last_charge = 0
 
-local function chargeThread()
+local function checkThread()
     while true do
-        local charge = interface.getStargateEnergy()
-        local target = interface.getEnergyTarget()
+        if isValidSide(config.charge) and interface.getStargateEnergy then
+            local charge = interface.getStargateEnergy()
+            local target = interface.getEnergyTarget()
 
-        if isValidSide(config.charge) then
             local charge_output = clamp(15*(charge/target), 0, 15)
             if charge_output ~= last_charge then
                 print("Set charge to "..charge_output)
@@ -139,9 +142,18 @@ local function chargeThread()
             end
             rs.setAnalogOutput(config.charge, charge_output)
         end
+
+        if isValidSide(config.gen) then
+            local stat, err = pcall(function()
+                rs.setAnalogOutput(config.gen, interface.getStargateGeneration() or 15)
+            end)
+            if not stat and err then
+                rs.setAnalogOutput(config.gen, 15)
+            end
+        end
         sleep(0.5)
     end
 end
 
 print("Starting RS Threads")
-parallel.waitForAll(chargeThread, eventThread)
+parallel.waitForAll(checkThread, eventThread)

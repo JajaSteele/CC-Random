@@ -1,3 +1,52 @@
+local script_version = "1.2"
+
+-- AUTO UPDATE STUFF
+local curr_script = shell.getRunningProgram()
+local script_io = io.open(curr_script, "r")
+local local_version_line = script_io:read()
+script_io:close()
+
+local function getVersionNumbers(first_line)
+    local major, minor, patch = first_line:match("local script_version = \"(%d+)%.(%d+)\"")
+    return {tonumber(major) or 0, tonumber(minor) or 0}
+end
+
+local local_version = getVersionNumbers(local_version_line)
+
+print("Local Version: "..string.format("%d.%d", table.unpack(local_version)))
+
+local update_source = "https://raw.githubusercontent.com/JajaSteele/CC-Random/refs/heads/main/Cow%20Empire%20Security%20System/cess.lua"
+local update_request = http.get(update_source)
+if update_request then
+    local script_version_line = update_request.readLine()
+    update_request:close()
+    local script_version = getVersionNumbers(script_version_line)
+    print("Remote Version: "..string.format("%d.%d", table.unpack(script_version)))
+
+    if script_version[1] > local_version[1] or (script_version[1] == local_version[1] and script_version[2] > local_version[2]) then
+        print("Remote version is newer, updating local")
+        sleep(0.5)
+        local full_update_request = http.get(update_source)
+        if full_update_request then
+            local full_script = full_update_request.readAll()
+            full_update_request:close()
+            local local_io = io.open(curr_script, "w")
+            local_io:write(full_script)
+            local_io:close()
+            print("Updated local script!")
+            sleep(0.5)
+            print("REBOOTING")
+            sleep(0.5)
+            os.reboot()
+        else
+            print("Full update request failed")
+        end
+    end
+else
+    print("Update request failed")
+end
+-- END OF AUTO UPDATE
+
 if not fs.exists("/DiscordHook.lua") then
     local file = http.get("https://raw.githubusercontent.com/Wendelstein7/DiscordHook-CC/master/DiscordHook.lua")
     local file2 = io.open("/DiscordHook.lua", "w")
@@ -99,7 +148,7 @@ local function log(text)
         discord_hook.send(text, "CESS - "..(config.name or "Unknown"))
     end
     if use_chatbox then
-        chat_queue[#chat_queue+1] = {text=text}
+        chat_queue[#chat_queue+1] = {text=text, timer=60}
     end
     term.setTextColor(colors.yellow)
     print('['..getDate().."] > "..text)
@@ -135,7 +184,7 @@ local function logPlayers(data)
     end
 
     if use_chatbox then
-        chat_queue[#chat_queue+1] = {text=chat_text}
+        chat_queue[#chat_queue+1] = {text=chat_text, timer=360}
     end
     print('['..getDate().."] > Security Notification:")
     for k,v in pairs(data) do
@@ -181,9 +230,12 @@ local function chatManager()
     while true do
         local to_delete = {}
         for k,v in ipairs(chat_queue) do
-            local is_sent = chatbox.sendMessageToPlayer(v.text, config.owner, "\xA7bCESS\xA7f-\xA7d"..(config.name or "Unknown").."\xA7f")
-            if is_sent then
-                to_delete[#to_delete+1] = k
+            if v.text and v.timer then
+                local is_sent = chatbox.sendMessageToPlayer(v.text, config.owner, "\xA7bCESS\xA7f-\xA7d"..(config.name or "Unknown").."\xA7f")
+                v.timer = v.timer-1
+                if is_sent or v.timer < 0 then
+                    to_delete[#to_delete+1] = k
+                end
             end
         end
 
@@ -226,6 +278,18 @@ local function playerRadar()
     end
 end
 
-log("Starting CESS..")
+local function messageDetector()
+    while true do
+        local event, username, message, uuid, hidden = os.pullEvent("chat")
+        if message == "cess_reboot" and username == config.owner or "" and hidden then
+            chat_queue = {}
+            log("Rebooting..")
+            sleep(1)
+            os.reboot()
+        end
+    end
+end
 
-parallel.waitForAll(playerRadar, chatManager)
+log("Starting CESS v"..string.format("%d.%d", table.unpack(local_version)).." ..")
+
+parallel.waitForAll(playerRadar, chatManager, messageDetector)

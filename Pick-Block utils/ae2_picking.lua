@@ -136,7 +136,7 @@ local function pickListener()
                 end
                 print("Checking ME System")
                 local required_item = me.getItem({name=block_name})
-                if required_item.amount and required_item.amount > 0 then
+                if required_item and required_item.amount and required_item.amount > 0 then
                     if curr_item.name then
                         print("Current item is not empty")
                         local free_slot = inv.getFreeSlot()

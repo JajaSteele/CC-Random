@@ -1,4 +1,52 @@
-local script_version = "1.12"
+local script_version = "1.13"
+
+local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
+
+local function log_to_file(txt)
+    local data = ""
+    local old_io = io.open(".debug.log", "r")
+    if old_io then
+        data = old_io:read("*a")
+        old_io:close()
+    end
+    data = data .. os.date("\n[%H.%M.%S] > ") .. txt
+    local new_io = io.open(".debug.log", "w")
+    new_io:write(data)
+    new_io:close()
+end
+
+local config = {}
+local function loadConfig()
+    if fs.exists("saved_config_easydial.txt") then
+        local file = io.open("saved_config_easydial.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open("saved_config_easydial.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+loadConfig()
+
+if config.label == nil then config.label = "Dialer "..os.getComputerID() end
+if config.monitor == nil then config.monitor = true end
+if config.address_book_id == nil then config.address_book_id = nil end
+if config.iris_control == nil then config.iris_control = false end
+if config.iris_anti_kawoosh == nil then config.iris_anti_kawoosh = false end
+
+print("Checking for iris..")
+if sg.isStargateConnected() and sg.getChevronsEngaged() < 3 and sg.closeIris then
+    if (config.iris_control and not sg.isStargateDialingOut()) or config.iris_anti_kawoosh then
+        print("Closing iris")
+        sg.closeIris()
+    end
+end
+if sg.isStargateConnected() and config.iris_anti_kawoosh then
+    os.queueEvent("anti_kawoosh_await")
+end
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -47,12 +95,7 @@ else
 end
 -- END OF AUTO UPDATE
 
-local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local completion = require("cc.completion")
-
-local modems = {peripheral.find("modem")}
-
-local modem
 
 local is_dialing = false
 
@@ -64,7 +107,6 @@ settings.define("sg.slowdial", {
     type = "boolean"
 })
 settings.save()
-
 
 local function debugLog(str)
     local debug_data = ""
@@ -79,6 +121,10 @@ local function debugLog(str)
     debug_file2:write(debug_data)
     debug_file2:close()
 end
+
+local modems = {peripheral.find("modem")}
+
+local modem
 
 for k,v in pairs(modems) do
     if v.isWireless() == true then
@@ -166,28 +212,6 @@ local function writeSave()
 end
 
 loadSave()
-
-local config = {}
-local function loadConfig()
-    if fs.exists("saved_config_easydial.txt") then
-        local file = io.open("saved_config_easydial.txt", "r")
-        config = textutils.unserialise(file:read("*a"))
-        file:close()
-    end
-end
-local function writeConfig()
-    local file = io.open("saved_config_easydial.txt", "w")
-    file:write(textutils.serialise(config))
-    file:close()
-end
-
-loadConfig()
-
-if config.label == nil then config.label = "Dialer "..os.getComputerID() end
-if config.monitor == nil then config.monitor = true end
-if config.address_book_id == nil then config.address_book_id = nil end
-if config.iris_control == nil then config.iris_control = false end
-if config.iris_anti_kawoosh == nil then config.iris_anti_kawoosh = false end
 
 local function split(s, delimiter)
     local result = {};
@@ -726,9 +750,9 @@ local function lastAddressSaverThread()
     end
     while true do
         local event = {os.pullEvent()}
-        if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+        if (event[1] == "stargate_incoming_wormhole" and (event[3] and event[3] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
             local old_last_address = table.concat(last_address, " ")
-            last_address = event[2]
+            last_address = event[3]
             if event[1] == "stargate_incoming_wormhole" then
                 repeat
                     sleep(0.5)
@@ -948,7 +972,7 @@ local function mainRemoteDistance()
 end
 local function mainFailsafe()
     while true do
-        local event, code, msg = os.pullEvent()
+        local event, int, code, msg = os.pullEvent("stargate_reset")
         if event == "stargate_reset" and code < 0 and msg ~= "interrupted_by_incoming_connection" then
             fancyReboot()
             return
@@ -1296,9 +1320,9 @@ local function irisControlThread()
                 if correct and (sg.isWormholeOpen() or not sg.isStargateConnected()) then
                     sg.openIris()
                 end
-            elseif data[1] == "stargate_incoming_wormhole" then
+            elseif data[1] == "stargate_incoming_connection" then
                 sg.closeIris()
-            elseif data[1] == "stargate_outgoing_wormhole" then
+            elseif (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and sg.isStargateConnected()) then
                 sg.openIris()
             elseif data[1] == "stargate_disconnected" then
                 sg.openIris()
@@ -1311,9 +1335,9 @@ local function irisAntiKawooshThread()
     while true do
         local data = {os.pullEvent()}
         if config.iris_anti_kawoosh then
-            if data[1] == "stargate_incoming_wormhole" or data[1] == "stargate_outgoing_wormhole" then
+            if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and sg.isStargateConnected()) then
                 sg.closeIris()
-                if not config.iris_control or data[1] == "stargate_outgoing_wormhole"  then
+                if not config.iris_control or data[1] == "stargate_chevron_engaged" or data[1] == "anti_kawoosh_await"  then
                     repeat
                         sleep(0.25)
                     until sg.isWormholeOpen() or not sg.isStargateConnected()
@@ -1381,6 +1405,7 @@ if not stat then
     if err == "Terminated" then
         fancyReboot()
     else
+        log_to_file(err)
         error(err)
     end
 end

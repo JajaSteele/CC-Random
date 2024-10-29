@@ -1,4 +1,4 @@
-local script_version = "1.6"
+local script_version = "1.7"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -556,9 +556,9 @@ end
 local function lastAddressThread()
     while true do
         local event = {os.pullEvent()}
-        if (event[1] == "stargate_incoming_wormhole" and (event[2] and event[2] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
+        if (event[1] == "stargate_incoming_wormhole" and (event[3] and event[3] ~= {})) or (event[1] == "stargate_outgoing_wormhole") then
             local old_last_address = table.concat(last_address, " ")
-            last_address = event[2]
+            last_address = event[3]
             if event[1] == "stargate_incoming_wormhole" then
                 repeat
                     sleep(0.5)

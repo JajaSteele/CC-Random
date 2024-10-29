@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -120,7 +120,9 @@ local function playTTS(msg, voice_name)
 end
 
 local feedback_blacklist = {
-    {code=-26, name="interrupted_by_incoming_connection"}
+    {code=-30, name="interrupted_by_incoming_connection"},
+    {code=7, name="connection_ended.disconnect"},
+    {code=8, name="connection_ended.point_of_origin"}
 }
 local is_energy_reached = false
 local has_announced_energy = false
@@ -206,11 +208,11 @@ local function mainTTS()
             end
             passed_entities = 0
         elseif event[1] == "stargate_reset" then
-            if checkFeedbackBlacklist(event[3]) then
+            if checkFeedbackBlacklist(event[4]) then
                 sleep(1.5)
                 print("stargate_reset")
                 is_active = false
-                playTTS("Gate failure detected; "..event[3]:gsub("_"," "))
+                playTTS("Gate failure detected; "..event[4]:gsub("_"," "))
                 if passed_entities > 0 then
                     playTTS(passed_entities.." entit"..(((passed_entities > 1) and "ies have") or "y has").." used the gate.")
                 end

@@ -58,11 +58,11 @@ end
 
 print("")
 print("-= Current Config =-")
-print("Outgoing = "..config.outgoing)
-print("Incoming = "..config.incoming)
-print("Idle = "..config.idle)
-print("Charge = "..config.charge)
-print("Await Wormhole = "..tostring(config.await_wormhole))
+print("Outgoing = "..(config.outgoing or "?"))
+print("Incoming = "..(config.incoming or "?"))
+print("Idle = "..(config.idle or "?"))
+print("Charge = "..(config.charge or "?"))
+print("Await Wormhole = "..tostring((config.await_wormhole or "?")))
 print("")
 
 if interface.isStargateConnected and interface.isStargateConnected() then

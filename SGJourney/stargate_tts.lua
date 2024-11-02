@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -147,27 +147,33 @@ end
 local function addressLookup(lookup_value)
     if modem then
         if not lookup_value then
+            print("Lookup Name: ".."Unknown Address (No lookup value)")
             return {name="Unknown Address"}
         end
 
         local id_to_send = settings.get("sg_tts.addressbook_id")
         if type(lookup_value) == "string" then
             rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_name")
+            print("Looking up: "..lookup_value)
         elseif type(lookup_value) == "table" then
             rednet.send(id_to_send, lookup_value, "jjs_sg_lookup_address")
+            print("Looking up: "..table.concat(lookup_value, "-"))
         end
 
         for i1=1, 5 do
             local id, msg, protocol = rednet.receive(nil, 0.25)
             if id == id_to_send then
                 if protocol == "jjs_sg_lookup_return" then
+                    print("Lookup Name: "..msg.name)
                     return msg
                 else
+                    print("Lookup Name: ".."Unknown Address (No returned message)")
                     return {name="Unknown Address"}
                 end
             end
         end
     end
+    print("Lookup Name: ".."Unknown Address (No response)")
     return {name="Unknown Address"}
 end
 
@@ -191,9 +197,9 @@ local function mainTTS()
             sleep(1.5)
             print("stargate_wormhole")
             if event[1] == "stargate_incoming_wormhole" then
-                playTTS("Incoming gate connection from "..(addressLookup(event[2]) or {name="UNKNOWN ADDRESS"}).name)
+                playTTS("Incoming gate connection from "..(addressLookup(event[3]) or {name="UNKNOWN ADDRESS"}).name)
             else
-                playTTS("Gate successfully connected to "..(addressLookup(event[2]) or {name="UNKNOWN ADDRESS"}).name)
+                playTTS("Gate successfully connected to "..(addressLookup(event[3]) or {name="UNKNOWN ADDRESS"}).name)
             end
             passed_entities = 0
         elseif event[1] == "stargate_disconnected" then

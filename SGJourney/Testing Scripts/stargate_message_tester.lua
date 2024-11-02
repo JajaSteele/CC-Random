@@ -1,8 +1,8 @@
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
 local stat, err = pcall(function()
-    print("Waiting for incoming wormhole")
-    os.pullEvent("stargate_incoming_wormhole")
+    print("Waiting for incoming connection")
+    os.pullEvent("stargate_incoming_connection")
     interface.sendStargateMessage("connection")
 end)
 if not stat then

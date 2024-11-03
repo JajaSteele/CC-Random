@@ -68,7 +68,9 @@ if modem then
     modem.open(2707)
 end
 
-local function fill(x,y,x1,y1,bg,fg,char)
+local function fill(x,y,x1,y1,bg,fg,char, target)
+    local curr_term = term.current()
+    term.redirect(target or curr_term)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
     local old_posx,old_posy = term.getCursorPos()
@@ -87,11 +89,14 @@ local function fill(x,y,x1,y1,bg,fg,char)
     term.setTextColor(old_fg)
     term.setBackgroundColor(old_bg)
     term.setCursorPos(old_posx,old_posy)
+    term.redirect(curr_term)
 end
 
 local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
 
-local function rect(x,y,x1,y1,bg,fg,char)
+local function rect(x,y,x1,y1,bg,fg,char, target)
+    local curr_term = term.current()
+    term.redirect(target or curr_term)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
     local old_posx,old_posy = term.getCursorPos()
@@ -120,9 +125,12 @@ local function rect(x,y,x1,y1,bg,fg,char)
     term.setTextColor(old_fg)
     term.setBackgroundColor(old_bg)
     term.setCursorPos(old_posx,old_posy)
+    term.redirect(curr_term)
 end
 
-local function write(x,y,text,bg,fg)
+local function write(x,y,text,bg,fg, target)
+    local curr_term = term.current()
+    term.redirect(target or curr_term)
     local old_posx,old_posy = term.getCursorPos()
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()
@@ -140,6 +148,7 @@ local function write(x,y,text,bg,fg)
     term.setTextColor(old_fg)
     term.setBackgroundColor(old_bg)
     term.setCursorPos(old_posx,old_posy)
+    term.redirect(curr_term)
 end
 
 local function split(s, delimiter)
@@ -1303,6 +1312,7 @@ local function filterBook(filter)
 end
 
 filterBook("")
+local list_window = window.create(term.current(), 1, 2, w, h-4)
 local function listThread()
     while true do
         local old_x, old_y = term.getCursorPos()
@@ -1315,33 +1325,35 @@ local function listThread()
 
         click_index = {}
         local entry_index = 1
-        local height = 2
+        local height = 1
         local last_height = height
+
+        list_window.setVisible(false)
         while true do
             local selected_num = (entry_index)+scroll
             local selected_address = filtered_book[selected_num]
             if selected_address then
                 last_height = height
-                fill(1,height, w, height, colors.black, colors.white, " ")
+                fill(1,height, w, height, colors.black, colors.white, " ", list_window)
                 local address_string = addressToString(selected_address.address, "-", true)
 
                 if not config.pocket_mode or (config.pocket_mode and not pocket_show_address) then
-                    term.setCursorPos(1, height)
-                    term.write((selected_address.index or selected_num)..".")
+                    list_window.setCursorPos(1, height)
+                    list_window.write((selected_address.index or selected_num)..".")
                     if selected_address.security == "public" then
-                        term.setTextColor(colors.lime)
-                        term.write("\x6F ")
+                        list_window.setTextColor(colors.lime)
+                        list_window.write("\x6F ")
                     else
-                        term.setTextColor(colors.red)
-                        term.write("\xF8 ")
+                        list_window.setTextColor(colors.red)
+                        list_window.write("\xF8 ")
                     end
-                    term.setTextColor(colors.white)
-                    term.write(selected_address.name)
+                    list_window.setTextColor(colors.white)
+                    list_window.write(selected_address.name)
                 end
                 
                 if not config.pocket_mode or (config.pocket_mode and pocket_show_address) then
-                    term.setCursorPos(w-#address_string, height)
-                    term.write(address_string)
+                    list_window.setCursorPos(w-#address_string, height)
+                    list_window.write(address_string)
                 end
                 click_index[height] = {
                     data = selected_address,
@@ -1351,10 +1363,11 @@ local function listThread()
             end
             entry_index = entry_index+1
             if entry_index >= h-3 then
-                fill(1, last_height+1, w, h-3, colors.black, colors.white, " ")
+                fill(1, last_height+1, w, h-3, colors.black, colors.white, " ", list_window)
                 break
             end
         end
+        list_window.setVisible(true)
         term.setCursorPos(old_x, old_y)
         os.pullEvent("drawList")
     end

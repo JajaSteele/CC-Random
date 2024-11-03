@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -1250,36 +1250,59 @@ local is_on_terminal = false
 loadSave()
 term.clear()
 
-local function command_autocomplete(text)
-    input_text = text
-    local cmd_split = split(text, " ")
-    local cmd_completion = {}
-    cmd_completion = getCommandList()
-    if isCommand(cmd_split[1]) or isCommand(text) then
-        local cmd = getCommand(cmd_split[1])
-        fill(11, h-2, w, h-2, colors.black, colors.white, " ")
-        local old_x, old_y = term.getCursorPos()
-        term.setCursorPos(11, h-2)
-        term.setTextColor(colors.lightGray)
-        local arg_names = getArgNames(cmd)
-        
-        for k,v in ipairs(arg_names) do
-            if (cmd_split[k+1] or "") ~= ""  then
-                term.write(cmd_split[k+1].." ")
-            else
-                term.write(v.." ")
-            end
-        end
+local search_mode = false
 
-        term.setTextColor(colors.white)
-        term.setCursorPos(old_x, old_y)
+local function command_autocomplete(text)
+    if not search_mode then
+        input_text = text
+        local cmd_split = split(text, " ")
+        local cmd_completion = {}
+        cmd_completion = getCommandList()
+        if isCommand(cmd_split[1]) or isCommand(text) then
+            local cmd = getCommand(cmd_split[1])
+            fill(11, h-2, w, h-2, colors.black, colors.white, " ")
+            local old_x, old_y = term.getCursorPos()
+            term.setCursorPos(11, h-2)
+            term.setTextColor(colors.lightGray)
+            local arg_names = getArgNames(cmd)
+            
+            for k,v in ipairs(arg_names) do
+                if (cmd_split[k+1] or "") ~= ""  then
+                    term.write(cmd_split[k+1].." ")
+                else
+                    term.write(v.." ")
+                end
+            end
+
+            term.setTextColor(colors.white)
+            term.setCursorPos(old_x, old_y)
+        else
+            fill(11, h-2, w, h-2, colors.black, colors.white, " ")
+            write(11, h-2, getCommandNameList(), colors.black, colors.lightGray)
+        end
+        return completion.choice(text, cmd_completion)
     else
-        fill(11, h-2, w, h-2, colors.black, colors.white, " ")
-        write(11, h-2, getCommandNameList(), colors.black, colors.lightGray)
+        return completion.choice(text, {})
     end
-    return completion.choice(text, cmd_completion)
+end
+local search_filter = ""
+local click_index = {}
+local filtered_book = {}
+local function filterBook(filter)
+    filtered_book = {}
+    for k,v in ipairs(address_book) do
+        if (v.name):lower():match(filter:lower()) then
+            filtered_book[#filtered_book+1] = {
+                name = v.name,
+                address = v.address,
+                security = v.security,
+                index = k
+            }
+        end
+    end
 end
 
+filterBook("")
 local function listThread()
     while true do
         local old_x, old_y = term.getCursorPos()
@@ -1289,16 +1312,22 @@ local function listThread()
         if config.master_id then
             term.write(" <"..tostring(config.master_id)..">")
         end
-        for i1=1, h-4 do
-            local selected_num = i1+scroll
-            local selected_address = address_book[selected_num]
+
+        click_index = {}
+        local entry_index = 1
+        local height = 2
+        local last_height = height
+        while true do
+            local selected_num = (entry_index)+scroll
+            local selected_address = filtered_book[selected_num]
             if selected_address then
-                fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
+                last_height = height
+                fill(1,height, w, height, colors.black, colors.white, " ")
                 local address_string = addressToString(selected_address.address, "-", true)
 
                 if not config.pocket_mode or (config.pocket_mode and not pocket_show_address) then
-                    term.setCursorPos(1, 1+i1)
-                    term.write(selected_num..".")
+                    term.setCursorPos(1, height)
+                    term.write((selected_address.index or selected_num)..".")
                     if selected_address.security == "public" then
                         term.setTextColor(colors.lime)
                         term.write("\x6F ")
@@ -1311,11 +1340,19 @@ local function listThread()
                 end
                 
                 if not config.pocket_mode or (config.pocket_mode and pocket_show_address) then
-                    term.setCursorPos(w-#address_string, 1+i1)
+                    term.setCursorPos(w-#address_string, height)
                     term.write(address_string)
                 end
-            else
-                fill(1,1+i1, w, 1+i1, colors.black, colors.white, " ")
+                click_index[height] = {
+                    data = selected_address,
+                    index = selected_address.index or selected_num
+                }
+                height = height+1
+            end
+            entry_index = entry_index+1
+            if entry_index >= h-3 then
+                fill(1, last_height+1, w, h-3, colors.black, colors.white, " ")
+                break
             end
         end
         term.setCursorPos(old_x, old_y)
@@ -1333,22 +1370,33 @@ local function consoleThread()
         term.setTextColor(colors.white)
 
         term.setCursorPos(1,h-1)
-        term.write("> ")
+        if search_mode then
+            term.write("? ")
+        else
+            term.write("> ")
+        end
 
         is_on_terminal = true
 
         local input_cmd = read(nil, nil, command_autocomplete, "")
-        local split_cmd = split(input_cmd, " ")
+        if search_mode then
+            search_filter = input_cmd
+            filterBook(search_filter)
+            os.queueEvent("drawList")
+            search_mode = false
+        else
+            local split_cmd = split(input_cmd, " ")
 
-        local cmd_data = getCommand(split_cmd[1])
-        if cmd_data then
-            local stat, err = pcall(cmd_data.func, table.unpack(split_cmd, 2))
-            if not stat then error(err) end
+            local cmd_data = getCommand(split_cmd[1])
+            if cmd_data then
+                local stat, err = pcall(cmd_data.func, table.unpack(split_cmd, 2))
+                if not stat then error(err) end
+            end
+
+            os.queueEvent("drawList")
+
+            is_on_terminal = false
         end
-
-        os.queueEvent("drawList")
-
-        is_on_terminal = false
 
         sleep(0.25)
     end
@@ -1371,7 +1419,7 @@ end
 local function keyThread()
     while true do
         local event, key, holding = os.pullEvent()
-        if (event == "key" or event == "key_up") and not holding and not is_on_help then
+        if (event == "key" or event == "key_up" or event == "char") and not holding and not is_on_help then
             if event == "key" then
                 if key == keys.leftShift or key == keys.rightShift then
                     hold_shift = true
@@ -1453,6 +1501,12 @@ local function keyThread()
                     hold_ctrl = false
                     os.queueEvent("drawList")
                 end
+            elseif event == "char" then
+                if key == "?" then
+                    write(1, h-1, "?")
+                    search_mode = true
+                    os.queueEvent("key", keys.backspace, false)
+                end
             end
         end
     end
@@ -1494,29 +1548,32 @@ local function clickThread()
     while true do
         local event, button, x, y = os.pullEvent()
         if (event == "mouse_click" or event == "monitor_touch") and y > 1 and y < h-2 and is_on_terminal then
-            local entry_num = (y-1)+scroll
-            local text_to_input = ""
-            local auto_enter = false
-            local full_erase = true
-            if hold_shift or button == 3 then
-                text_to_input = "sg quickdial "..entry_num
-                auto_enter = true
-            else
-                text_to_input = tostring(entry_num)
-                full_erase = false
-            end
-
-            if full_erase then
-                for i1=1, #input_text do
-                    os.queueEvent("key", keys.backspace, false)
+            local tar_index = click_index[y]
+            if tar_index then
+                local entry_num = tar_index.index
+                local text_to_input = ""
+                local auto_enter = false
+                local full_erase = true
+                if hold_shift or button == 3 then
+                    text_to_input = "sg quickdial "..entry_num
+                    auto_enter = true
+                else
+                    text_to_input = tostring(entry_num)
+                    full_erase = false
                 end
-            end
 
-            for i1=1, #text_to_input do
-                os.queueEvent("char", text_to_input:sub(i1,i1))
-            end
-            if auto_enter then
-                os.queueEvent("key", keys.enter, false)
+                if full_erase then
+                    for i1=1, #input_text do
+                        os.queueEvent("key", keys.backspace, false)
+                    end
+                end
+
+                for i1=1, #text_to_input do
+                    os.queueEvent("char", text_to_input:sub(i1,i1))
+                end
+                if auto_enter then
+                    os.queueEvent("key", keys.enter, false)
+                end
             end
         end
     end

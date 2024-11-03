@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -1355,7 +1355,7 @@ local function listThread()
                     list_window.setCursorPos(w-#address_string, height)
                     list_window.write(address_string)
                 end
-                click_index[height] = {
+                click_index[height+1] = {
                     data = selected_address,
                     index = selected_address.index or selected_num
                 }

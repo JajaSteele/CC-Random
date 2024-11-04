@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -362,6 +362,24 @@ local function addressToString(address, separator, hasPrefixSuffix)
     end
     if hasPrefixSuffix then output = output..separator end
     return output
+end
+
+local search_mode = false
+local search_filter = ""
+local click_index = {}
+local filtered_book = {}
+local function filterBook(filter)
+    filtered_book = {}
+    for k,v in ipairs(address_book) do
+        if (v.name):lower():match(filter:lower()) then
+            filtered_book[#filtered_book+1] = {
+                name = v.name,
+                address = v.address,
+                security = v.security,
+                index = k
+            }
+        end
+    end
 end
 
 local commands
@@ -972,6 +990,7 @@ commands = {
                     if not is_displaying_cmd then
                         term.setCursorPos(1,1)
                         term.setTextColor(colors.white)
+                        term.clearLine()
                         term.write("Command Guide")
                         fill(1,2, w, h-1, colors.black, colors.white, " ")
                         term.setCursorPos(1,2)
@@ -981,8 +1000,12 @@ commands = {
                             local cmd_entry = commands[cmd_entry_num]
 
                             if cmd_entry then
+                                count = count+1
                                 term.setTextColor(colors.yellow)
                                 print(cmd_entry.main)
+                            end
+                            if count >= h-2 then
+                                break
                             end
                         end
                     end
@@ -1181,6 +1204,66 @@ commands = {
             "Dials the last connected address on the nearest gate",
             "You can also press F6 to execute the command quickly"
         }
+    },
+    {
+        main="search",
+        args = {
+            {name="filter", type="str", outline="[]", desc="Directly set the filter"}
+        },
+        func = function(...)
+            local args = {...}
+            if args[1] then
+                write(1, h-1, "?")
+                search_filter = table.concat(args, " ")
+                filterBook(search_filter)
+                os.queueEvent("drawList")
+            else
+                write(1, h-1, "?")
+                search_mode = true
+                os.queueEvent("key", keys.backspace, false)
+                os.queueEvent("paste", search_filter)
+                fill(1, h-2, w, h-2, colors.black, colors.lightBlue, " ")
+                write(1, h-2, "Search Filter:", colors.black, colors.lightBlue)
+            end
+        end,
+        short_description = {
+            "Opens the search filter input box (or sets one directly)"
+        },
+        long_description={
+            "Opens the search filter input box",
+            "If there is any arguments, they will be applied as filter directly",
+            "You can also press '?' to open the search prompt"
+        }
+    },
+    {
+        main="find",
+        args = {
+            {name="filter", type="str", outline="[]", desc="Directly set the filter"}
+        },
+        func = function(...)
+            local args = {...}
+            if args[1] then
+                write(1, h-1, "?")
+                search_filter = table.concat(args, " ")
+                filterBook(search_filter)
+                os.queueEvent("drawList")
+            else
+                write(1, h-1, "?")
+                search_mode = true
+                os.queueEvent("key", keys.backspace, false)
+                os.queueEvent("paste", search_filter)
+                fill(1, h-2, w, h-2, colors.black, colors.lightBlue, " ")
+                write(1, h-2, "Search Filter:", colors.black, colors.lightBlue)
+            end
+        end,
+        short_description = {
+            "Opens the search filter input box (or sets one directly)"
+        },
+        long_description={
+            "Opens the search filter input box",
+            "If there is any arguments, they will be applied as filter directly",
+            "You can also press '?' to open the search prompt"
+        }
     }
 }
 
@@ -1259,7 +1342,7 @@ local is_on_terminal = false
 loadSave()
 term.clear()
 
-local search_mode = false
+filterBook("")
 
 local function command_autocomplete(text)
     if not search_mode then
@@ -1294,24 +1377,6 @@ local function command_autocomplete(text)
         return completion.choice(text, {})
     end
 end
-local search_filter = ""
-local click_index = {}
-local filtered_book = {}
-local function filterBook(filter)
-    filtered_book = {}
-    for k,v in ipairs(address_book) do
-        if (v.name):lower():match(filter:lower()) then
-            filtered_book[#filtered_book+1] = {
-                name = v.name,
-                address = v.address,
-                security = v.security,
-                index = k
-            }
-        end
-    end
-end
-
-filterBook("")
 local list_window = window.create(term.current(), 1, 2, w, h-4)
 local function listThread()
     while true do
@@ -1332,39 +1397,45 @@ local function listThread()
         while true do
             local selected_num = (entry_index)+scroll
             local selected_address = filtered_book[selected_num]
-            if selected_address then
-                last_height = height
+            if search_filter ~= "" and height == 1 then
                 fill(1,height, w, height, colors.black, colors.white, " ", list_window)
-                local address_string = addressToString(selected_address.address, "-", true)
-
-                if not config.pocket_mode or (config.pocket_mode and not pocket_show_address) then
-                    list_window.setCursorPos(1, height)
-                    list_window.write((selected_address.index or selected_num)..".")
-                    if selected_address.security == "public" then
-                        list_window.setTextColor(colors.lime)
-                        list_window.write("\x6F ")
-                    else
-                        list_window.setTextColor(colors.red)
-                        list_window.write("\xF8 ")
-                    end
-                    list_window.setTextColor(colors.white)
-                    list_window.write(selected_address.name)
-                end
-                
-                if not config.pocket_mode or (config.pocket_mode and pocket_show_address) then
-                    list_window.setCursorPos(w-#address_string, height)
-                    list_window.write(address_string)
-                end
-                click_index[height+1] = {
-                    data = selected_address,
-                    index = selected_address.index or selected_num
-                }
+                write(1, height, "?: "..search_filter, colors.black, colors.lightBlue, list_window)
                 height = height+1
-            end
-            entry_index = entry_index+1
-            if entry_index >= h-3 then
-                fill(1, last_height+1, w, h-3, colors.black, colors.white, " ", list_window)
-                break
+            else
+                if selected_address then
+                    last_height = height
+                    fill(1,height, w, height, colors.black, colors.white, " ", list_window)
+                    local address_string = addressToString(selected_address.address, "-", true)
+
+                    if not config.pocket_mode or (config.pocket_mode and not pocket_show_address) then
+                        list_window.setCursorPos(1, height)
+                        list_window.write((selected_address.index or selected_num)..".")
+                        if selected_address.security == "public" then
+                            list_window.setTextColor(colors.lime)
+                            list_window.write("\x6F ")
+                        else
+                            list_window.setTextColor(colors.red)
+                            list_window.write("\xF8 ")
+                        end
+                        list_window.setTextColor(colors.white)
+                        list_window.write(selected_address.name)
+                    end
+                    
+                    if not config.pocket_mode or (config.pocket_mode and pocket_show_address) then
+                        list_window.setCursorPos(w-#address_string, height)
+                        list_window.write(address_string)
+                    end
+                    click_index[height+1] = {
+                        data = selected_address,
+                        index = selected_address.index or selected_num
+                    }
+                    height = height+1
+                end
+                entry_index = entry_index+1
+                if entry_index >= h-3 then
+                    fill(1, last_height+1, w, h-3, colors.black, colors.white, " ", list_window)
+                    break
+                end
             end
         end
         list_window.setVisible(true)
@@ -1374,18 +1445,25 @@ local function listThread()
 end
 local function consoleThread()
     while true do
-        term.setCursorPos(1,h-2)
-        fill(1,h-2, w,h-1, colors.black, colors.white, " ")
-        term.write("Commands: ")
-        term.setTextColor(colors.lightGray)
-        local cmd_list = getCommandNameList()
-        term.write(cmd_list)
-        term.setTextColor(colors.white)
-
-        term.setCursorPos(1,h-1)
         if search_mode then
+            term.setCursorPos(1,h-2)
+            fill(1,h-2, w,h-1, colors.black, colors.white, " ")
+            term.setTextColor(colors.lightBlue)
+            term.write("Search Filter: ")
+            term.setTextColor(colors.white)
+
+            term.setCursorPos(1,h-1)
             term.write("? ")
         else
+            term.setCursorPos(1,h-2)
+            fill(1,h-2, w,h-1, colors.black, colors.white, " ")
+            term.write("Commands: ")
+            term.setTextColor(colors.lightGray)
+            local cmd_list = getCommandNameList()
+            term.write(cmd_list)
+            term.setTextColor(colors.white)
+
+            term.setCursorPos(1,h-1)
             term.write("> ")
         end
 
@@ -1419,7 +1497,7 @@ local function scrollThread()
     while true do
         local event, scroll_input, x, y = os.pullEvent("mouse_scroll")
         if is_on_terminal and not is_on_help then
-            scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#address_book-(h-4), 0, #address_book)))
+            scroll = math.ceil(clamp(scroll+(scroll_input*3), 0, clamp(#filtered_book-(h-4), 0, #filtered_book)))
             os.queueEvent("drawList")
         end
         if is_on_help then
@@ -1519,6 +1597,9 @@ local function keyThread()
                     write(1, h-1, "?")
                     search_mode = true
                     os.queueEvent("key", keys.backspace, false)
+                    os.queueEvent("paste", search_filter)
+                    fill(1, h-2, w, h-2, colors.black, colors.lightBlue, " ")
+                    write(1, h-2, "Search Filter:", colors.black, colors.lightBlue)
                 end
             end
         end
@@ -1562,7 +1643,20 @@ local function clickThread()
         local event, button, x, y = os.pullEvent()
         if (event == "mouse_click" or event == "monitor_touch") and y > 1 and y < h-2 and is_on_terminal then
             local tar_index = click_index[y]
-            if tar_index then
+            if y == 2 and search_filter ~= "" then
+                if button == 1 then
+                    write(1, h-1, "?")
+                    search_mode = true
+                    os.queueEvent("key", keys.backspace, false)
+                    os.queueEvent("paste", search_filter)
+                    fill(1, h-2, w, h-2, colors.black, colors.lightBlue, " ")
+                    write(1, h-2, "Search Filter:", colors.black, colors.lightBlue)
+                elseif button == 2 then
+                    search_filter = ""
+                    filterBook(search_filter)
+                    os.queueEvent("drawList")
+                end
+            elseif tar_index then
                 local entry_num = tar_index.index
                 local text_to_input = ""
                 local auto_enter = false

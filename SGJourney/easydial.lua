@@ -1,4 +1,4 @@
-local script_version = "1.16"
+local script_version = "1.17"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -1349,7 +1349,7 @@ local function irisControlThread()
         local data = {os.pullEvent()}
         if config.iris_control then
             if data[1] == "transceiver_transmission_received" then
-                local event, freq, code, correct = table.unpack(data)
+                local event, int, freq, code, correct = table.unpack(data)
                 if correct and (sg.isWormholeOpen() or not sg.isStargateConnected()) then
                     sg.openIris()
                 end

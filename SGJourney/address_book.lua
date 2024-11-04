@@ -1,4 +1,4 @@
-local script_version = "1.3"
+local script_version = "1.4"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -380,6 +380,7 @@ local function filterBook(filter)
             }
         end
     end
+    scroll = 0
 end
 
 local commands

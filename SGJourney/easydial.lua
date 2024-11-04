@@ -1,4 +1,4 @@
-local script_version = "1.14"
+local script_version = "1.15"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
@@ -1384,13 +1384,13 @@ end
 if sg.isStargateConnected() then
     if sg.isStargateDialingOut() then
         if sg.getConnectedAddress then
-            os.queueEvent("stargate_outgoing_wormhole", sg.getConnectedAddress())
+            os.queueEvent("stargate_outgoing_wormhole", peripheral.getName(sg), sg.getConnectedAddress())
         else
             os.queueEvent("stargate_outgoing_wormhole", nil)
         end
     else
     if sg.getConnectedAddress then
-        os.queueEvent("stargate_incoming_wormhole", sg.getConnectedAddress())
+        os.queueEvent("stargate_incoming_wormhole", peripheral.getName(sg), sg.getConnectedAddress())
     else
         os.queueEvent("stargate_incoming_wormhole", nil)
         end

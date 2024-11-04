@@ -1,4 +1,4 @@
-local script_version = "1.13"
+local script_version = "1.14"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 
@@ -1081,12 +1081,12 @@ local function gateMonitor()
             if event[1] == "stargate_incoming_wormhole" then
                 screensaver_text = "  Incoming Wormhole  "
                 screensaver_color = colors.orange
-                if event[2] then
-                    local address_incoming = addressLookupCached(event[2])
+                if event[3] then
+                    local address_incoming = addressLookupCached(event[3])
                     if address_incoming then
-                        status_text = address_incoming.name or table.concat(event[2], "-")
+                        status_text = address_incoming.name or table.concat(event[3], "-")
                     else
-                        status_text = table.concat(event[2], "-")
+                        status_text = table.concat(event[3], "-")
                     end
                     status_color = colors.yellow
                     if monitor and config.monitor then
@@ -1102,12 +1102,12 @@ local function gateMonitor()
             elseif event[1] == "stargate_outgoing_wormhole" and not is_dialing then
                 screensaver_text = "  Outgoing Wormhole  "
                 screensaver_color = colors.green
-                if event[2] then
-                    local address_outgoing = addressLookupCached(event[2])
+                if event[3] then
+                    local address_outgoing = addressLookupCached(event[3])
                     if address_outgoing then
-                        status_text = address_outgoing.name or table.concat(event[2], "-")
+                        status_text = address_outgoing.name or table.concat(event[3], "-")
                     else
-                        status_text = table.concat(event[2], "-")
+                        status_text = table.concat(event[3], "-")
                     end
                     status_color = colors.yellow
                     if monitor and config.monitor then

@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -50,6 +50,7 @@ end
 local interface = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local speakers = {peripheral.find("speaker")}
 local completion = require("cc.completion")
+local transceiver = peripheral.find("transceiver")
 
 local modems = {peripheral.find("modem")}
 local modem
@@ -83,12 +84,15 @@ end
 
 local dfpwm = require("cc.audio.dfpwm")
 local decoder = dfpwm.make_decoder()
-local tts_address = "http://jajasteele.duckdns.org:2456/"
+local tts_address = "http://jajasteele.mooo.com:2456/"
 local voice = "Microsoft Michelle Online"
 
 local speaker_audio_threads = {}
 
+local audio_available = true
+
 local function playAudio(link)
+    audio_available = false
     local request = http.get(link,nil,true)
     if request then
         while true do
@@ -113,9 +117,15 @@ local function playAudio(link)
     else
         print("Couldn't reach TTS Server")
     end
+    audio_available = true
 end
 
 local function playTTS(msg, voice_name)
+    if not audio_available then
+        repeat
+            sleep(0.5)
+        until audio_available
+    end
     playAudio(tts_address.."?tts="..textutils.urlEncode(msg).."&voice="..textutils.urlEncode(voice_name or voice))
 end
 
@@ -183,6 +193,14 @@ local passed_entities = 0
 playTTS("Gate TTS is now online.")
 print("Gate TTS is now online, address book id: "..(settings.get("sg_tts.addressbook_id") or "NO MODEM"))
 
+local important_warning = ""
+local function addWarn(txt)
+    if important_warning == "" then
+        important_warning = "Warning: "
+    end
+    important_warning = important_warning.." "..txt
+end
+
 local function mainTTS()
     while true do
         local event = {os.pullEvent()}
@@ -194,16 +212,29 @@ local function mainTTS()
                 playTTS("Gate activation detected.")
             end
         elseif event[1] == "stargate_incoming_wormhole" or event[1] == "stargate_outgoing_wormhole" then
-            sleep(1.5)
+            repeat
+                sleep(0.25)
+            until interface.isWormholeOpen() or not interface.isStargateConnected()
             print("stargate_wormhole")
             if event[1] == "stargate_incoming_wormhole" then
                 playTTS("Incoming gate connection from "..(addressLookup(event[3]) or {name="UNKNOWN ADDRESS"}).name)
             else
-                playTTS("Gate successfully connected to "..(addressLookup(event[3]) or {name="UNKNOWN ADDRESS"}).name)
+                local iris_perc = 0
+                if transceiver then
+                    iris_perc = transceiver.checkConnectedShielding() or 0
+                end
+                if iris_perc > 0 then
+                    addWarn("Iris detected,")
+                    print("Iris Detected: "..iris_perc)
+                    os.queueEvent("survey_iris")
+                end
+
+                playTTS(important_warning.." ".."Gate successfully connected to "..(addressLookup(event[3]) or {name="UNKNOWN ADDRESS"}).name)
             end
             passed_entities = 0
         elseif event[1] == "stargate_disconnected" then
-            sleep(1.5)
+            important_warning = ""
+            print("Cleared warnings")
             print("stargate_disconnected")
             is_active = false
             playTTS("Gate is now closed.")
@@ -215,7 +246,8 @@ local function mainTTS()
             passed_entities = 0
         elseif event[1] == "stargate_reset" then
             if checkFeedbackBlacklist(event[4]) then
-                sleep(1.5)
+                important_warning = ""
+                print("Cleared warnings")
                 print("stargate_reset")
                 is_active = false
                 playTTS("Gate failure detected; "..event[4]:gsub("_"," "))
@@ -266,4 +298,41 @@ local function speaker_refresh()
     end
 end
 
-parallel.waitForAll(mainTTS, entityCounter, energyCounter, speaker_refresh)
+local function irisChecker()
+    if transceiver then
+        while true do
+            os.pullEvent("survey_iris")
+            while true do
+                sleep(0.25)
+                local iris_amount = transceiver.checkConnectedShielding()
+                if not iris_amount then
+                    break
+                elseif iris_amount < 5 then
+                    print("Iris opened!")
+                    playTTS("Iris is now open, ready for traversal", voice)
+                    break
+                elseif not interface.isStargateConnected() then
+                    break
+                end
+            end
+        end
+    end
+end
+
+local function stargateMessageListener()
+    while true do
+        local event, int, msg = os.pullEvent("stargate_message_received")
+        local data = textutils.unserialise(msg)
+        if data then
+            if data.protocol == "jjs_sg_warn" then
+                if data.message == "radiation" then
+                    addWarn("Radiation detected,")
+                elseif data.message == "monster" then
+                    addWarn("Monsters detected,")
+                end
+            end
+        end
+    end
+end
+
+parallel.waitForAll(mainTTS, entityCounter, energyCounter, speaker_refresh, irisChecker, stargateMessageListener)

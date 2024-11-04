@@ -33,7 +33,7 @@ end
 
 local function audioPlayer()
     while true do
-        playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode("Testing TTS volume and syncing").."&voice="..textutils.urlEncode("Microsoft Zira Desktop"))
+        playAudio("http://jajasteele.mooo.com:2456/?tts="..textutils.urlEncode("Testing TTS volume and syncing").."&voice="..textutils.urlEncode("Microsoft Zira Desktop"))
         sleep(10)
     end
 end

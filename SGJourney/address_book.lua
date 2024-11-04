@@ -1,4 +1,4 @@
-local script_version = "1.4"
+local script_version = "1.5"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -366,6 +366,7 @@ end
 
 local search_mode = false
 local search_filter = ""
+local old_filter = ""
 local click_index = {}
 local filtered_book = {}
 local function filterBook(filter)
@@ -380,7 +381,11 @@ local function filterBook(filter)
             }
         end
     end
-    scroll = 0
+
+    if old_filter ~= filter then
+        scroll = 0
+    end
+    old_filter = filter
 end
 
 local commands
@@ -425,6 +430,7 @@ commands = {
                     selected_entry.security = "private"
                 end
             end
+            filterBook(search_filter)
         end),
         short_description={
             "Edits the specified entry",
@@ -474,6 +480,7 @@ commands = {
                 end
                 table.insert(address_book, tonumber(entry_num) or #address_book+1, selected_entry)
             end
+            filterBook(search_filter)
         end),
         short_description={
             "Creates a new entry",
@@ -491,6 +498,7 @@ commands = {
         func=(function(...)
             local entry_num = ...
             table.remove(address_book, entry_num)
+            filterBook(search_filter)
         end),
         short_description={
             "Removes the specified entry",
@@ -913,6 +921,7 @@ commands = {
                     rednet.send(selected_id, address_to_send, "jjs_sg_transmit_data")
                 end
             end
+            filterBook(search_filter)
         end),
         short_description={
             "Transfer the specified addresses to another computer",
@@ -952,6 +961,7 @@ commands = {
             sleep(0.5)
             write(1, h-2, "(Not permanent if unsaved)")
             sleep(0.5)
+            filterBook(search_filter)
         end),
         short_description={
             "Temp. clear the address book"
@@ -969,6 +979,7 @@ commands = {
             fill(1, h-2, w, h-1, colors.black, colors.white, " ")
             write(1, h-2, "Reloaded from file!")
             sleep(0.5)
+            filterBook(search_filter)
         end),
         short_description={
             "Reloads the address book"
@@ -1124,6 +1135,7 @@ commands = {
                 write(1, h-2, "Exported to disk")
                 sleep(0.5)
             end
+            filterBook(search_filter)
         end),
         short_description={
             "Imports or exports the addresses to/from the disk/pocket in disk drive"

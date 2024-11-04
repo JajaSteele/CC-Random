@@ -4,6 +4,7 @@ local stat, err = pcall(function()
     print("Waiting for incoming connection")
     os.pullEvent("stargate_incoming_connection")
     interface.sendStargateMessage("connection")
+    print("Connection!")
 end)
 if not stat then
     print("Failed: "..err)
@@ -11,10 +12,9 @@ end
 
 local stat, err = pcall(function()
     print("Waiting for kawoosh to start")
-    repeat
-        sleep()
-    until interface.getOpenTime() > 0
+    os.pullEvent("stargate_incoming_wormhole")
     interface.sendStargateMessage("kawoosh")
+    print("Kawoosh!")
 end)
 if not stat then
     print("Failed: "..err)
@@ -26,6 +26,7 @@ local stat, err = pcall(function()
         sleep()
     until interface.isWormholeOpen()
     interface.sendStargateMessage("formed")
+    print("Formed!")
 end)
 if not stat then
     print("Failed: "..err)

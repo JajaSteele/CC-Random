@@ -1,6 +1,13 @@
-local script_version = "1.15"
+local script_version = "1.16"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
+local env_detector = peripheral.find("environmentDetector")
+local uni_scanner = peripheral.find("universal_scanner")
+
+local sgmsg = {}
+sgmsg.send = function(protocol, message)
+    sg.sendStargateMessage(textutils.serialize({protocol=protocol, message=message}))
+end
 
 local function log_to_file(txt)
     local data = ""
@@ -13,6 +20,30 @@ local function log_to_file(txt)
     local new_io = io.open(".debug.log", "w")
     new_io:write(data)
     new_io:close()
+end
+
+local function checkWarns()
+    print("Checking for warns")
+    if env_detector then
+        local rads = env_detector.getRadiationRaw()
+        if rads*100000 > 1 then
+            sgmsg.send("jjs_sg_warn", "radiation")
+            log_to_file("Rads higher than safe amount! (10µSv)")
+        end
+        log_to_file("Rads = "..(rads*100000).." > 1")
+    end
+    if uni_scanner then
+        local entity_scan = uni_scanner.scan("entity")
+        local monster_count = 0
+        for k,v in pairs(entity_scan) do
+            if v.category == "MONSTER" then
+                monster_count = monster_count+1
+            end
+        end
+        if monster_count > 4 then
+            sgmsg.send("jjs_sg_warn", "monster")
+        end
+    end
 end
 
 local config = {}
@@ -39,12 +70,15 @@ if config.iris_anti_kawoosh == nil then config.iris_anti_kawoosh = false end
 
 print("Checking for iris..")
 if sg.isStargateConnected() and sg.getChevronsEngaged() < 3 and sg.closeIris then
+    checkWarns()
     if (config.iris_control and not sg.isStargateDialingOut()) or config.iris_anti_kawoosh then
         print("Closing iris")
         sg.closeIris()
     end
 end
+local anti_kawoosh_check = false
 if sg.isStargateConnected() and config.iris_anti_kawoosh then
+    anti_kawoosh_check = true
     os.queueEvent("anti_kawoosh_await")
 end
 
@@ -96,7 +130,6 @@ end
 -- END OF AUTO UPDATE
 
 local completion = require("cc.completion")
-
 local is_dialing = false
 
 settings.load()
@@ -1332,21 +1365,35 @@ local function irisControlThread()
 end
 
 local function irisAntiKawooshThread()
+    if anti_kawoosh_check then
+        anti_kawoosh_check = false
+        os.queueEvent("anti_kawoosh_await")
+    end
     while true do
         local data = {os.pullEvent()}
         if config.iris_anti_kawoosh then
             if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and sg.isStargateConnected()) then
+                log_to_file("Started anti kawoosh listener")
                 sg.closeIris()
                 if not config.iris_control or data[1] == "stargate_chevron_engaged" or data[1] == "anti_kawoosh_await"  then
+                    log_to_file("Waiting for kawoosh to finish")
                     repeat
                         sleep(0.25)
                     until sg.isWormholeOpen() or not sg.isStargateConnected()
+                    log_to_file("Kawoosh Finished")
                     sg.openIris()
                 end
             elseif data[1] == "stargate_disconnected" then
                 sg.openIris()
             end
         end
+    end
+end
+
+local function warnSystem()
+    while true do
+        os.pullEvent("stargate_incoming_connection")
+        checkWarns()
     end
 end
 
@@ -1398,7 +1445,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread)
+    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread, warnSystem)
 end)
 
 if not stat then

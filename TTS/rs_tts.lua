@@ -13,7 +13,7 @@ local stat, err = pcall(function()
     else
         local voice_list = {}
 
-        local voice_req = http.get("http://jajasteele.duckdns.org:2456/?listVoices=true", nil, nil)
+        local voice_req = http.get("http://jajasteele.mooo.com:2456/?listVoices=true", nil, nil)
         if voice_req then
             voice_list = textutils.unserialiseJSON(voice_req:readAll())
             voice_req:close()
@@ -61,10 +61,10 @@ local stat, err = pcall(function()
 
         if last_input == 0 and new_input > 0 and config.text_on ~= "none" then
             print("Playing TTS for ON")
-            playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode(config.text_on).."&voice="..textutils.urlEncode(config.voice))
+            playAudio("http://jajasteele.mooo.com:2456/?tts="..textutils.urlEncode(config.text_on).."&voice="..textutils.urlEncode(config.voice))
         elseif last_input > 0 and new_input == 0 and config.text_off ~= "none" then
             print("Playing TTS for OFF")
-            playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode(config.text_off).."&voice="..textutils.urlEncode(config.voice))
+            playAudio("http://jajasteele.mooo.com:2456/?tts="..textutils.urlEncode(config.text_off).."&voice="..textutils.urlEncode(config.voice))
         end
     end
 end)

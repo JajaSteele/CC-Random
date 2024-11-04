@@ -24,7 +24,7 @@ local text = read()
 
 local voice_list = {}
 
-local voice_req = http.get("http://jajasteele.duckdns.org:2456/?listVoices=true", nil, nil)
+local voice_req = http.get("http://jajasteele.mooo.com:2456/?listVoices=true", nil, nil)
 if voice_req then
     voice_list = textutils.unserialiseJSON(voice_req:readAll())
     voice_req:close()
@@ -33,4 +33,4 @@ end
 print("Enter Voice:")
 local voice = read(nil, nil, function(text) return completion.choice(text, voice_list) end)
 
-playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode(text).."&voice="..textutils.urlEncode(voice))
+playAudio("http://jajasteele.mooo.com:2456/?tts="..textutils.urlEncode(text).."&voice="..textutils.urlEncode(voice))

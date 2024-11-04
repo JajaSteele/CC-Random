@@ -12,7 +12,7 @@ local blacklist = {
 
 local dfpwm = require("cc.audio.dfpwm")
 local decoder = dfpwm.make_decoder()
-local tts_address = "http://jajasteele.duckdns.org:2456/"
+local tts_address = "http://jajasteele.mooo.com:2456/"
 local voice = "Microsoft Zira Desktop"
 
 local speaker = peripheral.wrap("back")

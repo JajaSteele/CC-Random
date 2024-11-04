@@ -132,7 +132,7 @@ local function mainThread()
         --        write(1,4, "! SERVER IS LOADING !", colors.black, colors.blue)
         --        write(1,5, "(Or at least it should be)", colors.black, colors.blue)
     --
-        --        playAudio("http://jajasteele.duckdns.org:7277/?vidid="..textutils.urlEncode(youtube_id))
+        --        playAudio("http://jajasteele.mooo.com:7277/?vidid="..textutils.urlEncode(youtube_id))
         --    end
     end
 end
@@ -291,7 +291,7 @@ local function inputThread()
             else
                 youtube_id = playlist_url:match("[?&]v=(...........)")
             end
-            local playlist_req = http.get("http://jajasteele.duckdns.org:7277/?playlist="..playlist_id.."&vidid="..youtube_id, nil, nil)
+            local playlist_req = http.get("http://jajasteele.mooo.com:7277/?playlist="..playlist_id.."&vidid="..youtube_id, nil, nil)
             local playlist_list = {}
             if playlist_req then
                 playlist_list = split(playlist_req:readAll(), "\n")
@@ -361,7 +361,7 @@ local function audioThread()
                 local current_id = playlist[play_position]
                 if current_id then
                     write(1, height, "Loading..", colors.black, colors.blue, true)
-                    playAudio("http://jajasteele.duckdns.org:7277/?vidid="..textutils.urlEncode(current_id))
+                    playAudio("http://jajasteele.mooo.com:7277/?vidid="..textutils.urlEncode(current_id))
                     if not skip_mode then
                         play_position = play_position+1
                         os.queueEvent("redrawPlaylist")

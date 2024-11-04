@@ -66,7 +66,7 @@ local function ttsThread()
     while true do
         local last_queue = tts_queue[1]
         if last_queue then
-            playAudio("http://jajasteele.duckdns.org:2456/?tts="..textutils.urlEncode(last_queue.msg).."&voice="..textutils.urlEncode(last_queue.voice))
+            playAudio("http://jajasteele.mooo.com:2456/?tts="..textutils.urlEncode(last_queue.msg).."&voice="..textutils.urlEncode(last_queue.voice))
             table.remove(tts_queue, 1)
             sleep(0.5)
         else

@@ -1,4 +1,4 @@
-local script_version = "1.17"
+local script_version = "1.18"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -23,14 +23,11 @@ local function log_to_file(txt)
 end
 
 local function checkWarns()
-    print("Checking for warns")
     if env_detector then
         local rads = env_detector.getRadiationRaw()
         if rads*100000 > 1 then
             sgmsg.send("jjs_sg_warn", "radiation")
-            log_to_file("Rads higher than safe amount! (10µSv)")
         end
-        log_to_file("Rads = "..(rads*100000).." > 1")
     end
     if uni_scanner then
         local entity_scan = uni_scanner.scan("entity")
@@ -1373,14 +1370,11 @@ local function irisAntiKawooshThread()
         local data = {os.pullEvent()}
         if config.iris_anti_kawoosh then
             if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and sg.isStargateConnected()) then
-                log_to_file("Started anti kawoosh listener")
                 sg.closeIris()
                 if not config.iris_control or data[1] == "stargate_chevron_engaged" or data[1] == "anti_kawoosh_await"  then
-                    log_to_file("Waiting for kawoosh to finish")
                     repeat
                         sleep(0.25)
                     until sg.isWormholeOpen() or not sg.isStargateConnected()
-                    log_to_file("Kawoosh Finished")
                     sg.openIris()
                 end
             elseif data[1] == "stargate_disconnected" then

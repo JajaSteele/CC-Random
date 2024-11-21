@@ -40,8 +40,10 @@ sleep(0.5)
 term.clear()
 term.setCursorPos(1,1)
 
-if shell.getRunningProgram() then
-    fs.delete(shell.getRunningProgram())
+local running_path = shell.getRunningProgram()
+
+if running_path and not running_path:match("wget%.lua") and not running_path:match("pastebin%.lua") then
+    fs.delete(running_path)
 end
 
 print("Peripherals:")

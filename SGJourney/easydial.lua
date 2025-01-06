@@ -1,4 +1,4 @@
-local script_version = "1.18"
+local script_version = "1.19"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -363,7 +363,7 @@ local function addressLookup(lookup_value)
 end
 
 local function clearGate()
-    if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 then
+    if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 or (sg.isChevronOpen and sg.isChevronOpen()) then
         sg.disconnectStargate()
         if sg.rotateClockwise then
             if sg.isChevronOpen() then
@@ -1437,6 +1437,8 @@ if sg.isStargateConnected() then
         end
     end
 end
+
+clearGate()
 
 local stat, err = pcall(function()
     parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread, warnSystem)

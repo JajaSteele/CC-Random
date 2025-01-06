@@ -1,4 +1,4 @@
-local script_version = "1.19"
+local script_version = "1.20"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -831,6 +831,7 @@ local function mainThread()
         print("9. Toggle Iris")
         print("10. Toggle Iris Control ("..tostring(config.iris_control)..")")
         print("11. Kawoosh-Protection Iris ("..tostring(config.iris_anti_kawoosh)..")")
+        print("12. Reset Stargate")
 
         write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -945,6 +946,8 @@ local function mainThread()
             print("Set to: "..tostring(config.iris_anti_kawoosh))
             sleep(1)
             writeConfig()
+        elseif mode == 12 then
+            clearGate()
         end
     end
 end
@@ -1437,8 +1440,6 @@ if sg.isStargateConnected() then
         end
     end
 end
-
-clearGate()
 
 local stat, err = pcall(function()
     parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread, warnSystem)

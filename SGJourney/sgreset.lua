@@ -10,6 +10,9 @@ for k,v in pairs(interfaces) do
         print("Opening iris")
     end
     if v.rotateAntiClockwise then
+        if v.isChevronOpen() then
+            v.closeChevron()
+        end
         rotate_threads[#rotate_threads+1] = function()
             print("Reseting rotation")
             if (0-v.getCurrentSymbol()) % 39 < 19 then

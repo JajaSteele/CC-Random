@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -53,7 +53,7 @@ local threads = {}
 local pos = 1
 
 while true do
-    local event, address = os.pullEvent("stargate_incoming_wormhole")
+    local event, address = os.pullEvent("stargate_incoming_connection")
     print("Incoming Wormhole!")
 
     if address then

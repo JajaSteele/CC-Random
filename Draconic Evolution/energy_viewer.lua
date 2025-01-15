@@ -182,29 +182,7 @@ local empty_eta_seconds = 0
 local empty_eta_history = {}
 local empty_eta_weight = {}
 
-write(1,1, "filling up samples", colors.black, colors.green, og_term)
-local temp_old = core.getEnergyStored()
-local temp_new = core.getEnergyStored()
-for i1=1, 10 do
-    temp_old = temp_new
-    temp_new = core.getEnergyStored()
-
-    local temp_delta = temp_new-temp_old
-
-    if temp_delta > 0 then
-        local temp_eta_seconds = (energy_max-energy)/(temp_delta*10)
-        table.insert(eta_history, 1, temp_eta_seconds)
-        table.insert(eta_weight, 1, 1)
-        write(1,2, "weighted mean: "..prettyETA(weighted_mean(eta_history, eta_weight)), colors.black, colors.red, og_term)
-    else
-        local temp_empty_eta_seconds = energy/math.abs(temp_delta*10)
-        table.insert(empty_eta_history, 1, temp_empty_eta_seconds)
-        table.insert(empty_eta_weight, 1, 1)
-        write(1,2, "weighted mean: "..prettyETA(weighted_mean(empty_eta_history, empty_eta_weight)), colors.black, colors.red, og_term)
-    end
-    write(1,1, "filling up samples: "..i1, colors.black, colors.green, og_term)
-    sleep(0.1)
-end
+local await = 5
 
 local function drawThread()
     while true do
@@ -232,6 +210,10 @@ local function drawThread()
             local delta_text = "ETA: "..prettyETA(empty_eta_seconds)
             write(((width/2)-(#delta_text/2))+1, 5, delta_text, colors.black, colors.red)
         end
+        if await > 0 then
+            local delta_text = "Loading Up.. "..string.format("%.1f%%", ((5-await)/5)*100)
+            write(((width/2)-(#delta_text/2))+1, 5, delta_text, colors.black, colors.lightGray)
+        end
         win.setVisible(true)
     end
 end
@@ -258,29 +240,33 @@ local function logicThread()
             empty_highest = delta
         end
         
-        if delta > 0 then
-            eta_seconds = (energy_max-energy)/delta
-            table.insert(eta_history, 1, eta_seconds)
-            table.insert(eta_weight, 1, 1)
-            if #eta_history > 60 then
-                table.remove(eta_history, 61)
-                table.remove(eta_weight, 61)
-            end
-            eta_seconds = weighted_mean(eta_history, eta_weight)
-            write(1,1, "filling eta: "..eta_seconds, colors.black, colors.orange, og_term)
-            write(1,2, "samples: "..#eta_history, colors.black, colors.orange, og_term)
+        if await > 0 then
+            await = await-1
         else
-            eta_seconds = -1
-            empty_eta_seconds = energy/math.abs(delta)
-            table.insert(empty_eta_history, 1, empty_eta_seconds)
-            table.insert(empty_eta_weight, 1, 1)
-            if #empty_eta_history > 60 then
-                table.remove(empty_eta_history, 61)
-                table.remove(empty_eta_weight, 61)
+            if delta > 0 then
+                eta_seconds = (energy_max-energy)/delta
+                table.insert(eta_history, 1, eta_seconds)
+                table.insert(eta_weight, 1, 1)
+                if #eta_history > 60 then
+                    table.remove(eta_history, 61)
+                    table.remove(eta_weight, 61)
+                end
+                eta_seconds = weighted_mean(eta_history, eta_weight)
+                write(1,1, "filling eta: "..eta_seconds, colors.black, colors.orange, og_term)
+                write(1,2, "samples: "..#eta_history, colors.black, colors.orange, og_term)
+            else
+                eta_seconds = -1
+                empty_eta_seconds = energy/math.abs(delta)
+                table.insert(empty_eta_history, 1, empty_eta_seconds)
+                table.insert(empty_eta_weight, 1, 1)
+                if #empty_eta_history > 60 then
+                    table.remove(empty_eta_history, 61)
+                    table.remove(empty_eta_weight, 61)
+                end
+                empty_eta_seconds = weighted_mean(empty_eta_history, empty_eta_weight)
+                write(1,1, "empty eta: "..eta_seconds, colors.black, colors.orange, og_term)
+                write(1,2, "samples: "..#eta_history, colors.black, colors.orange, og_term)
             end
-            empty_eta_seconds = weighted_mean(empty_eta_history, empty_eta_weight)
-            write(1,1, "empty eta: "..eta_seconds, colors.black, colors.orange, og_term)
-            write(1,2, "samples: "..#eta_history, colors.black, colors.orange, og_term)
         end
 
         os.queueEvent("drawMonitor")

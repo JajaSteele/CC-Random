@@ -1,4 +1,4 @@
-local script_version = "1.20"
+local script_version = "1.21"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -379,12 +379,6 @@ local function clearGate()
             repeat
                 sleep()
             until sg.getCurrentSymbol() == 0
-        else
-            if (0-sg.getCurrentSymbol()) % 39 < 19 then
-                sg.rotateAntiClockwise(0)
-            else
-                sg.rotateClockwise(0)
-            end
         end
     end
 end
@@ -789,7 +783,7 @@ local function lastAddressSaverThread()
                 until sg.getOpenTime() > 6 or not sg.isStargateConnected()
                 last_address = sg.getConnectedAddress()
             end
-            if sg.isStargateConnected() and sg.getChevronsEngaged() >= 6 and #last_address >= 6 then
+            if sg.isStargateConnected() and sg.getChevronsEngaged() >= 6 and last_address and #last_address >= 6 then
                 writeSave()
             else
                 local old_address = split(old_last_address, " ")

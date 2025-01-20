@@ -4,7 +4,9 @@ local core = peripheral.find("draconic_rf_storage")
 local win = window.create(monitor, 1, 1, monitor.getSize())
 
 local function prettyEnergy(energy)
-    if energy > 1000000000000 then
+    if energy > 1000000000000000 then
+        return string.format("%.2f", energy/1000000000000000).." PFE"
+    elseif energy > 1000000000000 then
         return string.format("%.2f", energy/1000000000000).." TFE"
     elseif energy > 1000000000 then
         return string.format("%.2f", energy/1000000000).." GFE"

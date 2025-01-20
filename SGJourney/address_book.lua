@@ -392,6 +392,20 @@ local commands
 
 commands = {
     {
+        main="save", 
+        args={},
+        func=(function(...)
+            writeSave()
+            rednet.broadcast("", "jjs_sg_sync_reload")
+        end),
+        short_description={
+            "Saves the address book to file",
+        },
+        long_description={
+            "Saves the address book to the save file , NO BACKUPS ARE MADE!",
+        }
+    },
+    {
         main="edit", 
         args={
             {name="entry", type="int", outline="<>", desc="Which entry to edit"}
@@ -519,20 +533,6 @@ commands = {
         },
         long_description={
             "Exits the program",
-        }
-    },
-    {
-        main="save", 
-        args={},
-        func=(function(...)
-            writeSave()
-            rednet.broadcast("", "jjs_sg_sync_reload")
-        end),
-        short_description={
-            "Saves the address book to file",
-        },
-        long_description={
-            "Saves the address book to the save file , NO BACKUPS ARE MADE!",
         }
     },
     {

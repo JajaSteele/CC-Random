@@ -1,12 +1,12 @@
 local reactor = peripheral.find("draconic_reactor")
-local valve = peripheral.find("flow_gate")
+local completion = require "cc.completion"
 
-if not reactor or not valve then
-    print("Waiting for reactor and valve..")
+if not reactor then
+    print("Waiting for reactor..")
     repeat
         reactor = peripheral.find("draconic_reactor")
-        valve = peripheral.find("flow_gate")
-    until reactor and valve
+        sleep(0.2)
+    until reactor
 end
 
 local args = {...}
@@ -17,6 +17,12 @@ if args[1] == "config" or not fs.exists("/.draconic_config.txt") then
     print("Welcome to the configuration wizard!")
     print("Reactor Name?")
     config.name = read()
+
+    print("Select the output gate:")
+    config.output_gate = read(nil, nil, function(text) return completion.peripheral(text) end, "")
+
+    print("Select the input gate:")
+    config.input_gate = read(nil, nil, function(text) return completion.peripheral(text) end, "")
 
     print("Global Chat? (y/n)")
     config.isGlobal = read():lower()
@@ -51,6 +57,22 @@ end
 local configfile = io.open("/.draconic_config.txt","r")
 config = textutils.unserialise(configfile:read("*a"))
 configfile:close()
+
+local function loadConfig()
+    if fs.exists(".draconic_config.txt") then
+        local file = io.open(".draconic_config.txt", "r")
+        config = textutils.unserialise(file:read("*a"))
+        file:close()
+    end
+end
+local function writeConfig()
+    local file = io.open(".draconic_config.txt", "w")
+    file:write(textutils.serialise(config))
+    file:close()
+end
+
+local input_valve = peripheral.wrap(config.input_gate)
+local output_valve = peripheral.wrap(config.output_gate)
 
 local discord
 local discord_hook
@@ -290,7 +312,7 @@ end
 
 local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
 
-local saturation_target = 50
+config.saturation_target = config.saturation_target or 50
 local width, height = term.getSize()
 
 local function writeStatus(text, color)
@@ -298,12 +320,19 @@ local function writeStatus(text, color)
     write(1, height, text, colors.black, color or colors.red)
 end
 
+local min_injection = 3500000
+local var_injection = config.last_injection or min_injection
+local save_injection_timer = 50
+
+local field_target = 50
+
 local data = reactor.getReactorInfo()
 local current_saturation
 local current_field
 local current_fuel
 local flow_delta
 local new_flow
+local fuel_eta
 
 local ignore_failsafe_timer = 10
 
@@ -314,15 +343,41 @@ local function reactorThread()
         data = reactor.getReactorInfo()
         current_saturation = (data.energySaturation / data.maxEnergySaturation)*100
         current_field = (data.fieldStrength/data.maxFieldStrength)*100
+
         current_fuel = (data.fuelConversion/data.maxFuelConversion)*100
-        flow_delta = clamp((current_saturation-saturation_target)*100000, -8000000, 8000000)
+        local fuel_rate = (data.fuelConversionRate/1000000)*20
+        local left_fuel = data.maxFuelConversion-data.fuelConversion
+
+        fuel_eta = left_fuel/fuel_rate
+        if fuel_rate <= 0.1 then
+            fuel_eta = 0
+        end
+
+        flow_delta = clamp((current_saturation-config.saturation_target)*100000, -8000000, 8000000)
         new_flow = data.generationRate+flow_delta
+        output_valve.setSignalLowFlow(new_flow)
+
+        local field_delta = clamp((field_target-current_field)*200000, -10000000, 10000000)
+        if data.status == "running" then
+            var_injection = clamp(var_injection+field_delta, min_injection, 150000000)
+        else
+            var_injection = clamp(var_injection-8000000, min_injection, 150000000)
+        end
+        input_valve.setSignalLowFlow(var_injection)
+
+        save_injection_timer = save_injection_timer-1
+
+        if save_injection_timer <= 0 then
+            save_injection_timer = 50
+            config.last_injection = var_injection
+            writeConfig()
+        end
 
         if ignore_failsafe_timer == 0 and data.status == "running" then
             if current_fuel > 99 then
                 reactor.stopReactor()
                 writeStatus("Ran out of fuel!", colors.red)
-                fullLog("Ran out of fuel, turning off..", 2)
+                fullLog("Ran out of fuel, turning off..\n("..100-current_fuel.."%)", 2)
             end
             if current_saturation < 5 or current_saturation > 95 then
                 reactor.stopReactor()
@@ -332,7 +387,7 @@ local function reactorThread()
             if current_field < 5 then
                 reactor.stopReactor()
                 writeStatus("Containment field too low!", colors.red)
-                fullLog("Too low containment, turning off..", 1)
+                fullLog("Too low containment, turning off..\n("..current_field.."%)", 1)
             end
         elseif ignore_failsafe_timer > 0 then
             ignore_failsafe_timer = ignore_failsafe_timer-1
@@ -343,8 +398,6 @@ local function reactorThread()
             emergency_shutdown = true
             error("FINAL HOPE")
         end
-
-        valve.setSignalLowFlow(new_flow)
         os.queueEvent("drawUpdate")
         sleep(0.1)
     end
@@ -354,8 +407,8 @@ local function drawThread()
     while true do
         os.pullEvent("drawUpdate")
 
-        fill(1,2, width,13, colors.black, colors.white)
         fill(1,1, width,1, colors.lightGray, colors.black)
+        fill(1,2, width,16, colors.black, colors.white)
         local top_text = "Draconic Reactor Monitor"
 
         write((width/2)-(#top_text/2)+1,1, top_text, colors.lightGray, colors.black)
@@ -376,19 +429,26 @@ local function drawThread()
         write(2,7, "[", colors.black, colors.lightGray) write(width-1,7, "]", colors.black, colors.lightGray)
         fill(3,7, 3+(width-4)*(current_field/100),7, colors.black, colors.blue, "#")
         write(3,8, "Rate: "..data.fieldDrainRate, colors.black, colors.gray)
+
+        local injection_text = "Injection: "..prettyEnergy(var_injection).."/t"
+        write(width-#injection_text-1,8, injection_text, colors.black, colors.gray)
         
-        local targ_saturation_text = string.format("Target: %.1f%%", saturation_target)
+        local targ_saturation_text = string.format("Target: %.1f%%", config.saturation_target)
 
         write(2,9, "Energy Saturation: "..string.format("%.1f%%", current_saturation), colors.black, colors.lime)
         write(width-#targ_saturation_text, 9, targ_saturation_text, colors.black, colors.orange)
         write(2,11, "[", colors.black, colors.lightGray) write(width-1,11, "]", colors.black, colors.lightGray)
         fill(3,11, 3+(width-4)*(current_saturation/100),11, colors.black, colors.red, "#")
-        write(2+((width-4)*(saturation_target/100)), 10, "-\x1F-", colors.black, colors.orange)
+        write(2+((width-4)*(config.saturation_target/100)), 10, "-\x1F-", colors.black, colors.orange)
 
         write(3,12, "Flow Gate: "..prettyEnergy(new_flow).."/t", colors.black, colors.gray)
         write(3,13, "Flow Diff: "..prettyEnergy(flow_delta).."/t", colors.black, colors.gray)
 
-        write(2,15, "Fuel: "..string.format("%.1f%%", (100-current_fuel)), colors.black, colors.yellow)
+        write(2,15, "Fuel: "..string.format("%.2f%%", (100-current_fuel)), colors.black, colors.yellow)
+        if fuel_eta > 0 then
+            local fuel_eta_text = "ETA: "..prettyETA(fuel_eta)
+            write(width-#fuel_eta_text,15, fuel_eta_text, colors.black, colors.yellow)
+        end
         write(2,16, "[", colors.black, colors.lightGray) write(width-1,16, "]", colors.black, colors.lightGray)
         fill(3,16, 3+(width-4)*((100-current_fuel)/100),16, colors.black, colors.orange, "#")
     end
@@ -426,7 +486,8 @@ local function inputThread()
                 term.write("> ")
                 local input = read():lower()
                 if input == "y" or input == "yes" or input == "true" then
-                    saturation_target = new_target
+                    config.saturation_target = new_target
+                    writeConfig()
                 end
             end
         end
@@ -468,6 +529,7 @@ while true do
         parallel.waitForAny(reactorThread, drawThread, inputThread, chatManager)
     end)
     if not stat then
+        chatQueue = {}
         if err == "Terminated" then
             term.clear()
             term.setCursorPos(1,1)

@@ -366,7 +366,6 @@ local function clearGate()
     if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 or (sg.isChevronOpen and sg.isChevronOpen()) then
         sg.disconnectStargate()
         if sg.rotateClockwise then
-            sg.endRotation()
             if sg.isChevronOpen() then
                 sg.closeChevron()
             end
@@ -942,6 +941,9 @@ local function mainThread()
             sleep(1)
             writeConfig()
         elseif mode == 12 then
+            if sg.rotateClockwise then
+                sg.endRotation()
+            end
             clearGate()
         end
     end

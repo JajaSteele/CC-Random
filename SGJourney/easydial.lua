@@ -1,4 +1,4 @@
-local script_version = "1.21"
+local script_version = "1.22"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -366,6 +366,7 @@ local function clearGate()
     if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 or (sg.isChevronOpen and sg.isChevronOpen()) then
         sg.disconnectStargate()
         if sg.rotateClockwise then
+            sg.endRotation()
             if sg.isChevronOpen() then
                 sg.closeChevron()
             end

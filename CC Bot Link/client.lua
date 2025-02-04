@@ -276,7 +276,7 @@ local function greetThread()
                 }
                 sendCrypted(data)
                 chat_queue[#chat_queue+1] = {
-                    message = "MC<>DC Link started!",
+                    message = "Minecraft <> Discord link has started!",
                     username = "CCDL"
                 }
                 os.queueEvent("new_msg")

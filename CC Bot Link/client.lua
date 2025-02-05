@@ -1,3 +1,52 @@
+local script_version = "1.1"
+
+-- AUTO UPDATE STUFF
+local curr_script = shell.getRunningProgram()
+local script_io = io.open(curr_script, "r")
+local local_version_line = script_io:read()
+script_io:close()
+
+local function getVersionNumbers(first_line)
+    local major, minor, patch = first_line:match("local script_version = \"(%d+)%.(%d+)\"")
+    return {tonumber(major) or 0, tonumber(minor) or 0}
+end
+
+local local_version = getVersionNumbers(local_version_line)
+
+print("Local Version: "..string.format("%d.%d", table.unpack(local_version)))
+
+local update_source = "https://raw.githubusercontent.com/JajaSteele/CC-Random/refs/heads/main/CC%20Bot%20Link/client.lua"
+local update_request = http.get(update_source)
+if update_request then
+    local script_version_line = update_request.readLine()
+    update_request:close()
+    local script_version = getVersionNumbers(script_version_line)
+    print("Remote Version: "..string.format("%d.%d", table.unpack(script_version)))
+
+    if script_version[1] > local_version[1] or (script_version[1] == local_version[1] and script_version[2] > local_version[2]) then
+        print("Remote version is newer, updating local")
+        sleep(0.5)
+        local full_update_request = http.get(update_source)
+        if full_update_request then
+            local full_script = full_update_request.readAll()
+            full_update_request:close()
+            local local_io = io.open(curr_script, "w")
+            local_io:write(full_script)
+            local_io:close()
+            print("Updated local script!")
+            sleep(0.5)
+            print("REBOOTING")
+            sleep(0.5)
+            os.reboot()
+        else
+            print("Full update request failed")
+        end
+    end
+else
+    print("Update request failed")
+end
+-- END OF AUTO UPDATE
+
 local chat_array = {peripheral.find("chatBox")}
 local player_detector = peripheral.find("playerDetector")
 
@@ -271,7 +320,8 @@ local function greetThread()
                 local data = {
                     type="mc_greeting",
                     content={
-                        name=config.server_name or "Unknown"
+                        name=config.server_name or "Unknown",
+                        info="-# V"..script_version..", "..(_HOST):gsub("ComputerCraft", "CC"):gsub("Minecraft", "MC")..", "..os.getComputerID()
                     }
                 }
                 sendCrypted(data)
@@ -392,26 +442,33 @@ local function chatManager()
     end
 end
 
---local function heartbeatThread()
---    local heartbeat_data = json.encode({
---        type="mc_heartbeat"
---    })
---    while true do
---        sleep(5)
---        print("Sending..")
---        websocket.send(heartbeat_data)
---        local data = websocket.receive(1)
---        print("Receiving..")
---        if not data then
---            os.queueEvent("websocket_reconnect")
---        end
---    end
---end
+local function heartbeatThread()
+    local data = {type="mc_heartbeat", content=""}
+    while true do
+        local stat, err = pcall(function()
+            if not success_connected then
+                sleep(0.1)
+            else
+                db_print("Sending HB..")
+                sendCrypted(data)
+                local data = websocket.receive(0.25)
+                if not data then
+                    print("Heartbeat failed, reconnecting")
+                    os.queueEvent("websocket_reconnect")
+                else
+                    db_print("Received HB")
+                end
+                sleep(15)
+            end
+        end)
+        if not stat then print(err) sleep(0.1) end
+    end
+end
 
 os.queueEvent("websocket_reconnect")
 
 local stat, err = pcall(function (...)
-    parallel.waitForAll(receiveThread, sendThread, websocketWatcher, websocketController, chatManager, greetThread) 
+    parallel.waitForAll(receiveThread, sendThread, websocketWatcher, websocketController, chatManager, greetThread, heartbeatThread) 
 end)
 if not stat then
     if err == "Terminated" then

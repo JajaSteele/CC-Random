@@ -1,6 +1,13 @@
 local dfpwm = require("cc.audio.dfpwm")
 local decoder = dfpwm.make_decoder()
 local speaker = peripheral.find("speaker")
+if not speaker then
+    print("Waiting for speaker..")
+    repeat
+        sleep(2)
+        speaker = peripheral.find("speaker")
+    until speaker
+end
 local chat = peripheral.find("chatBox")
 
 local default_voice = "Microsoft Michelle Online"

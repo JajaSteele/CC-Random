@@ -24,7 +24,7 @@ local startup_file = io.open("startup.lua", "w")
 local startup_program = ([[
     print("Starting Program '&p' in ]]..delay..[[s")
     sleep(]]..delay..[[)
-    shell.execute("&p")
+    shell.run("&p")
 ]])
 
 local startup_program_pcall = ([[
@@ -32,7 +32,7 @@ local startup_program_pcall = ([[
         local stat, err = pcall(function()
             print("Starting Program '&p' in ]]..delay..[[s")
             sleep(]]..delay..[[)
-            if not shell.execute("&p") then
+            if not shell.run("&p") then
                 error("Program Errored")
             end
         end)

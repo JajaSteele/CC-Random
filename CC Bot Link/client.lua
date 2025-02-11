@@ -1,4 +1,4 @@
-local script_version = "1.1"
+local script_version = "1.2"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -362,6 +362,7 @@ local function sendThread()
                                 username=username
                             }
                         }
+                        print(username..": "..message)
                         sendCrypted(data)
                     end
                 elseif event[1] == "playerJoin" or event[1] == "playerLeave" then
@@ -374,6 +375,7 @@ local function sendThread()
                             type=event
                         }
                     }
+                    print(event..": "..username)
                     sendCrypted(data)
                 end
             end

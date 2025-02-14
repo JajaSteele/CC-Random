@@ -157,8 +157,6 @@ end
 
 local args = {...}
 
-local config = {}
-
 local _rinit = false
 --- Checks if the random byte generator has been initialized, initializes it if not.
 local function init_rand()
@@ -178,6 +176,8 @@ local db_print = function(...)
         end
     end
 end
+
+local config = {}
 
 local function loadConfig()
     if fs.exists(".ccdl_config.txt") then

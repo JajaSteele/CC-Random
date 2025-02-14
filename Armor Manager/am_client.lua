@@ -269,6 +269,19 @@ local function clickThread()
     end
 end
 
+local function specialThread()
+    while true do
+        local event, key, hold = os.pullEvent("key")
+        if key == keys.f4 then
+            rednet.send(config.server, {special="clear"}, "jjs_armor_order")
+            local sender, msg, prot = rednet.receive("jjs_armor_confirm", 1)
+            if not msg or sender ~= config.server then
+                displayMessage(1, colors.red, "Request timed out")
+            end
+        end
+    end
+end
+
 local function scrollThread()
     while true do
         local event, dir, x, y = os.pullEvent("mouse_scroll")
@@ -276,4 +289,4 @@ local function scrollThread()
 end
 
 os.queueEvent("redraw")
-parallel.waitForAll(drawThread, clickThread)
+parallel.waitForAll(drawThread, clickThread, specialThread)

@@ -45,8 +45,12 @@ local function receiverThread()
         local sender, msg, prot = rednet.receive("jjs_armor_order")
         if sender == config.trusted and type(msg) == "table" then
             rednet.send(sender, "", "jjs_armor_confirm")
-            os.queueEvent("armor_order", msg)
-            print("Added order")
+            if msg.special then
+                os.queueEvent("armor_order", msg.special)
+            else
+                os.queueEvent("armor_order", msg)
+                print("Added order")
+            end
         end
     end
 end
@@ -68,18 +72,26 @@ end
 local function armorThread()
     while true do
         local event, order = os.pullEvent("armor_order")
-        for k,v in pairs(order) do
-            local list = inv.getItemsChest("front")
-            local pull_slot
-            for k,item in pairs(list) do
-                if item.name == v.name and item.displayName == v.displayName then
-                    pull_slot = item.slot
-                    break
+        if type(order) == "table" then
+            for k,v in pairs(order) do
+                local list = inv.getItemsChest("front")
+                local pull_slot
+                for k,item in pairs(list) do
+                    if item.name == v.name and item.displayName == v.displayName then
+                        pull_slot = item.slot
+                        break
+                    end
+                end
+                if pull_slot then
+                    inv.removeItemFromPlayer("front", {fromSlot=v.slot})
+                    inv.addItemToPlayer("front", {toSlot=v.slot, fromSlot=pull_slot})
                 end
             end
-            if pull_slot then
-                inv.removeItemFromPlayer("front", {fromSlot=v.slot})
-                inv.addItemToPlayer("front", {toSlot=v.slot, fromSlot=pull_slot})
+        elseif type(order) == "string" then
+            if order == "clear" then
+                for i1=100, 103 do
+                    inv.removeItemFromPlayer("front", {fromSlot=i1})
+                end
             end
         end
     end

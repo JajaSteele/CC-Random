@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -366,13 +366,15 @@ local function sendThread()
                         sendCrypted(data)
                     end
                 elseif event[1] == "playerJoin" or event[1] == "playerLeave" then
+                    local player_count = #(player_detector.getOnlinePlayers() or {})
                     local event, username, dimension = table.unpack(event)
                     db_print("Event: "..event.." from "..username)
                     local data = {
                         type="mc_traffic",
                         content={
                             username=username,
-                            type=event
+                            type=event,
+                            count=player_count
                         }
                     }
                     print(event..": "..username)

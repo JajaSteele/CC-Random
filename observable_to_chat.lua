@@ -12,7 +12,11 @@ while true do
     local dim, x, y, z = cmd:match("/observable tp ([%w_:]-) position ([%-]?%d+) ([%-]?%d+) ([%-]?%d+)")
     if dim and x and y and z then
         local waypoint = string.format(waypoint_template, "<OBVS> "..x..", "..y..", "..z, x, y, z, dim)
-        chat_box.sendMessage(waypoint)
+        if username == "" then
+            chat_box.sendMessage(waypoint)
+        else
+            chat_box.sendMessageToPlayer(waypoint, username, "AP (Whisper)")
+        end
     else
         print("Invalid Command")
     end

@@ -1,4 +1,4 @@
-local script_version = "1.2"
+local script_version = "1.3"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -105,8 +105,8 @@ local function lastAddressSaverThread()
     end
     while true do
         local event = {os.pullEvent()}
-        if (event[1] == "stargate_incoming_wormhole" and (event[2])) or (event[1] == "stargate_outgoing_wormhole") then
-            last_address = event[2]
+        if (event[1] == "stargate_incoming_wormhole" and (event[3])) or (event[1] == "stargate_outgoing_wormhole") then
+            last_address = event[3]
             if event[1] == "stargate_incoming_wormhole" and interface.getConnectedAddress then
                 print("Awaiting wormhole..")
                 repeat
@@ -204,13 +204,11 @@ local function dialThread()
             end
 
             if interface.engageSymbol and config.mode == 2 and start_dialing then
-                repeat
-                    local symbol = interface.getCurrentSymbol()
+                while interface.getCurrentSymbol() ~= 0 do
                     sleep()
-                until symbol == 0
+                end
 
                 interface.endRotation()
-                sleep(0.25)
 
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then
                     interface.rotateAntiClockwise(0)
@@ -218,7 +216,7 @@ local function dialThread()
                     interface.rotateClockwise(0)
                 end
 
-                sleep(0.25)
+                --[[ sleep(0.25)
 
                 if (0-interface.getCurrentSymbol()) % 39 < 19 then
                     interface.rotateAntiClockwise(0)
@@ -229,7 +227,8 @@ local function dialThread()
                 repeat
                     local symbol = interface.getCurrentSymbol()
                     sleep(0.125)
-                until symbol == 0
+                until symbol == 0 ]]
+
                 sleep(0.25)
                 interface.openChevron()
                 sleep(0.75)

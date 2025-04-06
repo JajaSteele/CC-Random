@@ -46,6 +46,7 @@ local function displayLinkThread()
 
                 local data = config[player]
                 if data then
+                    print("Config detected for "..player.."\nType: "..data.action)
                     if data.action == "delete" then
                         table.remove(raw_list, name_to_entry[player])
                         name_to_entry[player] = nil
@@ -82,9 +83,15 @@ local function displayLinkThread()
         link.clear()
         for pos,entry in pairs(raw_list) do
             link.setCursorPos(1, pos)
-            link.write(entry.name)
+            link.write(entry.name) 
             link.setCursorPos(width-(#tostring(entry.count)-1), pos)
             link.write(tostring(entry.count))
+        end
+        for pos=#raw_list+1, height do
+            link.setCursorPos(1, pos)
+            link.write(string.rep(" ", width)) 
+            link.setCursorPos(1, pos)
+            link.write("\xA78\xA7kNONE") 
         end
         link.update()
         sleep(1)

@@ -1,4 +1,4 @@
-local script_version = "1.24"
+local script_version = "1.25"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -379,6 +379,7 @@ local function clearGate()
             repeat
                 sleep()
             until sg.getCurrentSymbol() == 0
+            sleep(0.25)
         end
     end
 end
@@ -691,7 +692,7 @@ local function dialThread()
                     repeat
                         sleep()
                     until sg.getCurrentSymbol() == v.num
-                    sleep(0.1)
+                    sleep(0.25)
                     if sg.openChevron then
                         sg.openChevron()
                         sleep(0.1)
@@ -1269,6 +1270,7 @@ local function rawCommandListener()
                 has_updated = false
             elseif msg == "click" then
                 if sg.getCurrentSymbol() == gate_target_symbol then
+                    sleep(0.25)
                     if sg.openChevron then
                         sg.openChevron()
                         sleep(0.1)
@@ -1310,30 +1312,30 @@ end
 local function rawCommandSpinner()
     while true do
         if sg.getCurrentSymbol then
-        if not has_updated and sg.getCurrentSymbol() ~= gate_target_symbol and update_timer <= 0 then
-            has_updated = true
-            if (gate_target_symbol-sg.getCurrentSymbol()) % 39 < 19 then
-                sg.rotateAntiClockwise(gate_target_symbol)
-            else
-                sg.rotateClockwise(gate_target_symbol)
+            if not has_updated and sg.getCurrentSymbol() ~= gate_target_symbol and update_timer <= 0 then
+                has_updated = true
+                if (gate_target_symbol-sg.getCurrentSymbol()) % 39 < 19 then
+                    sg.rotateAntiClockwise(gate_target_symbol)
+                else
+                    sg.rotateClockwise(gate_target_symbol)
+                end
             end
-        end
-        if update_timer > 0 then
-            update_timer = update_timer-1
-        end
-        if awaiting_encode and sg.getCurrentSymbol() == gate_target_symbol then
-            awaiting_encode = false
-            sleep(0.5)
-            if sg.openChevron then
-                sg.openChevron()
-                sleep(0.1)
-                sg.encodeChevron()
-                sleep(0.1)
-                sg.closeChevron()
-            else
-                sg.encodeChevron()
+            if update_timer > 0 then
+                update_timer = update_timer-1
             end
-        end
+            if awaiting_encode and sg.getCurrentSymbol() == gate_target_symbol then
+                awaiting_encode = false
+                sleep(0.5)
+                if sg.openChevron then
+                    sg.openChevron()
+                    sleep(0.1)
+                    sg.encodeChevron()
+                    sleep(0.1)
+                    sg.closeChevron()
+                else
+                    sg.encodeChevron()
+                end
+            end
         sleep()
         else
             sleep(10)

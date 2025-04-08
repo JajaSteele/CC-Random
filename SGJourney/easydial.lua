@@ -1,4 +1,4 @@
-local script_version = "1.22"
+local script_version = "1.23"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -365,8 +365,8 @@ end
 local function clearGate()
     if sg.isStargateConnected() or sg.getChevronsEngaged() > 0 or (sg.isChevronOpen and sg.isChevronOpen()) then
         sg.disconnectStargate()
-        if sg.rotateClockwise then
-            if sg.isChevronOpen() then
+        if not sg.engageSymbol and sg.rotateClockwise then
+            if sg.isChevronOpen and sg.isChevronOpen() then
                 sg.closeChevron()
             end
     
@@ -692,11 +692,15 @@ local function dialThread()
                         sleep()
                     until sg.getCurrentSymbol() == v.num
                     sleep(0.1)
-                    sg.openChevron()
-                    sleep(0.1)
-                    sg.encodeChevron()
-                    sleep(0.1)
-                    sg.closeChevron()
+                    if sg.openChevron then
+                        sg.openChevron()
+                        sleep(0.1)
+                        sg.encodeChevron()
+                        sleep(0.1)
+                        sg.closeChevron()
+                    else
+                        sg.encodeChevron()
+                    end
                 end
                 address[k].dialing = false
                 address[k].dialed = true
@@ -1250,7 +1254,7 @@ local function rawCommandListener()
     while true do
         local id, msg, protocol = rednet.receive("jjs_sg_rawcommand")
         rednet.send(id, "", "jjs_sg_rawcommand_confirm")
-        if sg.rotateClockwise then
+        if not sg.engageSymbol and sg.rotateClockwise then
             if msg == "left" then
                 local current_symbol = sg.getCurrentSymbol()
                 gate_target_symbol = (gate_target_symbol+1)%39
@@ -1263,11 +1267,15 @@ local function rawCommandListener()
                 has_updated = false
             elseif msg == "click" then
                 if sg.getCurrentSymbol() == gate_target_symbol then
-                    sg.openChevron()
-                    sleep(0.25)
-                    sg.encodeChevron()
-                    sleep(0.25)
-                    sg.closeChevron()
+                    if sg.openChevron then
+                        sg.openChevron()
+                        sleep(0.1)
+                        sg.encodeChevron()
+                        sleep(0.1)
+                        sg.closeChevron()
+                    else
+                        sg.encodeChevron()
+                    end
                 else
                     awaiting_encode = true
                 end
@@ -1314,11 +1322,15 @@ local function rawCommandSpinner()
         if awaiting_encode and sg.getCurrentSymbol() == gate_target_symbol then
             awaiting_encode = false
             sleep(0.5)
-            sg.openChevron()
-            sleep(0.25)
-            sg.encodeChevron()
-            sleep(0.25)
-            sg.closeChevron()
+            if sg.openChevron then
+                sg.openChevron()
+                sleep(0.1)
+                sg.encodeChevron()
+                sleep(0.1)
+                sg.closeChevron()
+            else
+                sg.encodeChevron()
+            end
         end
         sleep()
         else

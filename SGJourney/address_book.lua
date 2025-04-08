@@ -1,4 +1,4 @@
-local script_version = "1.5"
+local script_version = "1.6"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -1796,12 +1796,15 @@ local function SGWListenerThread()
             if stat and msg then
                 local queue_msg = true
                 if msg == "fetch_addressbook" then
+                    write(1, h, "SGW: Fetching addresses", colors.black, colors.orange)
+                    sleep(0.5)
                     queue_msg = false
                     websocket_connection.send("addressbook_transfer_start")
                     for k,address in ipairs(address_book) do
                         websocket_connection.send(textutils.serialize(address, {compact=true}))
                     end
                     websocket_connection.send("addressbook_transfer_end")
+                    fill(1, h, w, h, colors.black, colors.white, " ")
                 elseif msg:match("address_full_request") then
                     queue_msg = false
                     local split_address = split(msg, " ")

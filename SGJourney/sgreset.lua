@@ -1,4 +1,4 @@
-local interfaces = {peripheral.find("advanced_crystal_interface")}
+local interfaces = {peripheral.find("advanced_crystal_interface"),peripheral.find("crystal_interface"),peripheral.find("basic_interface")}
 
 local rotate_threads = {}
 
@@ -10,7 +10,7 @@ for k,v in pairs(interfaces) do
         print("Opening iris")
     end
     if v.rotateAntiClockwise then
-        if v.isChevronOpen() then
+        if v.isChevronOpen and v.isChevronOpen() then
             v.closeChevron()
         end
         rotate_threads[#rotate_threads+1] = function()

@@ -1,4 +1,4 @@
-local script_version = "1.23"
+local script_version = "1.24"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -785,7 +785,9 @@ local function lastAddressSaverThread()
                 repeat
                     sleep(0.5)
                 until sg.getOpenTime() > 6 or not sg.isStargateConnected()
-                last_address = sg.getConnectedAddress()
+                if sg.getConnectedAddress then
+                    last_address = sg.getConnectedAddress()
+                end
             end
             if sg.isStargateConnected() and sg.getChevronsEngaged() >= 6 and last_address and #last_address >= 6 then
                 writeSave()

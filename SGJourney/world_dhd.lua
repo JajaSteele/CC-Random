@@ -1,4 +1,4 @@
-local script_version = "1.7"
+local script_version = "1.8"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -532,7 +532,7 @@ local function externalThread()
     while true do
         local event = {os.pullEvent()}
         if event[1] == "stargate_chevron_engaged" then
-            local symbol = event[5]
+            local symbol = event[6]
             if symbol then
                 print(symbol.." engaged")
                 local button = findButton(symbol)

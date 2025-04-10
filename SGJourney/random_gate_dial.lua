@@ -1,4 +1,4 @@
-local gate_list = {peripheral.find("advanced_crystal_interface")}
+local gate_list = {peripheral.find("crystal_interface")}
 
 local monitor = peripheral.find("monitor")
 

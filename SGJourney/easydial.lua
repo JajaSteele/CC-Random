@@ -1,4 +1,4 @@
-local script_version = "1.26"
+local script_version = "1.27"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -1394,7 +1394,7 @@ local function irisAntiKawooshThread()
     while true do
         local data = {os.pullEvent()}
         if config.iris_anti_kawoosh then
-            if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or data[1] == "stargate_outgoing_connection" then
+            if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5]) then
                 sg.closeIris()
                 if not config.iris_control or data[1] == "stargate_chevron_engaged" or data[1] == "anti_kawoosh_await"  then
                     repeat
@@ -1433,10 +1433,12 @@ local function irisProtectionThread()
             end ]]
             while true do
                 local iris_status = trans.checkConnectedShielding()
-                if iris_status > 1 or not sg.isWormholeOpen()  then
+                if iris_status and iris_status > 0 and sg.isWormholeOpen() then
                     sg.closeIris()
                 else
-                    sg.openIris()
+                    if not (config.iris_anti_kawoosh and not sg.isWormholeOpen()) then
+                        sg.openIris()
+                    end
                 end
 
                 if not sg.isStargateConnected() or not sg.isStargateDialingOut() or not config.iris_protection then

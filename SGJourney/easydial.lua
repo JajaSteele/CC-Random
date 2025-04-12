@@ -1,4 +1,4 @@
-local script_version = "1.25"
+local script_version = "1.26"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -64,6 +64,7 @@ if config.monitor == nil then config.monitor = true end
 if config.address_book_id == nil then config.address_book_id = nil end
 if config.iris_control == nil then config.iris_control = false end
 if config.iris_anti_kawoosh == nil then config.iris_anti_kawoosh = false end
+if config.iris_protection == nil then config.iris_protection = false end
 
 print("Checking for iris..")
 if sg.isStargateConnected() and sg.getChevronsEngaged() < 3 and sg.closeIris then
@@ -830,9 +831,10 @@ local function mainThread()
         print("7. Set Addressbook ID ("..tostring(config.address_book_id)..")")
         print("8. Dial-Back")
         print("9. Toggle Iris")
-        print("10. Toggle Iris Control ("..tostring(config.iris_control)..")")
+        print("10. Toggle GDO Iris("..tostring(config.iris_control)..")")
         print("11. Kawoosh-Protection Iris ("..tostring(config.iris_anti_kawoosh)..")")
-        print("12. Reset Stargate")
+        print("12. Security Iris ("..tostring(config.iris_protection)..")")
+        print("13. Reset Stargate")
 
         write(3, h, "Label: "..config.label, colors.black, colors.yellow)
 
@@ -948,6 +950,13 @@ local function mainThread()
             sleep(1)
             writeConfig()
         elseif mode == 12 then
+            term.clear()
+            term.setCursorPos(1,1)
+            config.iris_protection = (not config.iris_protection)
+            print("Set to: "..tostring(config.iris_protection))
+            sleep(1)
+            writeConfig()
+        elseif mode == 13 then
             if sg.rotateClockwise then
                 sg.endRotation()
             end
@@ -1385,7 +1394,7 @@ local function irisAntiKawooshThread()
     while true do
         local data = {os.pullEvent()}
         if config.iris_anti_kawoosh then
-            if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and sg.isStargateConnected()) then
+            if data[1] == "stargate_incoming_connection" or data[1] == "anti_kawoosh_await" or data[1] == "stargate_outgoing_connection" then
                 sg.closeIris()
                 if not config.iris_control or data[1] == "stargate_chevron_engaged" or data[1] == "anti_kawoosh_await"  then
                     repeat
@@ -1395,6 +1404,48 @@ local function irisAntiKawooshThread()
                 end
             elseif data[1] == "stargate_disconnected" then
                 sg.openIris()
+            end
+        end
+    end
+end
+
+local function irisProtectionThread()
+    while true do
+        os.pullEvent("stargate_outgoing_wormhole")
+        if config.iris_protection and sg.getIris() and peripheral.find("transceiver") then
+            local trans = peripheral.find("transceiver")
+            --[[ local trans = peripheral.find("transceiver")
+            if trans and sg.getIris() then
+                local iris_status = trans.checkConnectedShielding()
+                if iris_status > 0 then
+                    repeat
+                        sleep()
+                        iris_status = trans.checkConnectedShielding()
+                    until not sg.isStargateConnected() or not sg.isStargateDialingOut() or sg.isWormholeOpen()
+                end
+                if iris_status and iris_status > 0 then
+                    sg.closeIris()
+                    repeat
+                        sleep(0.5)
+                    until trans.checkConnectedShielding() == 0 or not sg.isStargateConnected() or not sg.isStargateDialingOut()
+                    sg.openIris()
+                end
+            end ]]
+            while true do
+                local iris_status = trans.checkConnectedShielding()
+                if iris_status > 1 or not sg.isWormholeOpen()  then
+                    sg.closeIris()
+                else
+                    sg.openIris()
+                end
+
+                if not sg.isStargateConnected() or not sg.isStargateDialingOut() or not config.iris_protection then
+                    if (config.iris_anti_kawoosh and sg.isWormholeOpen()) or not sg.isStargateConnected() then
+                        sg.openIris()
+                    end
+                    break
+                end
+                sleep()
             end
         end
     end
@@ -1455,7 +1506,7 @@ if sg.isStargateConnected() then
 end
 
 local stat, err = pcall(function()
-    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread, warnSystem)
+    parallel.waitForAll(mainThread, irisControlThread, mainRemote, mainFailsafe, mainRemoteCommands, mainRemoteDistance, screenSaverMonitor, gateMonitor, gateClosingMonitor, displayLinkUpdater, rawCommandListener, rawCommandSpinner, checkAliveThread, lastAddressSaverThread, irisAntiKawooshThread, monitorConnectThread, warnSystem, irisProtectionThread)
 end)
 
 if not stat then

@@ -1,4 +1,4 @@
-local script_version = "1.3"
+local script_version = "1.4"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -243,7 +243,6 @@ local function mainTTS()
             else
                 playTTS("No entities have used the gate")
             end
-            passed_entities = 0
         elseif event[1] == "stargate_reset" then
             if checkFeedbackBlacklist(event[4]) then
                 important_warning = ""

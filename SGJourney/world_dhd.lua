@@ -1,4 +1,4 @@
-local script_version = "1.8"
+local script_version = "1.9"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -563,7 +563,9 @@ local function lastAddressThread()
                 repeat
                     sleep(0.5)
                 until interface.getOpenTime() > 6 or not interface.isStargateConnected()
-                last_address = interface.getConnectedAddress()
+                if interface.getConnectedAddress then
+                    last_address = interface.getConnectedAddress()
+                end
             end
             if interface.isStargateConnected() and interface.getChevronsEngaged() >= 6 and #last_address >= 6 then
                 writeSave()

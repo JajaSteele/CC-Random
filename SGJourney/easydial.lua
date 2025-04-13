@@ -1,4 +1,4 @@
-local script_version = "1.27"
+local script_version = "1.28"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -631,9 +631,9 @@ local function inputThread()
                     repeat
                         sleep(0.1)
                         attempts = attempts+1
-                    until sg.getChevronsEngaged() > 0 or attempts >= 20
+                    until sg.getChevronsEngaged() > 0 or attempts >= 25
 
-                    if (address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen()) or sg.getChevronsEngaged() == 0 then
+                    if (address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen()) or (sg.getChevronsEngaged() == 0 and ((sg.isChevronOpen and not sg.isChevronOpen()) or true)) then
                         if monitor and config.monitor then
                             local mw, mh = monitor.getSize()
                             monitor.setTextColor(colors.green)
@@ -652,12 +652,13 @@ local function inputThread()
 
                         repeat
                             local event = os.pullEvent()
-                        until event == "stargate_disconnected" or event == "stargate_reset" or sg.getChevronsEngaged() == 0
+                        until event == "stargate_disconnected" or event == "stargate_reset" or (sg.getChevronsEngaged() == 0 and ((sg.isChevronOpen and not sg.isChevronOpen()) or true))
 
                         if monitor and config.monitor then
                             monitor.clear()
                         end
 
+                        --log_to_file("Gate Disconnected")
                         fancyReboot()
                         return
                     end
@@ -811,6 +812,7 @@ local function disconnectListener()
     rednet.send(id, "", "jjs_sg_rawcommand_confirm")
     if msg == "gate_disconnect" then
         clearGate()
+        log_to_file("Gate Disconnected by SGW")
         fancyReboot()
     end
 end
@@ -999,6 +1001,7 @@ local function mainRemoteCommands()
         local id, msg, protocol = rednet.receive()
         if protocol == "jjs_sg_disconnect" then
             clearGate()
+            log_to_file("Gate Disconnected by SGW")
             fancyReboot()
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, config.label, "jjs_sg_sendlabel")
@@ -1020,6 +1023,7 @@ local function mainFailsafe()
     while true do
         local event, int, code, msg = os.pullEvent("stargate_reset")
         if event == "stargate_reset" and code < 0 and msg ~= "interrupted_by_incoming_connection" then
+            log_to_file("Gate Disconnected by Incoming Connection")
             fancyReboot()
             return
         end
@@ -1224,6 +1228,7 @@ local function rawAbsoluteListener()
 
             if msg == "gate_disconnect" then
                 clearGate()
+                log_to_file("Gate Disconnected by SGW")
                 fancyReboot()
             end
         else
@@ -1238,6 +1243,7 @@ local function rawAbsoluteListener()
             if symbol == 0 then
                 if sg.isStargateConnected() then
                     clearGate()
+                    log_to_file("Gate Disconnected by SGW")
                     fancyReboot()
                 else
                     os.queueEvent("key", keys.enter, false)
@@ -1306,6 +1312,7 @@ local function rawCommandListener()
         end
         if msg == "gate_disconnect" then
             clearGate()
+            log_to_file("Gate Disconnected by SGW")
             fancyReboot()
         end
         if msg == "gate_dialback" then

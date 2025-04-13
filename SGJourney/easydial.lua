@@ -1,4 +1,4 @@
-local script_version = "1.28"
+local script_version = "1.29"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -631,7 +631,7 @@ local function inputThread()
                     repeat
                         sleep(0.1)
                         attempts = attempts+1
-                    until sg.getChevronsEngaged() > 0 or attempts >= 25
+                    until sg.getChevronsEngaged() > 0 or attempts >= 80
 
                     if (address[#address].dialed and sg.isStargateConnected() and sg.isWormholeOpen()) or (sg.getChevronsEngaged() == 0 and ((sg.isChevronOpen and not sg.isChevronOpen()) or true)) then
                         if monitor and config.monitor then

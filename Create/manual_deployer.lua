@@ -18,7 +18,7 @@ end
 
 local counter = 1
 while true do
-    if deployer_inv.getItemDetail(1) == nil then
+    if not rs.getInput("bottom") then
         if input_inv.getItemDetail(counter) == nil then
             counter = 1
         else
@@ -26,6 +26,7 @@ while true do
             input_inv.pushItems(peripheral.getName(deployer_inv), counter, 1)
             counter = counter+1
         end
+        sleep(0.05)
     end
     if counter > (input_inv.size() or 27) then
         if input_inv.getItemDetail(1) == nil then

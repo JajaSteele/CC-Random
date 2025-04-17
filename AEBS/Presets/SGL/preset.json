@@ -1,0 +1,231 @@
+{
+    "apotheosis:beeshelf": [
+        {
+            "arcana": 0,
+            "eterna": -15,
+            "maxEterna": 0,
+            "quanta": 100
+        }
+    ],
+    "apotheosis:blazing_hellshelf": [
+        {
+            "arcana": 0,
+            "clues": -1,
+            "eterna": 4,
+            "maxEterna": 30,
+            "quanta": 5
+        }
+    ],
+    "apotheosis:crystal_seashelf": [
+        {
+            "arcana": 2,
+            "eterna": 2,
+            "maxEterna": 30,
+            "quanta": 4
+        }
+    ],
+    "apotheosis:deepshelf": [
+        {
+            "arcana": 5,
+            "eterna": 2.5,
+            "maxEterna": 35,
+            "quanta": 5
+        }
+    ],
+    "apotheosis:dormant_deepshelf": [
+        {
+            "arcana": 0,
+            "eterna": 1,
+            "maxEterna": 15,
+            "quanta": 0
+        }
+    ],
+    "apotheosis:draconic_endshelf": [
+        {
+            "arcana": 0,
+            "eterna": 10,
+            "maxEterna": 50,
+            "quanta": 0
+        }
+    ],
+    "apotheosis:echoing_deepshelf": [
+        {
+            "arcana": 15,
+            "eterna": 2.5,
+            "maxEterna": 37.5,
+            "quanta": 0
+        }
+    ],
+    "apotheosis:echoing_sculkshelf": [
+        {
+            "arcana": 15,
+            "clues": 1,
+            "eterna": 5,
+            "maxEterna": 40,
+            "quanta": 5
+        }
+    ],
+    "apotheosis:endshelf": [
+        {
+            "arcana": 5,
+            "eterna": 2.5,
+            "maxEterna": 45,
+            "quanta": 5
+        }
+    ],
+    "apotheosis:glowing_hellshelf": [
+        {
+            "arcana": 4,
+            "eterna": 2,
+            "maxEterna": 30,
+            "quanta": 2
+        }
+    ],
+    "apotheosis:heart_seashelf": [
+        {
+            "arcana": 10,
+            "eterna": 3,
+            "maxEterna": 30,
+            "quanta": 0,
+            "rectification": -5
+        }
+    ],
+    "apotheosis:hellshelf": [
+        {
+            "arcana": 0,
+            "eterna": 1.5,
+            "maxEterna": 22.5,
+            "quanta": 3
+        }
+    ],
+    "apotheosis:infused_hellshelf": [
+        {
+            "arcana": 0,
+            "eterna": 1.75,
+            "maxEterna": 27,
+            "quanta": 1.75
+        }
+    ],
+    "apotheosis:infused_seashelf": [
+        {
+            "arcana": 1.75,
+            "eterna": 1.75,
+            "maxEterna": 27,
+            "quanta": 0
+        }
+    ],
+    "apotheosis:melonshelf": [
+        {
+            "arcana": 0,
+            "eterna": -1,
+            "maxEterna": 0,
+            "quanta": -10
+        }
+    ],
+    "apotheosis:pearl_endshelf": [
+        {
+            "arcana": 7.5,
+            "eterna": 5,
+            "maxEterna": 45,
+            "quanta": 7.5
+        }
+    ],
+    "apotheosis:rectifier": [
+        {
+            "rectification": 10
+        }
+    ],
+    "apotheosis:rectifier_t2": [
+        {
+            "rectification": 15
+        }
+    ],
+    "apotheosis:rectifier_t3": [
+        {
+            "rectification": 25
+        }
+    ],
+    "apotheosis:seashelf": [
+        {
+            "arcana": 2,
+            "eterna": 1.5,
+            "maxEterna": 22.5,
+            "quanta": 0
+        }
+    ],
+    "apotheosis:sightshelf": [
+        {
+            "clues": 1
+        }
+    ],
+    "apotheosis:sightshelf_t2": [
+        {
+            "clues": 2
+        }
+    ],
+    "apotheosis:soul_touched_deepshelf": [
+        {
+            "arcana": 0,
+            "eterna": 2.5,
+            "maxEterna": 37.5,
+            "quanta": 15
+        }
+    ],
+    "apotheosis:soul_touched_sculkshelf": [
+        {
+            "arcana": 5,
+            "eterna": 5,
+            "maxEterna": 40,
+            "quanta": 15,
+            "rectification": 5
+        }
+    ],
+    "apotheosis:stoneshelf": [
+        {
+            "arcana": -7.5,
+            "eterna": -1.5,
+            "maxEterna": 0,
+            "quanta": 0
+        }
+    ],
+    "basic_skulls": [
+        {
+            "arcana": 0,
+            "clues": 0,
+            "eterna": 0,
+            "maxEterna": 0,
+            "quanta": 5,
+            "rectification": 0
+        }
+    ],
+    "minecraft:amethyst_cluster": [
+        {
+            "arcana": 0,
+            "clues": 0,
+            "eterna": 0,
+            "maxEterna": 0,
+            "quanta": 0,
+            "rectification": 1.5
+        }
+    ],
+    "minecraft:wither_skeleton_skull": [
+        {
+            "arcana": 0,
+            "clues": 0,
+            "eterna": 0,
+            "maxEterna": 0,
+            "quanta": 10,
+            "rectification": 0
+        }
+    ],
+    "minecraft:wither_skeleton_wall_skull": [
+        {
+            "arcana": 0,
+            "clues": 0,
+            "eterna": 0,
+            "maxEterna": 0,
+            "quanta": 10,
+            "rectification": 0
+        }
+    ]
+}

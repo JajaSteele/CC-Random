@@ -1,4 +1,4 @@
-local script_version = "1.29"
+local script_version = "1.30"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -26,6 +26,7 @@ local function checkWarns()
     if env_detector then
         local rads = env_detector.getRadiationRaw()
         if rads*100000 > 1 then
+            log_to_file("Rads Warn: "..(rads*100000).." > 1")
             sgmsg.send("jjs_sg_warn", "radiation")
         end
     end
@@ -38,6 +39,7 @@ local function checkWarns()
             end
         end
         if monster_count > 4 then
+            log_to_file("Monster Warn: "..(monster_count).." > 4")
             sgmsg.send("jjs_sg_warn", "monster")
         end
     end
@@ -68,7 +70,6 @@ if config.iris_protection == nil then config.iris_protection = false end
 
 print("Checking for iris..")
 if sg.isStargateConnected() and sg.getChevronsEngaged() < 3 and sg.closeIris then
-    checkWarns()
     if (config.iris_control and not sg.isStargateDialingOut()) or config.iris_anti_kawoosh then
         print("Closing iris")
         sg.closeIris()
@@ -683,7 +684,7 @@ local function dialThread()
             if not v.dialed then
                 address[k].dialing = true
                 if sg.engageSymbol and not (sg.rotateClockwise and settings.get("sg.slowdial")) then
-                    sg.engageSymbol(v.num)
+                    sg.engageSymbol(v.num, not settings.get("sg.slowdial"))
                 else
                     if (v.num-sg.getCurrentSymbol()) % 39 < 19 then
                         sg.rotateAntiClockwise(v.num)

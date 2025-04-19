@@ -141,12 +141,12 @@ while true do
             else
                 write(x, 1, i1, colors.black, colors.white, mon_win)
                 write(x, height, "RDY", colors.black, colors.white, mon_win)
-                fill(x,3, x+2, height-2, colors.black, colors.white, "\x7F", mon_win)
+                fill(x,3, x+2, height-2, colors.lightGray, colors.white, "\x7F", mon_win)
             end
         else
             write(x, 1, i1, colors.black, colors.gray, mon_win)
             write(x, height, "---", colors.black, colors.gray, mon_win)
-            fill(x,3, x+2, height-2, colors.black, colors.gray, "\x7F", mon_win)
+            fill(x,3, x+2, height-2, colors.gray, colors.black, "\x7F", mon_win)
         end
         last_x = x+4
     end

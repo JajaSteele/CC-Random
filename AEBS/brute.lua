@@ -399,6 +399,38 @@ if success then
     for k,v in pairs(condensed) do
         print(v.."x "..k)
     end
+
+    print("Auto-Build? (y/n)")
+    local res = read():lower()
+
+    if res == "y" or res == "true" or res == "yes" or res == "1" then
+        local library = peripheral.find("sophisticatedstorage:shulker_box")
+        local placer = peripheral.find("sophisticatedstorage:barrel")
+
+        local rs_io = peripheral.find("redstoneIntegrator")
+
+        if library and placer and rs_io then
+            print("Gathering items..")
+            for block, amount in pairs(condensed) do
+                for slot,item in pairs(library.list()) do
+                    if item.name == block then
+                        if item.count >= amount then
+                            library.pushItems(peripheral.getName(placer), slot, amount)
+                        else
+                            error("Not enough "..block.." ("..item.count.."/"..amount..")")
+                        end
+                    end
+                end 
+            end
+
+            print("Assembling setup..")
+            rs_io.setOutput("left", true)
+            sleep(0.1)
+            rs_io.setOutput("left", false)
+        else
+            error("No shulkerbox or barrel (soph storage)  or redstone IO found! Needs both")
+        end
+    end
 else
     error("Couldn't find a setup, reason: "..fail_reason)
 end

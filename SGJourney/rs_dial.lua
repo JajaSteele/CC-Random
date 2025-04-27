@@ -10,7 +10,7 @@ local interface = peripheral.find("basic_interface") or peripheral.find("crystal
 
 local function engageChevron(number)
     if interface.engageSymbol and not (interface.rotateClockwise and settings.get("sg.slowdial")) then
-        interface.engageSymbol(number)
+        interface.engageSymbol(number, not settings.get("sg.slowdial"))
     elseif interface.rotateClockwise then
         if interface.isChevronOpen(number) then
             interface.closeChevron()

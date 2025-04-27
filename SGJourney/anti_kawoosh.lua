@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -25,7 +25,6 @@ if update_request then
 
     if script_version[1] > local_version[1] or (script_version[1] == local_version[1] and script_version[2] > local_version[2]) then
         print("Remote version is newer, updating local")
-        sleep(0.5)
         local full_update_request = http.get(update_source)
         if full_update_request then
             local full_script = full_update_request.readAll()
@@ -34,9 +33,7 @@ if update_request then
             local_io:write(full_script)
             local_io:close()
             print("Updated local script!")
-            sleep(0.5)
             print("REBOOTING")
-            sleep(0.5)
             os.reboot()
         else
             print("Full update request failed")
@@ -61,7 +58,7 @@ end
 
 while true do
     local data = {os.pullEvent()}
-    if data[1] == "stargate_incoming_connection" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5] and interface.isStargateConnected()) then
+    if data[1] == "stargate_incoming_connection" or (data[1] == "stargate_chevron_engaged" and data[6] == 0 and not data[5]) then
         print("Connection detected! Closing iris")
         interface.closeIris()
         repeat

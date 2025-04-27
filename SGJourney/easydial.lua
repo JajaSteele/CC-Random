@@ -1,4 +1,4 @@
-local script_version = "1.30"
+local script_version = "1.31"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -1443,9 +1443,11 @@ local function irisProtectionThread()
                 local iris_status = trans.checkConnectedShielding()
                 if iris_status and iris_status > 0 and sg.isWormholeOpen() then
                     sg.closeIris()
+                    log_to_file("Closing Iris (Secure)")
                 else
-                    if not (config.iris_anti_kawoosh and not sg.isWormholeOpen()) then
+                    if not ((config.iris_anti_kawoosh and not sg.isWormholeOpen()) or (sg.getIrisProgressPercentage() == 100 and not sg.isWormholeOpen())) then
                         sg.openIris()
+                        log_to_file("Opening Iris (Secure)")
                     end
                 end
 

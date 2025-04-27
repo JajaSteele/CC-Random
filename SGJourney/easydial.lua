@@ -1,4 +1,4 @@
-local script_version = "1.31"
+local script_version = "1.32"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -1452,7 +1452,7 @@ local function irisProtectionThread()
                 end
 
                 if not sg.isStargateConnected() or not sg.isStargateDialingOut() or not config.iris_protection then
-                    if (config.iris_anti_kawoosh and sg.isWormholeOpen()) or not sg.isStargateConnected() then
+                    if ((config.iris_anti_kawoosh or (not config.iris_control and not sg.isStargateDialingOut())) and sg.isWormholeOpen()) or not sg.isStargateConnected() then
                         sg.openIris()
                     end
                     break

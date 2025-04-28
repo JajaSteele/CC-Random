@@ -1,4 +1,4 @@
-local script_version = "1.32"
+local script_version = "1.33"
 
 local sg = peripheral.find("basic_interface") or peripheral.find("crystal_interface") or peripheral.find("advanced_crystal_interface")
 local env_detector = peripheral.find("environmentDetector")
@@ -660,6 +660,9 @@ local function inputThread()
                         end
 
                         --log_to_file("Gate Disconnected")
+                        if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                            sg.openIris()
+                        end
                         fancyReboot()
                         return
                     end
@@ -814,6 +817,9 @@ local function disconnectListener()
     if msg == "gate_disconnect" then
         clearGate()
         log_to_file("Gate Disconnected by SGW")
+        if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+            sg.openIris()
+        end
         fancyReboot()
     end
 end
@@ -1003,6 +1009,9 @@ local function mainRemoteCommands()
         if protocol == "jjs_sg_disconnect" then
             clearGate()
             log_to_file("Gate Disconnected by SGW")
+            if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                sg.openIris()
+            end
             fancyReboot()
         elseif protocol == "jjs_sg_getlabel" then
             rednet.send(id, config.label, "jjs_sg_sendlabel")
@@ -1025,6 +1034,9 @@ local function mainFailsafe()
         local event, int, code, msg = os.pullEvent("stargate_reset")
         if event == "stargate_reset" and code < 0 and msg ~= "interrupted_by_incoming_connection" then
             log_to_file("Gate Disconnected by Incoming Connection")
+            if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                sg.openIris()
+            end
             fancyReboot()
             return
         end
@@ -1230,6 +1242,9 @@ local function rawAbsoluteListener()
             if msg == "gate_disconnect" then
                 clearGate()
                 log_to_file("Gate Disconnected by SGW")
+                if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                    sg.openIris()
+                end
                 fancyReboot()
             end
         else
@@ -1245,6 +1260,9 @@ local function rawAbsoluteListener()
                 if sg.isStargateConnected() then
                     clearGate()
                     log_to_file("Gate Disconnected by SGW")
+                    if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                        sg.openIris()
+                    end
                     fancyReboot()
                 else
                     os.queueEvent("key", keys.enter, false)
@@ -1314,6 +1332,9 @@ local function rawCommandListener()
         if msg == "gate_disconnect" then
             clearGate()
             log_to_file("Gate Disconnected by SGW")
+            if config.iris_protection and (not config.iris_control or config.iris_control and sg.isStargateDialingOut()) and sg.getIris() then
+                sg.openIris()
+            end
             fancyReboot()
         end
         if msg == "gate_dialback" then
@@ -1447,13 +1468,13 @@ local function irisProtectionThread()
                 else
                     if not ((config.iris_anti_kawoosh and not sg.isWormholeOpen()) or (sg.getIrisProgressPercentage() == 100 and not sg.isWormholeOpen())) then
                         sg.openIris()
-                        log_to_file("Opening Iris (Secure)")
                     end
                 end
 
                 if not sg.isStargateConnected() or not sg.isStargateDialingOut() or not config.iris_protection then
                     if ((config.iris_anti_kawoosh or (not config.iris_control and not sg.isStargateDialingOut())) and sg.isWormholeOpen()) or not sg.isStargateConnected() then
                         sg.openIris()
+                        log_to_file("Opening Iris for Disconnect (Secure)")
                     end
                     break
                 end

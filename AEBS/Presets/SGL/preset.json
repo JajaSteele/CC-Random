@@ -188,7 +188,7 @@
             "quanta": 0
         }
     ],
-    "basic_skulls": [
+    "minecraft:skeleton_skull": [
         {
             "arcana": 0,
             "clues": 0,
@@ -198,27 +198,7 @@
             "rectification": 0
         }
     ],
-    "minecraft:amethyst_cluster": [
-        {
-            "arcana": 0,
-            "clues": 0,
-            "eterna": 0,
-            "maxEterna": 0,
-            "quanta": 0,
-            "rectification": 1.5
-        }
-    ],
     "minecraft:wither_skeleton_skull": [
-        {
-            "arcana": 0,
-            "clues": 0,
-            "eterna": 0,
-            "maxEterna": 0,
-            "quanta": 10,
-            "rectification": 0
-        }
-    ],
-    "minecraft:wither_skeleton_wall_skull": [
         {
             "arcana": 0,
             "clues": 0,

@@ -189,6 +189,14 @@ local min_clues = tonumber(read()) or 0
 print("Enter min Rectification (0 < 0 < 100)")
 local min_rectification = tonumber(read()) or 0
 
+print("Treasure? (y/n)")
+local treasure = read():lower()
+if treasure == "y" or treasure == "yes" or treasure == "true" or treasure == "1" then
+    treasure = true
+else
+    treasure = false
+end
+
 term.clear()
 term.setCursorPos(1,1)
 
@@ -204,11 +212,20 @@ local curr = {
     rectification = 0,
 }
 
+local has_treasure = false
+
 local last_action = ""
 local last_block = ""
 
 local fail_reason = ""
 local success = false
+
+if treasure then
+    blocks[#blocks+1] = "apotheosis:treasure_shelf"
+    curr.quanta = curr.quanta-10
+    curr.arcana = curr.arcana+10
+    has_treasure = true
+end
 
 while true do
     local new_block = ""
@@ -353,11 +370,11 @@ while true do
             curr.maxEterna = (new_block_data[1].maxEterna or 0)
         end
         curr.eterna = clamp(curr.eterna + (new_block_data[1].eterna or 0), -99999, curr.maxEterna)
-        curr.quanta = clamp(curr.quanta + (new_block_data[1].quanta or 0), -99999, 100)
-        curr.arcana = clamp(curr.arcana + (new_block_data[1].arcana or 0), -99999, 100)
+        curr.quanta = clamp(curr.quanta + (new_block_data[1].quanta or 0), -99999, 99999)
+        curr.arcana = clamp(curr.arcana + (new_block_data[1].arcana or 0), -99999, 99999)
 
-        curr.clues = clamp(curr.clues + (new_block_data[1].clues or 0), -99999, 4)
-        curr.rectification = clamp(curr.rectification + (new_block_data[1].rectification or 0), -99999, 100)
+        curr.clues = clamp(curr.clues + (new_block_data[1].clues or 0), -99999, 99999)
+        curr.rectification = clamp(curr.rectification + (new_block_data[1].rectification or 0), -99999, 99999)
 
         blocks[#blocks+1] = new_block
         last_block = new_block
@@ -383,6 +400,7 @@ write(7,1, string.format("%.1f", curr.quanta), colors.black, colors.red)
 write(13,1, string.format("%.1f", curr.arcana), colors.black, colors.purple)
 write(19,1, string.format("%.1f", curr.rectification), colors.black, colors.yellow)
 write(25,1, string.format("%.0f", curr.clues), colors.black, colors.cyan)
+write(27,1, string.format("%s", has_treasure), colors.black, colors.orange)
 write(1,2, "Blocks: "..#blocks, colors.black, colors.lightGray)
 
 term.setCursorPos(1,3)
@@ -412,15 +430,26 @@ if success then
         if library and placer and rs_io then
             print("Gathering items..")
             for block, amount in pairs(condensed) do
+                local found = false
                 for slot,item in pairs(library.list()) do
                     if item.name == block then
                         if item.count >= amount then
                             library.pushItems(peripheral.getName(placer), slot, amount)
+                            found = true
                         else
+                            for slot2, item2 in pairs(placer.list()) do
+                                placer.pushItems(peripheral.getName(library), slot2)
+                            end
                             error("Not enough "..block.." ("..item.count.."/"..amount..")")
                         end
                     end
-                end 
+                end
+                if not found then
+                    for slot2, item2 in pairs(placer.list()) do
+                        placer.pushItems(peripheral.getName(library), slot2)
+                    end
+                    error("Couldn't find "..block.." (x"..amount..")")
+                end
             end
 
             print("Assembling setup..")

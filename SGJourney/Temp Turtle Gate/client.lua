@@ -170,7 +170,7 @@ modem.open(2707)
 
 local function engageChevron(number)
     if interface.engageSymbol then
-        interface.engageSymbol(number)
+        interface.engageSymbol(number, true)
         sleep(0.075)
     elseif interface.rotateClockwise then
         if interface.isChevronOpen(number) then

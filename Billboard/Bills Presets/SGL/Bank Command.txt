@@ -1,0 +1,2 @@
+You can use the &lightBlue $bank &white command to
+easily view your balance anywhere.

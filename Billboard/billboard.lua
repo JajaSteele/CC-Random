@@ -121,7 +121,15 @@ local curr_bill = 1
 local default_timer = 30
 local next_timer = default_timer
 
+local select_page = 1
+local select_map = {}
+
 local display_mode = "bill"
+
+local function switchMode(mode)
+    display_mode = mode
+    os.queueEvent("redraw")
+end
 
 local drawThread = function()
     while true do
@@ -162,6 +170,21 @@ local drawThread = function()
                     monitor.write(char)
                 end
             end
+        elseif display_mode == "select" then
+            write(1,1, "All Tips: Page "..select_page, colors.black, colors.yellow, monitor)
+            local entry_line = 2
+            select_map = {}
+            for i1=1, #bill_list do
+                local bill_data = bill_list[i1]
+                if entry_line > height-1 then   
+                    break
+                end
+                if bill_data then
+                    write(2,entry_line, bill_data.name, colors.black, colors.lightGray, monitor)
+                    select_map[entry_line] = {data=bill_data, id=i1}
+                    entry_line = entry_line+1
+                end
+            end
         end
         fill(1,height,width,height, colors.black, colors.gray, "-", monitor)
         fill(1,height,(width*(next_timer/default_timer)),height, colors.black, colors.lightBlue, "-", monitor)
@@ -172,6 +195,7 @@ local timerThread = function ()
     while true do
         next_timer = next_timer-1
         if next_timer <= 0 then
+            switchMode("bill")
             next_timer = default_timer
             curr_bill = curr_bill+1
             if curr_bill > #bill_list then
@@ -183,5 +207,24 @@ local timerThread = function ()
     end
 end
 
+local inputThread = function()
+    while true do
+        local data = {os.pullEvent()}
+        if data[1] == "monitor_touch" then
+            next_timer = default_timer
+            if display_mode == "bill" then
+                switchMode("select")
+            elseif display_mode == "select" then
+                local _, mon, x, y = table.unpack(data)
+                if select_map[y] then
+                    local selected_bill = select_map[y]
+                    curr_bill = selected_bill.id
+                    switchMode("bill")
+                end
+            end
+        end
+    end
+end
+
 os.queueEvent("redraw")
-parallel.waitForAll(drawThread, timerThread)
+parallel.waitForAll(drawThread, timerThread, inputThread)

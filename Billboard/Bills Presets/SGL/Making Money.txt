@@ -1,0 +1,5 @@
+You can sell items at spawn for additional money.
+Either at players shops, or at the Admin Shop.
+
+To reach the Admin Shop, go upstairs
+at the end of the players shop hallway.

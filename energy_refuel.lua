@@ -1,5 +1,7 @@
 local automata = peripheral.find("weakAutomata") or peripheral.find("endAutomata")
 
+turtle.select(1)
+
 local function fill(x,y,x1,y1,bg,fg,char)
     local old_bg = term.getBackgroundColor()
     local old_fg = term.getTextColor()

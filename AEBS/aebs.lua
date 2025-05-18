@@ -5,6 +5,13 @@ if not fs.exists("json.lua") then
 end
 local json = require("json")
 
+if not fs.exists("/startup") then
+    fs.makeDir("/startup")
+end
+if not fs.exists("/startup/aebs_completion.lua") then
+    shell.run("wget ")
+end
+
 local preset_io = io.open("preset.json")
 if not preset_io then
     error("Couldn't open 'preset.json'")
@@ -256,7 +263,7 @@ while true do
             end
         end
     end
-    if curr.rectification < min_rectification then
+    if clamp(curr.rectification,0,100) < min_rectification then
         last_action = "Increasing Rectification"
         local curr_diff = min_rectification - curr.rectification
         table.sort(helper_map.rectification.pos, function (a, b)
@@ -270,7 +277,7 @@ while true do
         end
     end
 
-    if curr.maxEterna < min_eterna then
+    if clamp(curr.maxEterna, 0, 50) < min_eterna then
         last_action = "Increasing Eterna"
         table.sort(helper_map.eterna.pos, function (a, b)
             return a.stats.maxEterna < b.stats.maxEterna
@@ -283,7 +290,7 @@ while true do
         end
     end
 
-    if curr.eterna < min_eterna then
+    if clamp(curr.eterna, 0, 50*eterna_mult) < min_eterna then
         last_action = "Increasing Eterna"
         local curr_diff = min_eterna - curr.eterna
         table.sort(helper_map.eterna.pos, function (a, b)
@@ -296,7 +303,7 @@ while true do
             end
         end
     end
-    if curr.eterna > max_eterna then
+    if clamp(curr.eterna, 0, 50*eterna_mult) > max_eterna then
         last_action = "Decreasing Eterna"
         local curr_diff = max_eterna - curr.eterna
         table.sort(helper_map.eterna.neg, function (a, b)
@@ -310,7 +317,7 @@ while true do
         end
     end
 
-    if curr.quanta < min_quanta then
+    if clamp(curr.quanta,0,100) < min_quanta then
         last_action = "Increasing Quanta"
         local curr_diff = min_quanta - curr.quanta
         table.sort(helper_map.quanta.pos, function (a, b)
@@ -323,7 +330,7 @@ while true do
             end
         end
     end
-    if curr.quanta > max_quanta then
+    if clamp(curr.quanta,0,100) > max_quanta then
         last_action = "Decreasing Quanta"
         local curr_diff = max_quanta - curr.quanta
         table.sort(helper_map.quanta.neg, function (a, b)
@@ -337,7 +344,7 @@ while true do
         end
     end
 
-    if curr.arcana < min_arcana then
+    if clamp(curr.arcana,0,100) < min_arcana then
         last_action = "Increasing Arcana"
         local curr_diff = min_arcana - curr.arcana
         table.sort(helper_map.arcana.pos, function (a, b)
@@ -350,7 +357,7 @@ while true do
             end
         end
     end
-    if curr.arcana > max_arcana then
+    if clamp(curr.arcana,0,100) > max_arcana then
         last_action = "Decreasing Arcana"
         local curr_diff = max_arcana - curr.arcana
         table.sort(helper_map.arcana.neg, function (a, b)
@@ -405,60 +412,128 @@ write(1,2, "Blocks: "..#blocks, colors.black, colors.lightGray)
 
 term.setCursorPos(1,3)
 
+local condensed = {}
+for k, block in pairs(blocks) do
+    if condensed[block] then
+        condensed[block] = condensed[block] + 1
+    else
+        condensed[block] = 1
+    end
+end
+for k,v in pairs(condensed) do
+    print(v.."x "..k)
+end
+
+local selections = {
+    "Autobuild Setup",
+    "Save Setup",
+}
+
 if success then
-    local condensed = {}
-    for k, block in pairs(blocks) do
-        if condensed[block] then
-            condensed[block] = condensed[block] + 1
-        else
-            condensed[block] = 1
+    print("Press any key to continue..")
+    os.pullEvent("key")
+
+    while true do
+        term.clear()
+        term.setCursorPos(1,1)
+        write(1,1, "Select an Option: ", colors.black, colors.yellow)
+        for k,v in ipairs(selections) do
+            write(2,1+k, k..". "..v, colors.black, colors.lightGray)
         end
-    end
-    for k,v in pairs(condensed) do
-        print(v.."x "..k)
-    end
 
-    print("Auto-Build? (y/n)")
-    local res = read():lower()
+        sleep(0.25)
 
-    if res == "y" or res == "true" or res == "yes" or res == "1" then
-        local library = peripheral.find("sophisticatedstorage:shulker_box")
-        local placer = peripheral.find("sophisticatedstorage:barrel")
+        term.setTextColor(colors.white)
+        term.setCursorPos(19,1)
+        local selected = tonumber(read())
 
-        local rs_io = peripheral.find("redstoneIntegrator")
+        if selected and selections[selected] then
+            term.clear()
+            term.setCursorPos(1,1)
+            write(1,1, "Selected: "..selections[selected], colors.black, colors.yellow)
+            term.setCursorPos(1,3)
 
-        if library and placer and rs_io then
-            print("Gathering items..")
-            for block, amount in pairs(condensed) do
-                local found = false
-                for slot,item in pairs(library.list()) do
-                    if item.name == block then
-                        if item.count >= amount then
-                            library.pushItems(peripheral.getName(placer), slot, amount)
-                            found = true
-                        else
+            if selected == 1 then
+                local library = peripheral.find("sophisticatedstorage:shulker_box")
+                local placer = peripheral.find("sophisticatedstorage:barrel")
+
+                local rs_io = peripheral.find("redstoneIntegrator")
+
+                if library and placer and rs_io then
+                    print("Gathering items..")
+                    for block, amount in pairs(condensed) do
+                        local found = false
+                        for slot,item in pairs(library.list()) do
+                            if item.name == block then
+                                if item.count >= amount then
+                                    library.pushItems(peripheral.getName(placer), slot, amount)
+                                    found = true
+                                else
+                                    for slot2, item2 in pairs(placer.list()) do
+                                        placer.pushItems(peripheral.getName(library), slot2)
+                                    end
+                                    error("Not enough "..block.." ("..item.count.."/"..amount..")")
+                                end
+                            end
+                        end
+                        if not found then
                             for slot2, item2 in pairs(placer.list()) do
                                 placer.pushItems(peripheral.getName(library), slot2)
                             end
-                            error("Not enough "..block.." ("..item.count.."/"..amount..")")
+                            error("Couldn't find "..block.." (x"..amount..")")
+                        end
+                    end
+
+                    print("Assembling setup..")
+                    rs_io.setOutput("left", true)
+                    sleep(0.1)
+                    rs_io.setOutput("left", false)
+                else
+                    error("No shulkerbox or barrel (soph storage) or redstone IO found! Needs both")
+                end
+            elseif selected == 2 then
+                print("Enter a name:")
+                local export_name = ""
+                while true do
+                    local ev = {os.pullEvent()}
+                    if ev[1] == "char" then
+                        local char = ev[2]
+                        export_name = export_name..char:match("[%w_%.]")
+                    elseif ev[1] == "key" then
+                        local key, hold = ev[2], ev[3]
+                        if key == keys.backspace then
+                            if #export_name > 0 then
+                                export_name = export_name:sub(1,#export_name-1)
+                            else
+                                print("Export Cancelled.")
+                                break
+                            end
+                        elseif key == keys.enter or key == keys.numPadEnter then
+                            if #export_name > 0 then
+                                if not fs.exists("/.aebs_export") then
+                                    fs.makeDir("/.aebs_export")
+                                end
+                                local file_io = io.open("/.aebs_export/"..export_name..".aebs", "w")
+                                if file_io then
+                                    file_io:write(textutils.serialise(condensed))
+                                    file_io:close()
+                                    print("File exported successfully.")
+                                    break
+                                else
+                                    print("Export Error: Couldn't write file.")
+                                    sleep(1)
+                                    break
+                                end
+                            else
+                                print("Export Cancelled.")
+                                break
+                            end
                         end
                     end
                 end
-                if not found then
-                    for slot2, item2 in pairs(placer.list()) do
-                        placer.pushItems(peripheral.getName(library), slot2)
-                    end
-                    error("Couldn't find "..block.." (x"..amount..")")
-                end
             end
-
-            print("Assembling setup..")
-            rs_io.setOutput("left", true)
-            sleep(0.1)
-            rs_io.setOutput("left", false)
-        else
-            error("No shulkerbox or barrel (soph storage)  or redstone IO found! Needs both")
         end
+        sleep(1)
     end
 else
     error("Couldn't find a setup, reason: "..fail_reason)

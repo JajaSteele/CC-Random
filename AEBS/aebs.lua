@@ -9,7 +9,34 @@ if not fs.exists("/startup") then
     fs.makeDir("/startup")
 end
 if not fs.exists("/startup/aebs_completion.lua") then
-    shell.run("wget ")
+    shell.run("wget https://raw.githubusercontent.com/JajaSteele/CC-Random/refs/heads/main/AEBS/aebs_completion.lua /startup/aebs_completion.lua")
+end
+
+local args = {...}
+
+local export_data = nil
+if args[1] then
+    if fs.exists("/.aebs_export") and fs.isDir("/.aebs_export") then
+        local files = fs.list("/.aebs_export")
+        for k,v in pairs(files) do
+            if args[1] == v:match("(.+)%.aebs") then
+                local file_io = io.open("/.aebs_export/"..v)
+                if file_io then
+                    export_data = textutils.unserialise(file_io:read("*a"))
+                    file_io:close()
+                    if not export_data then
+                        error("Couldn't unserialise export data")
+                    end
+                    break
+                else
+                    error("Couldn't open export file")
+                end
+            end
+        end
+        if not export_data then
+            error("Couldn't find export '"..args[1].."'")
+        end
+    end
 end
 
 local preset_io = io.open("preset.json")
@@ -157,56 +184,7 @@ for block, data in pairs(preset) do
     end
 end
 
-print("Map generated!")
-sleep(0.5)
-
-term.clear()
-term.setCursorPos(1,1)
-
-print("Enter an Eterna multiplier: (1 or 2, default 2)")
-print("(On older versions, Eterna is 0-50 instead of 0-100)")
-local eterna_mult = (tonumber(read()) or 2)
-
-print("Enter min Eterna: (0 < 50 < 50)")
-local min_eterna = (tonumber(read()) or 50)*eterna_mult
-print("Enter max Eterna: ("..(min_eterna/eterna_mult).." < 50 < 50)")
-local max_eterna = (tonumber(read()) or 50)*eterna_mult
-
-term.clear()
-term.setCursorPos(1,1)
-
-print("Enter min Quanta: (0 < 50 < 100)")
-local min_quanta = tonumber(read()) or 50
-print("Enter max Quanta: ("..min_quanta.." < 50 < 100)")
-local max_quanta = tonumber(read()) or 50
-
-term.clear()
-term.setCursorPos(1,1)
-
-print("Enter min Arcana: (0 < 100 < 100)")
-local min_arcana = tonumber(read()) or 100
-print("Enter max Arcana: ("..min_arcana.." < 100 < 100)")
-local max_arcana = tonumber(read()) or 100
-
-term.clear()
-term.setCursorPos(1,1)
-
-print("Enter min Clues: (0 < 0 < 4)")
-local min_clues = tonumber(read()) or 0
-print("Enter min Rectification (0 < 0 < 100)")
-local min_rectification = tonumber(read()) or 0
-
-print("Treasure? (y/n)")
-local treasure = read():lower()
-if treasure == "y" or treasure == "yes" or treasure == "true" or treasure == "1" then
-    treasure = true
-else
-    treasure = false
-end
-
-term.clear()
-term.setCursorPos(1,1)
-
+local width, height = term.getSize()
 local blocks = {}
 local max_blocks = 32
 
@@ -226,178 +204,248 @@ local last_block = ""
 
 local fail_reason = ""
 local success = false
+local eterna_mult
 
-if treasure then
-    blocks[#blocks+1] = "apotheosis:treasure_shelf"
-    curr.quanta = curr.quanta-10
-    curr.arcana = curr.arcana+10
-    has_treasure = true
+if not export_data then
+    print("Map generated!")
+    sleep(0.5)
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter an Eterna multiplier: (1 or 2, default 2)")
+    print("(On older versions, Eterna is 0-50 instead of 0-100)")
+    eterna_mult = (tonumber(read()) or 2)
+
+    print("Enter min Eterna: (0 < 50 < 50)")
+    local min_eterna = (tonumber(read()) or 50)*eterna_mult
+    print("Enter max Eterna: ("..(min_eterna/eterna_mult).." < 50 < 50)")
+    local max_eterna = (tonumber(read()) or 50)*eterna_mult
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter min Quanta: (0 < 50 < 100)")
+    local min_quanta = tonumber(read()) or 50
+    print("Enter max Quanta: ("..min_quanta.." < 50 < 100)")
+    local max_quanta = tonumber(read()) or 50
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter min Arcana: (0 < 100 < 100)")
+    local min_arcana = tonumber(read()) or 100
+    print("Enter max Arcana: ("..min_arcana.." < 100 < 100)")
+    local max_arcana = tonumber(read()) or 100
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter min Clues: (0 < 0 < 4)")
+    local min_clues = tonumber(read()) or 0
+    print("Enter min Rectification (0 < 0 < 100)")
+    local min_rectification = tonumber(read()) or 0
+
+    print("Treasure? (y/n)")
+    local treasure = read():lower()
+    if treasure == "y" or treasure == "yes" or treasure == "true" or treasure == "1" then
+        treasure = true
+    else
+        treasure = false
+    end
+
+    term.clear()
+    term.setCursorPos(1,1)
+
+    if treasure then
+        blocks[#blocks+1] = "apotheosis:treasure_shelf"
+        curr.quanta = curr.quanta-10
+        curr.arcana = curr.arcana+10
+        has_treasure = true
+    end
+
+    while true do
+        local new_block = ""
+        term.clear()
+        write(2,2, "Status: "..last_action, colors.black, colors.white)
+        write(2,3, "Status: "..(last_block:match(".+:(.+)") or "None"), colors.black, colors.white)
+        write(3,5, "Eterna: "..(curr.eterna/eterna_mult).." ("..(curr.maxEterna/eterna_mult).." max)", colors.black, colors.lime)
+        write(3,6, "Quanta: "..curr.quanta.."%", colors.black, colors.red)
+        write(3,7, "Arcana: "..curr.arcana.."%", colors.black, colors.purple)
+
+        write(3,8, "Clues: "..curr.clues, colors.black, colors.cyan)
+        write(3,9, "Rectification: "..curr.rectification.."%", colors.black, colors.yellow)
+
+        write(3,11, "Total Blocks: "..#blocks.."/"..max_blocks, colors.black, colors.lightGray)
+
+        term.setCursorPos(1,9)
+
+        if curr.clues < min_clues then
+            last_action = "Increasing Clues"
+            local curr_diff = min_clues - curr.clues
+            table.sort(helper_map.clues.pos, function (a, b)
+                return (a.stats.clues or 0) < (b.stats.clues or 0)
+            end)
+            for k,v in ipairs(helper_map.clues.pos) do
+                if v.stats.clues >= curr_diff or k == #helper_map.clues.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+        if clamp(curr.rectification,0,100) < min_rectification then
+            last_action = "Increasing Rectification"
+            local curr_diff = min_rectification - curr.rectification
+            table.sort(helper_map.rectification.pos, function (a, b)
+                return (a.stats.rectification or 0) < (b.stats.rectification or 0)
+            end)
+            for k,v in ipairs(helper_map.rectification.pos) do
+                if v.stats.rectification >= curr_diff or k == #helper_map.rectification.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+
+        if clamp(curr.maxEterna, 0, 50) < min_eterna then
+            last_action = "Increasing Eterna"
+            table.sort(helper_map.eterna.pos, function (a, b)
+                return a.stats.maxEterna < b.stats.maxEterna
+            end)
+            for k,v in ipairs(helper_map.eterna.pos) do
+                if v.stats.maxEterna >= min_eterna or k == #helper_map.eterna.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+
+        if clamp(curr.eterna, 0, 50*eterna_mult) < min_eterna then
+            last_action = "Increasing Eterna"
+            local curr_diff = min_eterna - curr.eterna
+            table.sort(helper_map.eterna.pos, function (a, b)
+                return a.stats.eterna < b.stats.eterna
+            end)
+            for k,v in ipairs(helper_map.eterna.pos) do
+                if v.stats.eterna >= curr_diff or k == #helper_map.eterna.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+        if clamp(curr.eterna, 0, 50*eterna_mult) > max_eterna then
+            last_action = "Decreasing Eterna"
+            local curr_diff = max_eterna - curr.eterna
+            table.sort(helper_map.eterna.neg, function (a, b)
+                return a.stats.eterna > b.stats.eterna
+            end)
+            for k,v in ipairs(helper_map.eterna.neg) do
+                if v.stats.eterna <= curr_diff or k == #helper_map.eterna.neg then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+
+        if clamp(curr.quanta,0,100) < min_quanta then
+            last_action = "Increasing Quanta"
+            local curr_diff = min_quanta - curr.quanta
+            table.sort(helper_map.quanta.pos, function (a, b)
+                return a.stats.quanta < b.stats.quanta
+            end)
+            for k,v in ipairs(helper_map.quanta.pos) do
+                if v.stats.quanta >= curr_diff or k == #helper_map.quanta.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+        if clamp(curr.quanta,0,100) > max_quanta then
+            last_action = "Decreasing Quanta"
+            local curr_diff = max_quanta - curr.quanta
+            table.sort(helper_map.quanta.neg, function (a, b)
+                return a.stats.quanta > b.stats.quanta
+            end)
+            for k,v in ipairs(helper_map.quanta.neg) do
+                if v.stats.quanta <= curr_diff or k == #helper_map.quanta.neg then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+
+        if clamp(curr.arcana,0,100) < min_arcana then
+            last_action = "Increasing Arcana"
+            local curr_diff = min_arcana - curr.arcana
+            table.sort(helper_map.arcana.pos, function (a, b)
+                return a.stats.arcana < b.stats.arcana
+            end)
+            for k,v in ipairs(helper_map.arcana.pos) do
+                if v.stats.arcana >= curr_diff or k == #helper_map.arcana.pos then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+        if clamp(curr.arcana,0,100) > max_arcana then
+            last_action = "Decreasing Arcana"
+            local curr_diff = max_arcana - curr.arcana
+            table.sort(helper_map.arcana.neg, function (a, b)
+                return a.stats.arcana > b.stats.arcana
+            end)
+            for k,v in ipairs(helper_map.arcana.neg) do
+                if v.stats.arcana <= curr_diff or k == #helper_map.arcana.neg then
+                    new_block = v.block
+                    break
+                end
+            end
+        end
+
+        local new_block_data = preset[new_block]
+        if new_block_data then
+            if curr.maxEterna < (new_block_data[1].maxEterna or 0) then
+                curr.maxEterna = (new_block_data[1].maxEterna or 0)
+            end
+            curr.eterna = clamp(curr.eterna + (new_block_data[1].eterna or 0), -99999, curr.maxEterna)
+            curr.quanta = clamp(curr.quanta + (new_block_data[1].quanta or 0), -99999, 99999)
+            curr.arcana = clamp(curr.arcana + (new_block_data[1].arcana or 0), -99999, 99999)
+
+            curr.clues = clamp(curr.clues + (new_block_data[1].clues or 0), -99999, 99999)
+            curr.rectification = clamp(curr.rectification + (new_block_data[1].rectification or 0), -99999, 99999)
+
+            blocks[#blocks+1] = new_block
+            last_block = new_block
+        end
+
+        sleep(0.1)
+
+        if new_block == "" then
+            success = true
+            break
+        end
+        if #blocks > 32 then
+            fail_reason = "Exceeded 32 blocks"
+            success = false
+            break
+        end
+    end
 end
 
-while true do
-    local new_block = ""
-    term.clear()
-    write(2,2, "Status: "..last_action, colors.black, colors.white)
-    write(2,3, "Status: "..(last_block:match(".+:(.+)") or "None"), colors.black, colors.white)
-    write(3,5, "Eterna: "..(curr.eterna/eterna_mult).." ("..(curr.maxEterna/eterna_mult).." max)", colors.black, colors.lime)
-    write(3,6, "Quanta: "..curr.quanta.."%", colors.black, colors.red)
-    write(3,7, "Arcana: "..curr.arcana.."%", colors.black, colors.purple)
-
-    write(3,8, "Clues: "..curr.clues, colors.black, colors.cyan)
-    write(3,9, "Rectification: "..curr.rectification.."%", colors.black, colors.yellow)
-
-    write(3,11, "Total Blocks: "..#blocks.."/"..max_blocks, colors.black, colors.lightGray)
-
-    term.setCursorPos(1,9)
-
-    if curr.clues < min_clues then
-        last_action = "Increasing Clues"
-        local curr_diff = min_clues - curr.clues
-        table.sort(helper_map.clues.pos, function (a, b)
-            return (a.stats.clues or 0) < (b.stats.clues or 0)
-        end)
-        for k,v in ipairs(helper_map.clues.pos) do
-            if v.stats.clues >= curr_diff or k == #helper_map.clues.pos then
-                new_block = v.block
-                break
-            end
-        end
+local condensed = {}
+for k, block in pairs(blocks) do
+    if condensed[block] then
+        condensed[block] = condensed[block] + 1
+    else
+        condensed[block] = 1
     end
-    if clamp(curr.rectification,0,100) < min_rectification then
-        last_action = "Increasing Rectification"
-        local curr_diff = min_rectification - curr.rectification
-        table.sort(helper_map.rectification.pos, function (a, b)
-            return (a.stats.rectification or 0) < (b.stats.rectification or 0)
-        end)
-        for k,v in ipairs(helper_map.rectification.pos) do
-            if v.stats.rectification >= curr_diff or k == #helper_map.rectification.pos then
-                new_block = v.block
-                break
-            end
-        end
-    end
+end
 
-    if clamp(curr.maxEterna, 0, 50) < min_eterna then
-        last_action = "Increasing Eterna"
-        table.sort(helper_map.eterna.pos, function (a, b)
-            return a.stats.maxEterna < b.stats.maxEterna
-        end)
-        for k,v in ipairs(helper_map.eterna.pos) do
-            if v.stats.maxEterna >= min_eterna or k == #helper_map.eterna.pos then
-                new_block = v.block
-                break
-            end
-        end
-    end
-
-    if clamp(curr.eterna, 0, 50*eterna_mult) < min_eterna then
-        last_action = "Increasing Eterna"
-        local curr_diff = min_eterna - curr.eterna
-        table.sort(helper_map.eterna.pos, function (a, b)
-            return a.stats.eterna < b.stats.eterna
-        end)
-        for k,v in ipairs(helper_map.eterna.pos) do
-            if v.stats.eterna >= curr_diff or k == #helper_map.eterna.pos then
-                new_block = v.block
-                break
-            end
-        end
-    end
-    if clamp(curr.eterna, 0, 50*eterna_mult) > max_eterna then
-        last_action = "Decreasing Eterna"
-        local curr_diff = max_eterna - curr.eterna
-        table.sort(helper_map.eterna.neg, function (a, b)
-            return a.stats.eterna > b.stats.eterna
-        end)
-        for k,v in ipairs(helper_map.eterna.neg) do
-            if v.stats.eterna <= curr_diff or k == #helper_map.eterna.neg then
-                new_block = v.block
-                break
-            end
-        end
-    end
-
-    if clamp(curr.quanta,0,100) < min_quanta then
-        last_action = "Increasing Quanta"
-        local curr_diff = min_quanta - curr.quanta
-        table.sort(helper_map.quanta.pos, function (a, b)
-            return a.stats.quanta < b.stats.quanta
-        end)
-        for k,v in ipairs(helper_map.quanta.pos) do
-            if v.stats.quanta >= curr_diff or k == #helper_map.quanta.pos then
-                new_block = v.block
-                break
-            end
-        end
-    end
-    if clamp(curr.quanta,0,100) > max_quanta then
-        last_action = "Decreasing Quanta"
-        local curr_diff = max_quanta - curr.quanta
-        table.sort(helper_map.quanta.neg, function (a, b)
-            return a.stats.quanta > b.stats.quanta
-        end)
-        for k,v in ipairs(helper_map.quanta.neg) do
-            if v.stats.quanta <= curr_diff or k == #helper_map.quanta.neg then
-                new_block = v.block
-                break
-            end
-        end
-    end
-
-    if clamp(curr.arcana,0,100) < min_arcana then
-        last_action = "Increasing Arcana"
-        local curr_diff = min_arcana - curr.arcana
-        table.sort(helper_map.arcana.pos, function (a, b)
-            return a.stats.arcana < b.stats.arcana
-        end)
-        for k,v in ipairs(helper_map.arcana.pos) do
-            if v.stats.arcana >= curr_diff or k == #helper_map.arcana.pos then
-                new_block = v.block
-                break
-            end
-        end
-    end
-    if clamp(curr.arcana,0,100) > max_arcana then
-        last_action = "Decreasing Arcana"
-        local curr_diff = max_arcana - curr.arcana
-        table.sort(helper_map.arcana.neg, function (a, b)
-            return a.stats.arcana > b.stats.arcana
-        end)
-        for k,v in ipairs(helper_map.arcana.neg) do
-            if v.stats.arcana <= curr_diff or k == #helper_map.arcana.neg then
-                new_block = v.block
-                break
-            end
-        end
-    end
-
-    local new_block_data = preset[new_block]
-    if new_block_data then
-        if curr.maxEterna < (new_block_data[1].maxEterna or 0) then
-            curr.maxEterna = (new_block_data[1].maxEterna or 0)
-        end
-        curr.eterna = clamp(curr.eterna + (new_block_data[1].eterna or 0), -99999, curr.maxEterna)
-        curr.quanta = clamp(curr.quanta + (new_block_data[1].quanta or 0), -99999, 99999)
-        curr.arcana = clamp(curr.arcana + (new_block_data[1].arcana or 0), -99999, 99999)
-
-        curr.clues = clamp(curr.clues + (new_block_data[1].clues or 0), -99999, 99999)
-        curr.rectification = clamp(curr.rectification + (new_block_data[1].rectification or 0), -99999, 99999)
-
-        blocks[#blocks+1] = new_block
-        last_block = new_block
-    end
-
-    sleep(0.1)
-
-    if new_block == "" then
-        success = true
-        break
-    end
-    if #blocks > 32 then
-        fail_reason = "Exceeded 32 blocks"
-        success = false
-        break
-    end
+if export_data then
+    condensed = export_data.setup
+    curr = export_data.info.stats
+    has_treasure = export_data.info.treasure
+    eterna_mult = export_data.info.eterna_mult
+    success = true
 end
 
 term.clear()
@@ -412,14 +460,6 @@ write(1,2, "Blocks: "..#blocks, colors.black, colors.lightGray)
 
 term.setCursorPos(1,3)
 
-local condensed = {}
-for k, block in pairs(blocks) do
-    if condensed[block] then
-        condensed[block] = condensed[block] + 1
-    else
-        condensed[block] = 1
-    end
-end
 for k,v in pairs(condensed) do
     print(v.."x "..k)
 end
@@ -427,6 +467,7 @@ end
 local selections = {
     "Autobuild Setup",
     "Save Setup",
+    "Exit",
 }
 
 if success then
@@ -436,15 +477,23 @@ if success then
     while true do
         term.clear()
         term.setCursorPos(1,1)
-        write(1,1, "Select an Option: ", colors.black, colors.yellow)
+        write(1,1, string.format("%.1f", curr.eterna/eterna_mult), colors.black, colors.lime)
+        write(7,1, string.format("%.1f", curr.quanta), colors.black, colors.red)
+        write(13,1, string.format("%.1f", curr.arcana), colors.black, colors.purple)
+        write(19,1, string.format("%.1f", curr.rectification), colors.black, colors.yellow)
+        write(25,1, string.format("%.0f", curr.clues), colors.black, colors.cyan)
+        write(27,1, string.format("%s", has_treasure), colors.black, colors.orange)
+
+        term.setCursorPos(1,2)
+        write(1,2, "Select an Option: ", colors.black, colors.yellow)
         for k,v in ipairs(selections) do
-            write(2,1+k, k..". "..v, colors.black, colors.lightGray)
+            write(2,2+k, k..". "..v, colors.black, colors.lightGray)
         end
 
         sleep(0.25)
 
         term.setTextColor(colors.white)
-        term.setCursorPos(19,1)
+        term.setCursorPos(19,2)
         local selected = tonumber(read())
 
         if selected and selections[selected] then
@@ -492,21 +541,22 @@ if success then
                     error("No shulkerbox or barrel (soph storage) or redstone IO found! Needs both")
                 end
             elseif selected == 2 then
-                print("Enter a name:")
+                write(2,3, "Enter a name: ", colors.black, colors.lightGray)
                 local export_name = ""
                 while true do
                     local ev = {os.pullEvent()}
                     if ev[1] == "char" then
                         local char = ev[2]
                         export_name = export_name..char:match("[%w_%.]")
+                        fill(2+14,3,width,3, colors.black)
+                    write(2+14,3, export_name, colors.black, colors.white)
                     elseif ev[1] == "key" then
                         local key, hold = ev[2], ev[3]
                         if key == keys.backspace then
                             if #export_name > 0 then
                                 export_name = export_name:sub(1,#export_name-1)
-                            else
-                                print("Export Cancelled.")
-                                break
+                                fill(2+14,3,width,3, colors.black)
+                                write(2+14,3, export_name, colors.black, colors.white)
                             end
                         elseif key == keys.enter or key == keys.numPadEnter then
                             if #export_name > 0 then
@@ -515,7 +565,15 @@ if success then
                                 end
                                 local file_io = io.open("/.aebs_export/"..export_name..".aebs", "w")
                                 if file_io then
-                                    file_io:write(textutils.serialise(condensed))
+                                    local data = {
+                                        setup=condensed,
+                                        info={
+                                            stats=curr,
+                                            treasure=has_treasure,
+                                            eterna_mult=eterna_mult
+                                        }
+                                    }
+                                    file_io:write(textutils.serialise(data))
                                     file_io:close()
                                     print("File exported successfully.")
                                     break
@@ -531,6 +589,11 @@ if success then
                         end
                     end
                 end
+            elseif selected == 3 then
+                term.clear()
+                term.setCursorPos(1,1)
+                shell.run("/startup/aebs_completion.lua")
+                return
             end
         end
         sleep(1)

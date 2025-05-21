@@ -155,6 +155,8 @@ local cubes = {}
 local file_name
 local image
 
+local splash_screen = 20*10
+
 local function updateTimer()
     while true do
         if auto_timer > -1 then
@@ -162,6 +164,10 @@ local function updateTimer()
         end
         if auto_timer == 0 and auto_update then
             os.queueEvent("recalc_output")
+        end
+        if splash_screen > 0 then
+            splash_screen = splash_screen-1
+            os.queueEvent("redraw")
         end
         sleep(0.05)
     end
@@ -175,21 +181,30 @@ local function renderThread()
         fill(1,1, width, 1, colors.gray)
         write(1,1, "Panel Maker", colors.gray, colors.white)
 
-        write(2,3, "File: "..(file_name or "No File"), colors.black, colors.yellow)
-        write(2,5, "Rotation: "..sides[rotation], colors.black, colors.lightGray)
-        write(2,6, "Brightness: "..string.format("%.0f" ,brightness*100).."%", colors.black, colors.lightGray)
-        write(2,7, "Thickness: "..string.format("%.1f" ,thickness).."px", colors.black, colors.lightGray)
+        if splash_screen > 0 then
+            write(2,3, "Make sure to face south when placing statue block", colors.black, colors.red)
+            write(2,4, "If not, it can have render glitches", colors.black, colors.red)
+            write(2,5, "(Yeah statues are.. janky)", colors.black, colors.red)
 
-        write(2,9, "Borders Width:", colors.black, colors.yellow)
-        write(3,10, "X1: "..borders.x1.."px", colors.black, colors.lightGray)
-        write(3,11, "X2: "..borders.x2.."px", colors.black, colors.lightGray)
-        write(3,12, "Y1: "..borders.y1.."px", colors.black, colors.lightGray)
-        write(3,13, "Y2: "..borders.y2.."px", colors.black, colors.lightGray)
+            write(2,7, "Continue in "..string.format("%.1f", splash_screen/20).."s", colors.black, colors.orange)
+            write(2,8, "(Or press any key)", colors.black, colors.orange)
+        else
+            write(2,3, "File: "..(file_name or "No File"), colors.black, colors.yellow)
+            write(2,5, "Rotation: "..sides[rotation], colors.black, colors.lightGray)
+            write(2,6, "Brightness: "..string.format("%.0f" ,brightness*100).."%", colors.black, colors.lightGray)
+            write(2,7, "Thickness: "..string.format("%.1f" ,thickness).."px", colors.black, colors.lightGray)
 
-        write(2,15, "Light Level: "..light_level, colors.black, colors.lightGray)
+            write(2,9, "Borders Width:", colors.black, colors.yellow)
+            write(3,10, "X1: "..borders.x1.."px", colors.black, colors.lightGray)
+            write(3,11, "X2: "..borders.x2.."px", colors.black, colors.lightGray)
+            write(3,12, "Y1: "..borders.y1.."px", colors.black, colors.lightGray)
+            write(3,13, "Y2: "..borders.y2.."px", colors.black, colors.lightGray)
 
-        write(2,height-2, "Auto Submit: "..tostring(auto_update), colors.black, colors.orange)
-        write(2,height-1, "Submit Changes", colors.black, colors.lime)
+            write(2,15, "Light Level: "..light_level, colors.black, colors.lightGray)
+
+            write(2,height-2, "Auto Submit: "..tostring(auto_update), colors.black, colors.orange)
+            write(2,height-1, "Submit Changes", colors.black, colors.lime)
+        end
         win.setVisible(true)
     end
 end
@@ -250,6 +265,10 @@ local function inputThread()
                 os.queueEvent("redraw")
             end
         elseif event[1] == "key" and not event[3] then
+            if splash_screen > 0 then
+                splash_screen = 0
+                os.queueEvent("redraw")
+            end
             if event[2] == keys.leftShift then
                 scroll_modifier = 10
             end

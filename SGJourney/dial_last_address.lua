@@ -1,4 +1,4 @@
-local script_version = "1.3"
+local script_version = "1.4"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -88,6 +88,15 @@ local function loadConfig()
 end
 
 loadConfig()
+
+settings.load()
+
+settings.define("sg.slowdial", {
+    description = "Forces the gate to use slow dial (for MW only)",
+    default = false,
+    type = "boolean"
+})
+settings.save()
 
 local start_dialing = false
 local to_dial = {}
@@ -179,10 +188,10 @@ local function dialThread()
                         repeat
                             sleep()
                         until ((interface.getCurrentSymbol()/38)*(#to_dial+1)) >= k
-                        interface.engageSymbol(v)
+                        interface.engageSymbol(v, true)
                         os.sleep(0.25)
                     else
-                        interface.engageSymbol(v)
+                        interface.engageSymbol(v, not settings.get("sg.slowdial"))
                         os.sleep(0.125)
                     end
                 elseif interface.rotateClockwise then

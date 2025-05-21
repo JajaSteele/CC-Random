@@ -1,4 +1,4 @@
-local script_version = "1.10"
+local script_version = "1.11"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -481,7 +481,7 @@ local function inputThread()
                         monitor.setTextColor(colors.white)
                         break
                     end
-                    if interface.engageSymbol and not (sg.rotateClockwise and settings.get("sg.slowdial")) then
+                    if interface.engageSymbol and not (interface.rotateClockwise and settings.get("sg.slowdial")) then
                         interface.engageSymbol(v.symbol, not settings.get("sg.slowdial"))
                     else
                         if (v.symbol-interface.getCurrentSymbol()) % 39 < 19 then

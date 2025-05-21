@@ -1,4 +1,4 @@
-local script_version = "1.9"
+local script_version = "1.10"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -124,6 +124,17 @@ settings.define("dhd.panel.background", {
     description = "Color for the background",
     default = 0x2f2b29,
     type = "number"
+})
+
+settings.define("sg.slowdial", {
+    description = "Forces the gate to use slow dial if available",
+    default = false,
+    type = "boolean"
+})
+settings.define("sg.hideIris", {
+    description = "Hides iris button from WorldDHD",
+    default = false,
+    type = "boolean"
 })
 
 local args = {...}
@@ -336,7 +347,7 @@ if height == 24 then
     monitor.write(text)
     button_list[#button_list+1] = {x=7, y=2, x2=9, y2=2, symbol=71, glow=true, text="X-X"}
 
-    if interface.getIrisProgressPercentage then
+    if interface.getIris() and not settings.get("sg.hideIris") then
         local text = "@-@"
         monitor.setCursorPos(7, height-1)
         monitor.write(text)
@@ -383,7 +394,7 @@ else
     monitor.write(text)
     button_list[#button_list+1] = {x=7, y=height-1, x2=9, y2=height-1, symbol=69, glow=false, text="#-#"}
 
-    if interface.getIrisProgressPercentage then
+    if interface.getIris() and not settings.get("sg.hideIris") then
         local text = "@-@"
         monitor.setCursorPos(7, height)
         monitor.write(text)
@@ -443,10 +454,10 @@ local function inputThread()
                         monitor.setTextColor(colors.white)
                         break
                     end
-                    if v.symbol == 70 then
+                    if v.symbol == 70 and interface.getIris() and not settings.get("sg.hideIris") then
                         monitor.setCursorPos(v.x, v.y)
                         monitor.setTextColor(colors.orange)
-                        if interface.getIrisProgressPercentage then
+                        if interface.getIris() and not settings.get("sg.hideIris") then
                             if interface.getIrisProgressPercentage() > 50 then
                                 interface.openIris()
                                 monitor.write("<->")
@@ -470,8 +481,8 @@ local function inputThread()
                         monitor.setTextColor(colors.white)
                         break
                     end
-                    if interface.engageSymbol then
-                        interface.engageSymbol(v.symbol)
+                    if interface.engageSymbol and not (sg.rotateClockwise and settings.get("sg.slowdial")) then
+                        interface.engageSymbol(v.symbol, not settings.get("sg.slowdial"))
                     else
                         if (v.symbol-interface.getCurrentSymbol()) % 39 < 19 then
                             interface.rotateAntiClockwise(v.symbol)
@@ -508,7 +519,7 @@ local function resetThread()
                     monitor.setPaletteColor(colors.gray, brb_secondary_off)
                     monitor.setPaletteColor(colors.red, brb_main_off)
                 end
-                if v.symbol == 70 then
+                if v.symbol == 70 and interface.getIris() and not settings.get("sg.hideIris") then
                     if iris_state == "idle" then
                         monitor.setCursorPos(v.x, v.y)
                         monitor.setTextColor(colors.white)

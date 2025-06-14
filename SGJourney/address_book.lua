@@ -1,4 +1,4 @@
-local script_version = "1.6"
+local script_version = "1.7"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -437,11 +437,11 @@ commands = {
                 write(1, h-2, "Editing: Security Level")
                 term.setCursorPos(1, h-1)
                 term.write("> ")
-                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "private")
+                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "public")
                 if new_security == "public" or new_security == "private" then
                     selected_entry.security = new_security
                 else
-                    selected_entry.security = "private"
+                    selected_entry.security = "public"
                 end
             end
             filterBook(search_filter)

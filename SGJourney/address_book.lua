@@ -1,4 +1,4 @@
-local script_version = "1.7"
+local script_version = "1.8"
 
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
@@ -467,7 +467,7 @@ commands = {
                 write(1, h-2, "Adding: Name")
                 term.setCursorPos(1, h-1)
                 term.write("> ")
-                selected_entry.name = read(nil, nil, function(text) return completion.choice(text, {selected_entry.name or "New Entry"}) end, selected_entry.name or "New Entry")
+                selected_entry.name = read(nil, nil, function(text) return completion.choice(text, {selected_entry.name or "New Entry"}) end, selected_entry.name or "")
 
                 fill(1, h-2, w, h-1, colors.black, colors.white, " ")
                 write(1, h-2, "Adding: Address")
@@ -486,11 +486,11 @@ commands = {
                 write(1, h-2, "Adding: Security Level")
                 term.setCursorPos(1, h-1)
                 term.write("> ")
-                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "private")
+                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "")
                 if new_security == "public" or new_security == "private" then
                     selected_entry.security = new_security
                 else
-                    selected_entry.security = "private"
+                    selected_entry.security = "public"
                 end
                 table.insert(address_book, tonumber(entry_num) or #address_book+1, selected_entry)
             end

@@ -1,5 +1,4 @@
-local script_version = "1.8"
-
+local script_version = "1.9"
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
 local script_io = io.open(curr_script, "r")
@@ -519,6 +518,34 @@ commands = {
         },
         long_description={
             "Removes the specified entry",
+            "Use the 'save' command to save the change",
+        }
+    },
+    {
+        main="move", 
+        args={
+            {name="entry", type="int", outline="<>", desc="Which entry to move"},
+            {name="target", type="int", outline="<>", desc="Where to move the entry"}
+        },
+        func=(function(...)
+            local entry_num, target_num = ...
+            local entry_num, target_num = tonumber(entry_num), tonumber(target_num)
+            local entry_data = address_book[entry_num]
+            if entry_data then
+                table.remove(address_book, entry_num)
+                if target_num > entry_num then
+                    table.insert(address_book, target_num-1, entry_data)
+                else
+                    table.insert(address_book, target_num, entry_data)
+                end
+            end
+            filterBook(search_filter)
+        end),
+        short_description={
+            "Moves the specified entry to the specified position",
+        },
+        long_description={
+            "Moves the specified entry to the specified position",
             "Use the 'save' command to save the change",
         }
     },

@@ -437,7 +437,7 @@ commands = {
                 write(1, h-2, "Editing: Security Level")
                 term.setCursorPos(1, h-1)
                 term.write("> ")
-                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "public")
+                local new_security = read(nil, nil, function(text) return completion.choice(text, {"public", "private"}) end, selected_entry.security or "")
                 if new_security == "public" or new_security == "private" then
                     selected_entry.security = new_security
                 else

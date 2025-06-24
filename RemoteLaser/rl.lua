@@ -6,10 +6,10 @@ while true do
     local event, username, msg, hidden = os.pullEvent("chat")
     if msg == "bindlaser" and username == inv.getOwner() then
         chat.sendMessage("Attempting to bind laser..")
-        inv.removeItemFromPlayer("down", {name="entangled:item"})
+        inv.removeItemFromPlayer("front", {name="entangled:item"})
 
         sleep(2)
 
-        inv.addItemToPlayer("down", {name="entangled:item"})
+        inv.addItemToPlayer("front", {name="entangled:item"})
     end
 end

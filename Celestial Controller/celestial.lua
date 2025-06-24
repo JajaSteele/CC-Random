@@ -1,4 +1,4 @@
-local script_version = "1.0"
+local script_version = "1.1"
 -- AUTO UPDATE STUFF
 local curr_script = shell.getRunningProgram()
 local script_io = io.open(curr_script, "r")

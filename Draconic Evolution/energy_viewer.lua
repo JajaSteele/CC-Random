@@ -2,6 +2,7 @@ local monitor = peripheral.find("monitor")
 local core = peripheral.find("draconic_rf_storage")
 
 local win = window.create(monitor, 1, 1, monitor.getSize())
+local function clamp(x,min,max) if x > max then return max elseif x < min then return min else return x end end
 
 local function prettyEnergy(energy)
     if energy > 1000000000000000 then
@@ -20,6 +21,9 @@ local function prettyEnergy(energy)
 end
 
 local function prettyETA(time)
+
+    time = clamp(time, 0, 31622400*512)
+
     local seconds = time%60
     local minutes = math.floor(time/60)%60
     local hours = math.floor(time/3600)%24

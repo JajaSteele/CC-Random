@@ -288,7 +288,7 @@ local function drawThread()
 					index = index+1
 				end
 			end
-			if pos >= height-1 then
+			if 2+pos > height-1 then
 				break
 			end
 		end

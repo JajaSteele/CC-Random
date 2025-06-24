@@ -1,10 +1,20 @@
-local condenser = peripheral.find("ae2:condenser")
+local condenser_list = {peripheral.find("ae2:condenser")}
 local sink = peripheral.find("cookingforblockheads:sink")
 
-while true do
-    local count = 0
-    for i1=1, 64 do
-        count = count + condenser.pullFluid(peripheral.getName(sink), 1000000000)
+local threads = {}
+
+print("Found "..#condenser_list.." condensers..")
+for k, condenser in pairs(condenser_list) do
+    for i1=1, 16 do
+        threads[#threads+1] = function()
+            while true do
+                for i1=1, 8 do
+                    condenser.pullFluid(peripheral.getName(sink))
+                end
+            end
+        end
     end
-    print(count)
 end
+
+print("Starting "..#threads.." threads")
+parallel.waitForAny(table.unpack(threads))

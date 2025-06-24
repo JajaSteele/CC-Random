@@ -274,24 +274,26 @@ local function drawThread()
 		local curr_group = ""
 		click_map = {}
 		term.clear()
-		for i1=1, height do
+		for i1=1, height-1 do
 			local entry = action_table[index+scroll]
 			if entry then
 				if entry.group ~= curr_group then
 					curr_group = entry.group
-					write(2, 1+pos, entry.group, colors.black, colors.white)
+					write(2, 2+pos, entry.group, colors.black, colors.white)
 					pos = pos+1
 				else
-					write(3, 1+pos, entry.displayName, colors.black, entry.highlight)
-					click_map[1+pos] = entry
+					write(3, 2+pos, entry.displayName, colors.black, entry.highlight)
+					click_map[2+pos] = entry
 					pos = pos+1
 					index = index+1
 				end
 			end
-			if pos > height-1 then
+			if pos >= height-1 then
 				break
 			end
 		end
+		write(1, 1, "Celestial Controller", colors.black, colors.yellow)
+
 		fill(width,1,width,height-1,colors.black,colors.gray, "\x3A")
 		write(width, clamp((height-1)*(scroll/max_scroll),1,height-1), "\x12", colors.black, colors.lightGray)
 

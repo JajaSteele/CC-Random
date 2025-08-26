@@ -42,7 +42,7 @@ if update_request then
         end
     end
 else
-    print("Update request failed")
+    print("Update request failed")	
 end
 -- END OF AUTO UPDATE
 

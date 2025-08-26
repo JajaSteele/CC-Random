@@ -1,0 +1,14 @@
+For easier travel, the following commands
+are available for players:
+&lime /warp spawn &lightGray : Teleports you to world spawn
+&lime /home &lightGray : Teleports you to your home
+&lime /back &lightGray : Teleports you to your previous location
+(Works for death location too)
+&lime /rtp &lightGray : Teleports you to a random place in 
+the current dimension
+&lime /tpa <player> &lightGray : Teleports you to 
+the player's position (once they accept)
+&lime /tpahere <player> &lightGray : Teleports the player 
+to your position (once they accept)
+
+&white Don't forget to do &lime /sethome &white at your place!

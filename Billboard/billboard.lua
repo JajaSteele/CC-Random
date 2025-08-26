@@ -170,6 +170,7 @@ local drawThread = function()
                     monitor.write(char)
                 end
             end
+            write(1,height-1, "R-Click monitor to explore other tips", colors.black, colors.gray, monitor)
         elseif display_mode == "select" then
             write(1,1, "All Tips: Page "..select_page, colors.black, colors.yellow, monitor)
             local entry_line = 2
@@ -185,6 +186,7 @@ local drawThread = function()
                     entry_line = entry_line+1
                 end
             end
+            write(1,height-1, "R-Click a tip to view it", colors.black, colors.gray, monitor)
         end
         fill(1,height,width,height, colors.black, colors.gray, "-", monitor)
         fill(1,height,(width*(next_timer/default_timer)),height, colors.black, colors.lightBlue, "-", monitor)

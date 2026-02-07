@@ -23,7 +23,7 @@ while true do
         os.pullEvent("monitor_touch")
         monitor.clear()
         monitor.setCursorPos(1,1)
-        monitor.write("Fixing")
+        monitor.write("Crawling")
     end
 
     local active_threads = 0
@@ -50,11 +50,18 @@ while true do
         end
     end
 
+    local block_count = 0
+
     threads[#threads+1] = function()
         print("Starting first job")
         job_list[#job_list+1] = {x=sx, y=sy, z=sz}
         while true do
-            print(active_threads)
+            if monitor then
+                monitor.setCursorPos(1,2)
+                monitor.write("Found:")
+                monitor.setCursorPos(1,3)
+                monitor.write(tostring(block_count))
+            end
             sleep()
             if active_threads == 0 then
                 quit = true
@@ -62,8 +69,6 @@ while true do
             end
         end
     end
-
-    local block_count = 0
 
     local block_map = {}
     local block_lookup = {}
@@ -117,6 +122,12 @@ while true do
     threads[#threads+1] = function()
         while true do
             print(active_threads.." > "..#job_list)
+            if monitor then
+                monitor.setCursorPos(1,2)
+                monitor.write("Left:")
+                monitor.setCursorPos(1,3)
+                monitor.write(tostring(#job_list).."     ")
+            end
             sleep()
             if active_threads == 0 then
                 quit = true
@@ -128,8 +139,15 @@ while true do
     job_list = block_lookup
     quit = false
 
+    if monitor then
+        monitor.clear()
+        monitor.setCursorPos(1,1)
+        monitor.write("Fixing")
+    end
+
     parallel.waitForAll(table.unpack(threads))
 
+    print("Done fixing.")
     if not monitor then
         break
     end

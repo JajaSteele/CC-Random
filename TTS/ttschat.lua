@@ -85,7 +85,7 @@ end
 local function chatThread()
     while true do
         if not rednet_mode then
-            local event, username, msg, hidden = os.pullEvent("chat")
+            local event, box, username, msg, hidden, idk = os.pullEvent("chat")
             if not hidden then
                 local voice
 

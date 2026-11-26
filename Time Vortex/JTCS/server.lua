@@ -265,12 +265,13 @@ if not save_data.password then
     print("")
     print("This server has no password")
     print("Enter a new password (Or nothing, to disable authentification)")
-    local new_password_raw = read()
+    print("(16 characters max.)")
+    local new_password_raw = read():sub(1, 16)
     if new_password_raw ~= "" then
         save_data.password = sha256.pbkdf2(new_password_raw, "", 512)
         print("Enter the password again to confirm")
         while true do
-            local password_check_raw = read()
+            local password_check_raw = read():sub(1, 16)
             if save_data.password == sha256.pbkdf2(password_check_raw, "", 512) then
                 print("Password configured successfully!")
                 break
@@ -279,7 +280,7 @@ if not save_data.password then
             end
         end
     else
-        save_data.password = -1
+        save_data.password = nil
     end
     writeSave()
 end
@@ -295,17 +296,37 @@ local keyring = {}
 
 local threads = {}
 
-threads[#threads+1] = function() --NETWORK THREAD
-    print("Starting network thread")
+threads[#threads+1] = function() --NETWORK-IN THREAD
+    print("Starting network input thread")
     while true do
         local _, sender, msg, prot = os.pullEvent("rednet_message")
         if prot == "jjs_jtcs" and type(msg) == "table" then
             print("Received cmd '"..(msg.command or "NONE").."' from sender '"..sender.."'")
             if msg.command == "init" then
-                keyring[sender] = {}
-                print("Generating key pair..")
-                local new_private = 
+                print("Generating local key pair..")
+                local new_private = sha256.pbkdf2(random.random(32), random.random(16), 512)
+                local new_public = curve.publicKey(new_private)
+
+                local new_shared = curve.exchange(new_private, msg.data.key)
+                keyring[sender] = {
+                    private=new_private,
+                    public=new_public,
+                    shared=new_shared
+                }
+
+                print("Exchanging public key..")
+                rednet.send(sender, {
+                    command="init",
+                    data={
+                        key=new_public,
+                        need_password=(save_data.password ~= nil)
+                    }
+                }, "jjs_jtcs_c")
             end
         end
     end
 end
+
+print("STARTING THREADS")
+os.queueEvent("jjs_drawgui")
+parallel.waitForAll(table.unpack(threads))
